@@ -1,7 +1,8 @@
 /*
 =================================================
 GAME GUILD PLATFORM
-APP CORE v2.2.0
+APP.JS v3.0
+FULL AUTH + GAMES
 =================================================
 */
 
@@ -11,18 +12,6 @@ let currentUser = null;
 let gamesCache = [];
 
 
-
-
-
-
-
-
-
-/*
-=================================================
-START
-=================================================
-*/
 
 
 document.addEventListener(
@@ -35,13 +24,10 @@ console.log(
 );
 
 
-
-await restoreSession();
-
+await initAuth();
 
 
 await loadGames();
-
 
 
 });
@@ -52,17 +38,17 @@ await loadGames();
 
 
 
-
-
 /*
 =================================================
-SESSION
+AUTH INIT
 =================================================
 */
 
 
-async function restoreSession(){
+async function initAuth(){
 
+
+try{
 
 
 const {
@@ -76,11 +62,15 @@ error
 
 
 
-console.log(
-"SESSION",
-data,
-error
-);
+if(error){
+
+console.error(error);
+
+showLoginButton();
+
+return;
+
+}
 
 
 
@@ -89,14 +79,17 @@ error
 if(data.session){
 
 
-
 currentUser =
 data.session.user;
 
 
+console.log(
+"USER:",
+currentUser
+);
+
 
 showProfile();
-
 
 
 }
@@ -106,6 +99,19 @@ else{
 
 showLoginButton();
 
+
+}
+
+
+
+}
+catch(e){
+
+
+console.error(e);
+
+
+showLoginButton();
 
 
 }
@@ -132,32 +138,26 @@ AUTH WINDOW
 function openLogin(){
 
 
-
-const win =
-
+const box =
 document.getElementById(
 "authWindow"
 );
 
 
 
+if(box){
 
 
-if(win){
+box.hidden=false;
 
-
-win.style.display =
-"flex";
-
-
-}
-
+box.style.display="flex";
 
 
 }
 
 
 
+}
 
 
 
@@ -166,22 +166,19 @@ win.style.display =
 function closeLogin(){
 
 
-
-const win =
-
+const box =
 document.getElementById(
 "authWindow"
 );
 
 
 
+if(box){
 
 
-if(win){
+box.hidden=true;
 
-
-win.style.display =
-"none";
+box.style.display="none";
 
 
 }
@@ -210,7 +207,6 @@ async function register(){
 
 
 const email =
-
 document
 .getElementById(
 "regEmail"
@@ -222,7 +218,6 @@ document
 
 
 const password =
-
 document
 .getElementById(
 "regPassword"
@@ -232,15 +227,14 @@ document
 
 
 
-const username =
 
+const name =
 document
 .getElementById(
 "regName"
 )
 .value
 .trim();
-
 
 
 
@@ -264,7 +258,6 @@ return;
 
 
 
-
 const {
 
 data,
@@ -276,9 +269,7 @@ error
 
 email,
 
-
 password,
-
 
 
 options:{
@@ -287,15 +278,13 @@ options:{
 data:{
 
 
-username:username
+display_name:name
 
 
 }
 
 
-
 }
-
 
 
 });
@@ -309,9 +298,7 @@ username:username
 if(error){
 
 
-alert(
-error.message
-);
+alert(error.message);
 
 
 return;
@@ -323,9 +310,34 @@ return;
 
 
 
+if(data.user){
+
+
+
+await supabaseClient
+
+.from("profiles")
+
+.insert({
+
+id:data.user.id,
+
+username:name,
+
+display_name:name
+
+
+});
+
+
+}
+
+
+
+
 
 alert(
-"Аккаунт создан"
+"Регистрация завершена"
 );
 
 
@@ -395,6 +407,7 @@ return;
 
 
 
+
 const {
 
 data,
@@ -406,23 +419,11 @@ error
 
 email,
 
-
 password
 
 
 });
 
-
-
-
-
-
-
-console.log(
-"LOGIN",
-data,
-error
-);
 
 
 
@@ -447,10 +448,17 @@ return;
 
 
 
-
-
 currentUser =
 data.user;
+
+
+
+
+
+console.log(
+"LOGIN OK",
+currentUser
+);
 
 
 
@@ -460,13 +468,15 @@ closeLogin();
 
 
 
+
+
 showProfile();
 
 
 
+
+
 await loadGames();
-
-
 
 
 
@@ -490,17 +500,13 @@ LOGOUT
 async function logout(){
 
 
-
 await supabaseClient.auth.signOut();
-
 
 
 currentUser=null;
 
 
-
 location.reload();
-
 
 
 }
@@ -533,11 +539,10 @@ document.getElementById(
 
 
 
-
 if(box){
 
 
-box.innerHTML = `
+box.innerHTML=`
 
 <button onclick="logout()">
 
@@ -550,7 +555,6 @@ ${currentUser.email}
 </button>
 
 `;
-
 
 
 }
@@ -567,37 +571,10 @@ document.getElementById(
 
 
 
-
-
 if(profile){
 
 
 profile.hidden=false;
-
-
-
-}
-
-
-
-
-
-const name =
-
-document.getElementById(
-"profileName"
-);
-
-
-
-
-
-if(name){
-
-
-name.innerText =
-currentUser.email;
-
 
 
 }
@@ -625,12 +602,10 @@ document.getElementById(
 
 
 
-
-
 if(box){
 
 
-box.innerHTML = `
+box.innerHTML=`
 
 <button onclick="openLogin()">
 
@@ -639,7 +614,6 @@ box.innerHTML = `
 </button>
 
 `;
-
 
 
 }
@@ -679,11 +653,6 @@ error
 
 .select("*")
 
-.eq(
-"status",
-"published"
-)
-
 .order(
 "created_at",
 {
@@ -696,22 +665,14 @@ ascending:false
 
 
 
-console.log(
-"GAMES",
-data,
-error
-);
-
-
-
-
-
-
 
 if(error){
 
 
-console.error(error);
+console.error(
+"LOAD GAMES",
+error
+);
 
 
 return;
@@ -766,8 +727,8 @@ document
 "gameSearch"
 )
 .value
-.toLowerCase();
 
+.toLowerCase();
 
 
 
@@ -776,17 +737,22 @@ document
 
 const result =
 
-gamesCache.filter(
+gamesCache.filter(game=>{
 
-game =>
 
-game.name
+return (
+
+game.name || ""
+
+)
 
 .toLowerCase()
 
-.includes(text)
+.includes(text);
 
-);
+
+
+});
 
 
 
@@ -810,7 +776,7 @@ renderGames(result);
 
 /*
 =================================================
-RENDER
+RENDER GAMES
 =================================================
 */
 
@@ -838,8 +804,8 @@ return;
 
 
 
-box.innerHTML="";
 
+box.innerHTML="";
 
 
 
@@ -850,8 +816,7 @@ list.forEach(game=>{
 
 
 
-box.innerHTML += `
-
+box.innerHTML+=`
 
 <div class="game-card"
 
@@ -878,15 +843,11 @@ game.logo_url
 
 
 
-
-
 <h3>
 
 ${game.name}
 
 </h3>
-
-
 
 
 
@@ -898,9 +859,7 @@ ${game.description || ""}
 
 
 
-
 </div>
-
 
 `;
 
@@ -924,11 +883,9 @@ function openGame(id){
 
 
 
-window.location.href =
+location.href =
 
-"game.html?id="
-+
-id;
+"game.html?id="+id;
 
 
 
@@ -956,41 +913,24 @@ function openCreateGame(){
 if(!currentUser){
 
 
-
 openLogin();
-
 
 
 return;
 
 
-
 }
 
 
 
 
+document
 
-
-
-const box =
-
-document.getElementById(
+.getElementById(
 "createGame"
-);
+)
 
-
-
-
-
-if(box){
-
-
-box.hidden=false;
-
-
-
-}
+.hidden=false;
 
 
 
@@ -1025,14 +965,16 @@ return;
 
 
 
-
 const name =
 
 document
+
 .getElementById(
 "gameName"
 )
+
 .value
+
 .trim();
 
 
@@ -1043,11 +985,12 @@ document
 const description =
 
 document
+
 .getElementById(
 "gameDescription"
 )
-.value;
 
+.value;
 
 
 
@@ -1057,9 +1000,11 @@ document
 const logo =
 
 document
+
 .getElementById(
 "gameLogo"
 )
+
 .value;
 
 
@@ -1088,6 +1033,7 @@ return;
 
 
 
+
 const {
 
 error
@@ -1098,26 +1044,20 @@ error
 
 .insert({
 
+name,
 
-name:name,
-
-
-description:description,
-
+description,
 
 logo_url:logo,
 
-
 created_by:
 currentUser.id,
-
 
 status:
 "published"
 
 
 });
-
 
 
 
@@ -1143,12 +1083,9 @@ return;
 
 
 
-
 alert(
 "Игра создана"
 );
-
-
 
 
 
