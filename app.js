@@ -1,15 +1,24 @@
 /*
 =================================================
 GAME GUILD PLATFORM
-APP.JS v3.0
-FULL AUTH + GAMES
+APP.JS v4.0
 =================================================
 */
 
 
-let currentUser = null;
+let supabaseClient;
 
-let gamesCache = [];
+let currentUser=null;
+
+let currentGame=null;
+
+let currentGuild=null;
+
+let games=[];
+
+let guilds=[];
+
+
 
 
 
@@ -19,12 +28,15 @@ document.addEventListener(
 async()=>{
 
 
-console.log(
-"APP START"
+supabaseClient =
+supabase.createClient(
+window.SUPABASE_URL,
+window.SUPABASE_ANON_KEY
 );
 
 
-await initAuth();
+
+await checkAuth();
 
 
 await loadGames();
@@ -38,40 +50,24 @@ await loadGames();
 
 
 
+
+
 /*
 =================================================
-AUTH INIT
+AUTH
 =================================================
 */
 
 
-async function initAuth(){
+async function checkAuth(){
 
-
-try{
 
 
 const {
 
-data,
-
-error
+data
 
 }=await supabaseClient.auth.getSession();
-
-
-
-
-if(error){
-
-console.error(error);
-
-showLoginButton();
-
-return;
-
-}
-
 
 
 
@@ -83,39 +79,10 @@ currentUser =
 data.session.user;
 
 
-console.log(
-"USER:",
-currentUser
-);
-
-
-showProfile();
+showProfileButton();
 
 
 }
-
-else{
-
-
-showLoginButton();
-
-
-}
-
-
-
-}
-catch(e){
-
-
-console.error(e);
-
-
-showLoginButton();
-
-
-}
-
 
 
 }
@@ -127,62 +94,32 @@ showLoginButton();
 
 
 
-
-/*
-=================================================
-AUTH WINDOW
-=================================================
-*/
+function openAuth(){
 
 
-function openLogin(){
+document
 
-
-const box =
-document.getElementById(
+.getElementById(
 "authWindow"
-);
+)
 
-
-
-if(box){
-
-
-box.hidden=false;
-
-box.style.display="flex";
+.hidden=false;
 
 
 }
 
 
 
-}
+function closeAuth(){
 
 
+document
 
-
-
-function closeLogin(){
-
-
-const box =
-document.getElementById(
+.getElementById(
 "authWindow"
-);
+)
 
-
-
-if(box){
-
-
-box.hidden=true;
-
-box.style.display="none";
-
-
-}
-
+.hidden=true;
 
 
 }
@@ -193,65 +130,24 @@ box.style.display="none";
 
 
 
-
-
-/*
-=================================================
-REGISTER
-=================================================
-*/
 
 
 async function register(){
 
 
 
-const email =
-document
-.getElementById(
-"regEmail"
-)
-.value
-.trim();
+let email =
+regEmail.value.trim();
 
 
 
-
-const password =
-document
-.getElementById(
-"regPassword"
-)
-.value;
+let password =
+regPassword.value;
 
 
 
-
-
-const name =
-document
-.getElementById(
-"regName"
-)
-.value
-.trim();
-
-
-
-
-
-if(!email || !password){
-
-
-alert(
-"Введите email и пароль"
-);
-
-
-return;
-
-
-}
+let name =
+regName.value.trim();
 
 
 
@@ -266,11 +162,9 @@ error
 
 }=await supabaseClient.auth.signUp({
 
-
 email,
 
 password,
-
 
 options:{
 
@@ -278,7 +172,7 @@ options:{
 data:{
 
 
-display_name:name
+username:name
 
 
 }
@@ -293,19 +187,13 @@ display_name:name
 
 
 
-
-
 if(error){
-
 
 alert(error.message);
 
-
 return;
 
-
 }
-
 
 
 
@@ -330,16 +218,15 @@ display_name:name
 });
 
 
-}
 
+}
 
 
 
 
 alert(
-"Регистрация завершена"
+"Регистрация создана"
 );
-
 
 
 }
@@ -350,61 +237,9 @@ alert(
 
 
 
-
-
-/*
-=================================================
-LOGIN
-=================================================
-*/
 
 
 async function login(){
-
-
-
-const email =
-
-document
-.getElementById(
-"loginEmail"
-)
-.value
-.trim();
-
-
-
-
-
-const password =
-
-document
-.getElementById(
-"loginPassword"
-)
-.value;
-
-
-
-
-
-
-if(!email || !password){
-
-
-alert(
-"Введите данные"
-);
-
-
-return;
-
-
-}
-
-
-
-
 
 
 
@@ -416,10 +251,11 @@ error
 
 }=await supabaseClient.auth.signInWithPassword({
 
+email:
+loginEmail.value,
 
-email,
-
-password
+password:
+loginPassword.value
 
 
 });
@@ -430,13 +266,10 @@ password
 
 
 
-
 if(error){
 
 
-alert(
-error.message
-);
+alert(error.message);
 
 
 return;
@@ -447,37 +280,14 @@ return;
 
 
 
-
-currentUser =
-data.user;
+currentUser=data.user;
 
 
 
+closeAuth();
 
 
-console.log(
-"LOGIN OK",
-currentUser
-);
-
-
-
-
-
-closeLogin();
-
-
-
-
-
-showProfile();
-
-
-
-
-
-await loadGames();
-
+showProfileButton();
 
 
 }
@@ -490,20 +300,11 @@ await loadGames();
 
 
 
-/*
-=================================================
-LOGOUT
-=================================================
-*/
-
-
 async function logout(){
 
 
+
 await supabaseClient.auth.signOut();
-
-
-currentUser=null;
 
 
 location.reload();
@@ -519,30 +320,17 @@ location.reload();
 
 
 
-/*
-=================================================
-PROFILE
-=================================================
-*/
-
-
-function showProfile(){
+function showProfileButton(){
 
 
 
-const box =
+document
 
-document.getElementById(
-"profileBlock"
-);
+.getElementById(
+"authBlock"
+)
 
-
-
-
-if(box){
-
-
-box.innerHTML=`
+.innerHTML=`
 
 <button onclick="logout()">
 
@@ -557,68 +345,6 @@ ${currentUser.email}
 `;
 
 
-}
-
-
-
-
-
-const profile =
-
-document.getElementById(
-"profile"
-);
-
-
-
-if(profile){
-
-
-profile.hidden=false;
-
-
-}
-
-
-
-}
-
-
-
-
-
-
-
-
-function showLoginButton(){
-
-
-
-const box =
-
-document.getElementById(
-"profileBlock"
-);
-
-
-
-if(box){
-
-
-box.innerHTML=`
-
-<button onclick="openLogin()">
-
-Войти
-
-</button>
-
-`;
-
-
-}
-
-
 
 }
 
@@ -632,7 +358,100 @@ box.innerHTML=`
 
 /*
 =================================================
-LOAD GAMES
+VIEWS
+=================================================
+*/
+
+
+function hideViews(){
+
+
+
+[
+"homeView",
+"gameView",
+"guildView",
+"profileView"
+
+]
+
+.forEach(id=>{
+
+
+let e=document.getElementById(id);
+
+
+if(e)
+
+e.hidden=true;
+
+
+});
+
+
+}
+
+
+
+
+
+
+function showHome(){
+
+
+hideViews();
+
+
+homeView.hidden=false;
+
+
+}
+
+
+
+function showProfile(){
+
+
+hideViews();
+
+
+profileView.hidden=false;
+
+
+
+profileInfo.innerHTML=`
+
+<h3>
+
+${currentUser?.email || "Гость"}
+
+</h3>
+
+`;
+
+
+
+}
+
+
+
+function showGames(){
+
+showHome();
+
+}
+
+
+
+
+
+
+
+
+
+/*
+=================================================
+GAMES
 =================================================
 */
 
@@ -664,15 +483,10 @@ ascending:false
 
 
 
-
-
 if(error){
 
 
-console.error(
-"LOAD GAMES",
-error
-);
+console.error(error);
 
 
 return;
@@ -684,18 +498,10 @@ return;
 
 
 
+games=data || [];
 
 
-gamesCache =
-data || [];
-
-
-
-
-
-renderGames(
-gamesCache
-);
+renderGames(games);
 
 
 
@@ -706,92 +512,16 @@ gamesCache
 
 
 
-
-
-
-/*
-=================================================
-SEARCH
-=================================================
-*/
-
-
-function searchGames(){
-
-
-
-const text =
-
-document
-.getElementById(
-"gameSearch"
-)
-.value
-
-.toLowerCase();
-
-
-
-
-
-
-const result =
-
-gamesCache.filter(game=>{
-
-
-return (
-
-game.name || ""
-
-)
-
-.toLowerCase()
-
-.includes(text);
-
-
-
-});
-
-
-
-
-
-
-
-renderGames(result);
-
-
-
-}
-
-
-
-
-
-
-
-
-
-/*
-=================================================
-RENDER GAMES
-=================================================
-*/
 
 
 function renderGames(list){
 
 
 
-const box =
-
-document
-.getElementById(
+const box=
+document.getElementById(
 "gamesList"
 );
-
 
 
 
@@ -799,7 +529,6 @@ document
 if(!box)
 
 return;
-
 
 
 
@@ -815,31 +544,24 @@ box.innerHTML="";
 list.forEach(game=>{
 
 
+box.innerHTML += `
 
-box.innerHTML+=`
 
-<div class="game-card"
+<div class="card"
 
 onclick="openGame('${game.id}')">
 
 
-${
+<img
 
-game.logo_url
+src="${game.logo_url || ''}"
 
-?
+width="100%"
 
-`
+height="180"
 
-<img src="${game.logo_url}">
 
-`
-
-:
-
-""
-
-}
+>
 
 
 
@@ -848,7 +570,6 @@ game.logo_url
 ${game.name}
 
 </h3>
-
 
 
 <p>
@@ -861,8 +582,8 @@ ${game.description || ""}
 
 </div>
 
-`;
 
+`;
 
 
 });
@@ -879,13 +600,29 @@ ${game.description || ""}
 
 
 
-function openGame(id){
+function searchGames(){
 
 
 
-location.href =
+let text=
 
-"game.html?id="+id;
+gameSearch.value.toLowerCase();
+
+
+
+renderGames(
+
+games.filter(g=>
+
+g.name
+
+.toLowerCase()
+
+.includes(text)
+
+)
+
+);
 
 
 
@@ -897,41 +634,22 @@ location.href =
 
 
 
-
-
-/*
-=================================================
-CREATE GAME
-=================================================
-*/
 
 
 function openCreateGame(){
 
 
-
-if(!currentUser){
-
-
-openLogin();
-
-
-return;
+createGameWindow.hidden=false;
 
 
 }
 
 
 
+function closeCreateGame(){
 
-document
 
-.getElementById(
-"createGame"
-)
-
-.hidden=false;
-
+createGameWindow.hidden=true;
 
 
 }
@@ -951,90 +669,21 @@ async function createGame(){
 if(!currentUser){
 
 
-alert(
-"Нужно войти"
-);
+openAuth();
 
 
 return;
 
 
 }
-
-
-
-
-
-const name =
-
-document
-
-.getElementById(
-"gameName"
-)
-
-.value
-
-.trim();
-
-
-
-
-
-
-const description =
-
-document
-
-.getElementById(
-"gameDescription"
-)
-
-.value;
-
-
-
-
-
-
-const logo =
-
-document
-
-.getElementById(
-"gameLogo"
-)
-
-.value;
-
-
-
-
-
-
-
-
-if(!name){
-
-
-alert(
-"Введите название"
-);
-
-
-return;
-
-
-}
-
-
-
 
 
 
 
 
 const {
+
+data,
 
 error
 
@@ -1044,20 +693,294 @@ error
 
 .insert({
 
-name,
+name:
+gameName.value,
 
-description,
 
-logo_url:logo,
+description:
+gameDescription.value,
+
+
+logo_url:
+gameLogo.value,
+
 
 created_by:
 currentUser.id,
+
 
 status:
 "published"
 
 
+})
+
+.select();
+
+
+
+
+
+
+if(error){
+
+
+alert(error.message);
+
+
+return;
+
+
+}
+
+
+
+closeCreateGame();
+
+
+loadGames();
+
+
+
+}
+
+
+
+
+
+
+
+
+
+async function openGame(id){
+
+
+
+const {
+
+data
+
+}=await supabaseClient
+
+.from("games")
+
+.select("*")
+
+.eq(
+"id",
+id
+);
+
+
+
+
+
+currentGame=data[0];
+
+
+
+hideViews();
+
+
+gameView.hidden=false;
+
+
+
+currentGameName.innerText=
+currentGame.name;
+
+
+currentGameDescription.innerText=
+currentGame.description || "";
+
+
+
+currentGameLogo.src=
+currentGame.logo_url || "";
+
+
+
+loadGuilds();
+
+
+
+}
+
+
+
+
+
+
+
+
+
+/*
+=================================================
+GUILDS
+=================================================
+*/
+
+
+async function loadGuilds(){
+
+
+
+const {
+
+data
+
+}=await supabaseClient
+
+.from("guilds")
+
+.select("*")
+
+.eq(
+"game_id",
+currentGame.id
+);
+
+
+
+
+
+guilds=data || [];
+
+
+
+
+
+const box=
+
+document.getElementById(
+"guildsList"
+);
+
+
+
+box.innerHTML="";
+
+
+
+
+guilds.forEach(g=>{
+
+
+box.innerHTML+=`
+
+
+<div class="card"
+
+onclick="openGuild('${g.id}')">
+
+
+<h3>
+
+${g.name}
+
+</h3>
+
+
+<p>
+
+${g.tag || ""}
+
+</p>
+
+
+</div>
+
+
+`;
+
+
 });
+
+
+}
+
+
+
+
+
+
+
+
+
+function openCreateGuild(){
+
+
+
+if(!currentUser){
+
+openAuth();
+
+return;
+
+}
+
+
+
+createGuildWindow.hidden=false;
+
+
+}
+
+
+
+function closeCreateGuild(){
+
+
+createGuildWindow.hidden=true;
+
+
+}
+
+
+
+
+
+
+
+
+
+async function createGuild(){
+
+
+
+const {
+
+data,
+
+error
+
+}=await supabaseClient
+
+.from("guilds")
+
+.insert({
+
+game_id:
+currentGame.id,
+
+name:
+guildNameInput.value,
+
+tag:
+guildTagInput.value,
+
+description:
+guildDescriptionInput.value,
+
+created_by:
+currentUser.id,
+
+is_public:true
+
+
+})
+
+.select();
 
 
 
@@ -1068,9 +991,7 @@ status:
 if(error){
 
 
-alert(
-error.message
-);
+alert(error.message);
 
 
 return;
@@ -1081,16 +1002,297 @@ return;
 
 
 
+let guild=data[0];
 
 
-alert(
-"Игра создана"
+
+
+
+
+await supabaseClient
+
+.from("guild_members")
+
+.insert({
+
+guild_id:guild.id,
+
+user_id:currentUser.id,
+
+nickname:currentUser.email,
+
+role:"leader"
+
+
+});
+
+
+
+
+
+
+openGuild(guild.id);
+
+
+}
+
+
+
+
+
+
+
+
+
+async function openGuild(id){
+
+
+
+const {
+
+data
+
+}=await supabaseClient
+
+.from("guilds")
+
+.select("*")
+
+.eq(
+"id",
+id
 );
 
 
 
-location.reload();
+currentGuild=data[0];
 
+
+
+hideViews();
+
+
+guildView.hidden=false;
+
+
+
+guildName.innerText=
+currentGuild.name;
+
+
+guildDescription.innerText=
+currentGuild.description || "";
+
+
+
+guildFaction.innerText=
+currentGuild.faction_name || "";
+
+
+
+guildLogo.src=
+currentGuild.logo_url || "";
+
+
+
+checkLeader();
+
+
+loadMembers();
+
+
+}
+
+
+
+
+
+
+
+
+
+async function checkLeader(){
+
+
+
+if(!currentUser)
+
+return;
+
+
+
+const {
+
+data
+
+}=await supabaseClient
+
+.from("guild_members")
+
+.select("*")
+
+.eq(
+guild_id,
+currentGuild.id
+)
+
+.eq(
+"user_id",
+currentUser.id
+);
+
+
+
+
+
+if(data && data.length){
+
+
+if(data[0].role==="leader"){
+
+
+leaderPanel.hidden=false;
+
+
+}
+
+
+}
+
+
+
+}
+
+
+
+
+
+
+
+
+
+async function loadMembers(){
+
+
+
+const {
+
+data
+
+}=await supabaseClient
+
+.from("guild_members")
+
+.select("*")
+
+.eq(
+"guild_id",
+currentGuild.id
+);
+
+
+
+membersList.innerHTML="";
+
+
+
+(data||[]).forEach(m=>{
+
+
+membersList.innerHTML+=`
+
+<div class="member">
+
+${m.nickname}
+
+<b>
+
+${m.role}
+
+</b>
+
+</div>
+
+`;
+
+
+});
+
+
+}
+
+
+
+
+
+
+
+
+
+/*
+=================================================
+SETTINGS
+=================================================
+*/
+
+
+function openGuildSettings(){
+
+
+guildSettingsWindow.hidden=false;
+
+
+}
+
+
+
+
+
+
+
+
+async function saveGuildSettings(){
+
+
+
+await supabaseClient
+
+.from("guilds")
+
+.update({
+
+theme_color:
+themeColor.value,
+
+button_color:
+buttonColor.value,
+
+background_url:
+backgroundUrl.value,
+
+faction_name:
+factionName.value,
+
+faction_flag_url:
+factionFlag.value
+
+
+})
+
+.eq(
+"id",
+currentGuild.id
+);
+
+
+
+
+alert(
+"Сохранено"
+);
+
+
+location.reload();
 
 
 }
