@@ -1,712 +1,362 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
-
-<meta charset="UTF-8">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-
-<title>
-Game Guild Platform
-</title>
-
-
-<link rel="stylesheet" href="style.css">
-
-
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GGP — Game Guild Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
 </head>
-
-
 <body>
 
+<div class="bg-glow" aria-hidden="true"></div>
+<div class="bg-grid" aria-hidden="true"></div>
 
-<div id="app">
+<header class="ggp-header">
+  <a class="brand" href="#/home">
+    <span class="brand-mark">GGP</span>
+    <span class="brand-sub">Game Guild Platform</span>
+  </a>
 
+  <nav class="main-nav" id="main-nav">
+    <a href="#/games" data-nav="games">Игры</a>
+    <a href="#/guilds" data-nav="guilds">Гильдии</a>
+    <a href="#/profile" data-nav="profile">Профиль</a>
+  </nav>
 
+  <div class="header-right">
+    <button id="btn-login" class="btn btn-ghost" type="button" data-action="open-auth">Войти</button>
 
-<header class="top-header">
-
-
-<div class="logo">
-GGP
-</div>
-
-
-
-<nav>
-
-<button onclick="showHome()">
-Игры
-</button>
-
-
-<button onclick="showProfile()">
-Профиль
-</button>
-
-
-</nav>
-
-
-
-<div id="authBlock">
-
-<button onclick="openAuth()">
-Войти
-</button>
-
-</div>
-
-
-
+    <div id="user-chip" class="user-chip hidden">
+      <img id="user-avatar" class="user-avatar" alt="avatar" src="" />
+      <span id="user-name" class="user-name">Игрок</span>
+      <button id="btn-logout" class="btn btn-mini" type="button" data-action="logout">Выйти</button>
+    </div>
+  </div>
 </header>
 
+<main id="view" class="view">
+  <div class="loader-block">
+    <div class="spinner"></div>
+    <p>Загрузка платформы...</p>
+  </div>
+</main>
 
+<footer class="ggp-footer">
+  <span>GGP © <span id="footer-year">2025</span> — платформа игровых сообществ</span>
+</footer>
 
+<div id="toasts" class="toasts" aria-live="polite"></div>
 
+<!-- AUTH MODAL -->
+<div id="modal-auth" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+  <div class="modal-backdrop" data-action="close-modal" data-modal="modal-auth"></div>
+  <div class="modal-card glass">
+    <button class="modal-close" type="button" data-action="close-modal" data-modal="modal-auth">✕</button>
 
+    <h2 id="auth-title" class="modal-title">Вход в GGP</h2>
+    <p class="modal-sub">Игровая платформа сообществ</p>
 
+    <div class="tabs">
+      <button class="tab active" type="button" data-auth-tab="login">Вход</button>
+      <button class="tab" type="button" data-auth-tab="register">Регистрация</button>
+    </div>
 
+    <form id="auth-form" class="form" novalidate>
+      <label class="field hidden" id="field-nickname">
+        <span>Никнейм</span>
+        <input type="text" id="auth-nickname" placeholder="NightRider" autocomplete="nickname" />
+      </label>
 
-<!-- ======================
- HOME
-====================== -->
+      <label class="field">
+        <span>Email</span>
+        <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email" required />
+      </label>
 
+      <label class="field">
+        <span>Пароль</span>
+        <input type="password" id="auth-password" placeholder="Минимум 6 символов" autocomplete="current-password" required />
+      </label>
 
-<section id="homeView">
+      <div id="auth-status" class="status hidden"></div>
 
-
-
-<div class="hero">
-
-
-<h1>
-Game Guild Platform
-</h1>
-
-
-<p>
-Создавай игровые сообщества и гильдии
-</p>
-
-
-<button onclick="openCreateGame()">
-Создать игру
-</button>
-
-
+      <button type="submit" id="auth-submit" class="btn btn-primary btn-block">Войти</button>
+    </form>
+  </div>
 </div>
 
+<!-- CREATE GAME MODAL -->
+<div id="modal-game" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="game-title">
+  <div class="modal-backdrop" data-action="close-modal" data-modal="modal-game"></div>
+  <div class="modal-card glass modal-wide">
+    <button class="modal-close" type="button" data-action="close-modal" data-modal="modal-game">✕</button>
 
+    <h2 id="game-title" class="modal-title">Создать игру</h2>
+    <p class="modal-sub">Добавьте игру, чтобы открывать внутри неё гильдии</p>
 
+    <form id="game-form" class="form" novalidate>
+      <div class="form-grid">
+        <label class="field field-full">
+          <span>Название игры *</span>
+          <input type="text" id="game-name" placeholder="Например: Starfall Odyssey" required />
+        </label>
 
+        <label class="field field-full">
+          <span>Описание</span>
+          <textarea id="game-description" rows="3" placeholder="Коротко о жанре, мире и особенностях игры"></textarea>
+        </label>
 
+        <label class="field">
+          <span>Логотип (изображение)</span>
+          <input type="file" id="game-logo" accept="image/*" />
+        </label>
 
+        <label class="field">
+          <span>Баннер (изображение)</span>
+          <input type="file" id="game-banner" accept="image/*" />
+        </label>
 
-<div class="content-block">
+        <label class="field">
+          <span>Фон страницы (изображение)</span>
+          <input type="file" id="game-background" accept="image/*" />
+        </label>
 
+        <label class="field">
+          <span>Сайт</span>
+          <input type="url" id="game-website" placeholder="https://example.com" />
+        </label>
 
-<h2>
-Игры
-</h2>
+        <label class="field">
+          <span>Discord</span>
+          <input type="url" id="game-discord" placeholder="https://discord.gg/xxxxxx" />
+        </label>
 
+        <label class="field">
+          <span>Цвет темы</span>
+          <input type="color" id="game-theme-color" value="#7c3aed" />
+        </label>
 
+        <label class="field">
+          <span>Цвет кнопок</span>
+          <input type="color" id="game-button-color" value="#2563eb" />
+        </label>
 
-<input
+        <label class="field">
+          <span>Стиль кнопок</span>
+          <select id="game-button-style">
+            <option value="solid">Solid</option>
+            <option value="outline">Outline</option>
+            <option value="gradient">Gradient</option>
+          </select>
+        </label>
 
-id="gameSearch"
+        <label class="field field-check">
+          <input type="checkbox" id="game-public" checked />
+          <span>Публичная игра</span>
+        </label>
+      </div>
 
-placeholder="Поиск игры..."
+      <div id="game-status" class="status hidden"></div>
 
-oninput="searchGames()"
-
->
-
-
-
-
-<div id="gamesList">
-
-
+      <button type="submit" id="game-submit" class="btn btn-primary btn-block">Создать игру</button>
+    </form>
+  </div>
 </div>
 
+<!-- CREATE GUILD MODAL -->
+<div id="modal-guild" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="guild-title">
+  <div class="modal-backdrop" data-action="close-modal" data-modal="modal-guild"></div>
+  <div class="modal-card glass modal-wide">
+    <button class="modal-close" type="button" data-action="close-modal" data-modal="modal-guild">✕</button>
 
+    <h2 id="guild-title" class="modal-title">Создать гильдию</h2>
+    <p class="modal-sub" id="guild-modal-sub">Заполните основные данные гильдии</p>
+
+    <form id="guild-form" class="form" novalidate>
+      <input type="hidden" id="guild-game-id" value="" />
+
+      <div class="form-grid">
+        <label class="field">
+          <span>Название гильдии *</span>
+          <input type="text" id="guild-name" placeholder="Например: Void Reapers" required />
+        </label>
+
+        <label class="field">
+          <span>Тег</span>
+          <input type="text" id="guild-tag" placeholder="VR" maxlength="8" />
+        </label>
+
+        <label class="field field-full">
+          <span>Описание</span>
+          <textarea id="guild-description" rows="3" placeholder="О гильдии, требованиях и активностях"></textarea>
+        </label>
+
+        <label class="field">
+          <span>Фракция</span>
+          <input type="text" id="guild-faction" placeholder="Например: Легион" />
+        </label>
+
+        <label class="field">
+          <span>Флаг фракции (изображение)</span>
+          <input type="file" id="guild-faction-flag" accept="image/*" />
+        </label>
+
+        <label class="field">
+          <span>Логотип (изображение)</span>
+          <input type="file" id="guild-logo" accept="image/*" />
+        </label>
+
+        <label class="field">
+          <span>Баннер (изображение)</span>
+          <input type="file" id="guild-banner" accept="image/*" />
+        </label>
+
+        <label class="field">
+          <span>Фон страницы (изображение)</span>
+          <input type="file" id="guild-background" accept="image/*" />
+        </label>
+
+        <label class="field">
+          <span>Сайт</span>
+          <input type="url" id="guild-website" placeholder="https://example.com" />
+        </label>
+
+        <label class="field">
+          <span>Discord</span>
+          <input type="url" id="guild-discord" placeholder="https://discord.gg/xxxxxx" />
+        </label>
+
+        <label class="field">
+          <span>Цвет темы</span>
+          <input type="color" id="guild-theme-color" value="#7c3aed" />
+        </label>
+
+        <label class="field">
+          <span>Цвет кнопок</span>
+          <input type="color" id="guild-button-color" value="#2563eb" />
+        </label>
+
+        <label class="field">
+          <span>Стиль кнопок</span>
+          <select id="guild-button-style">
+            <option value="solid">Solid</option>
+            <option value="outline">Outline</option>
+            <option value="gradient">Gradient</option>
+          </select>
+        </label>
+
+        <label class="field field-check">
+          <input type="checkbox" id="guild-public" checked />
+          <span>Публичная гильдия</span>
+        </label>
+      </div>
+
+      <div id="guild-status" class="status hidden"></div>
+
+      <button type="submit" id="guild-submit" class="btn btn-primary btn-block">Создать гильдию</button>
+    </form>
+  </div>
 </div>
 
+<!-- GUILD SETTINGS MODAL -->
+<div id="modal-guild-settings" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="gs-title">
+  <div class="modal-backdrop" data-action="close-modal" data-modal="modal-guild-settings"></div>
+  <div class="modal-card glass modal-wide">
+    <button class="modal-close" type="button" data-action="close-modal" data-modal="modal-guild-settings">✕</button>
 
+    <h2 id="gs-title" class="modal-title">Настройки гильдии</h2>
+    <p class="modal-sub">Оформление, фракция и ссылки</p>
 
-</section>
+    <form id="guild-settings-form" class="form" novalidate>
+      <input type="hidden" id="gs-id" value="" />
 
+      <div class="form-grid">
+        <label class="field">
+          <span>Название гильдии *</span>
+          <input type="text" id="gs-name" required />
+        </label>
 
+        <label class="field">
+          <span>Тег</span>
+          <input type="text" id="gs-tag" maxlength="8" />
+        </label>
 
+        <label class="field field-full">
+          <span>Описание</span>
+          <textarea id="gs-description" rows="3"></textarea>
+        </label>
 
+        <label class="field">
+          <span>Фракция</span>
+          <input type="text" id="gs-faction" />
+        </label>
 
+        <label class="field">
+          <span>Новый флаг фракции</span>
+          <input type="file" id="gs-faction-flag" accept="image/*" />
+        </label>
 
+        <label class="field">
+          <span>Новый логотип</span>
+          <input type="file" id="gs-logo" accept="image/*" />
+        </label>
 
+        <label class="field">
+          <span>Новый баннер</span>
+          <input type="file" id="gs-banner" accept="image/*" />
+        </label>
 
+        <label class="field">
+          <span>Новый фон страницы</span>
+          <input type="file" id="gs-background" accept="image/*" />
+        </label>
 
-<!-- ======================
- GAME
-====================== -->
+        <label class="field">
+          <span>Сайт</span>
+          <input type="url" id="gs-website" />
+        </label>
 
+        <label class="field">
+          <span>Discord</span>
+          <input type="url" id="gs-discord" />
+        </label>
 
-<section id="gameView" hidden>
+        <label class="field">
+          <span>Цвет темы</span>
+          <input type="color" id="gs-theme-color" value="#7c3aed" />
+        </label>
 
+        <label class="field">
+          <span>Цвет кнопок</span>
+          <input type="color" id="gs-button-color" value="#2563eb" />
+        </label>
 
-<div class="content-block">
+        <label class="field">
+          <span>Стиль кнопок</span>
+          <select id="gs-button-style">
+            <option value="solid">Solid</option>
+            <option value="outline">Outline</option>
+            <option value="gradient">Gradient</option>
+          </select>
+        </label>
 
+        <label class="field field-check">
+          <input type="checkbox" id="gs-public" />
+          <span>Публичная гильдия</span>
+        </label>
+      </div>
 
-<h2 id="gameTitle">
+      <div id="gs-status" class="status hidden"></div>
 
-</h2>
-
-
-<p id="gameDescription">
-
-</p>
-
-
-
-<h3>
-Гильдии
-</h3>
-
-
-
-<div id="guildsList">
-
+      <button type="submit" id="gs-submit" class="btn btn-primary btn-block">Сохранить изменения</button>
+    </form>
+  </div>
 </div>
 
-
-
-<button onclick="openCreateGuild()">
-
-Создать гильдию
-
-</button>
-
-
-</div>
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<!-- ======================
- GUILD
-====================== -->
-
-
-<section id="guildView" hidden>
-
-
-<div class="content-block">
-
-
-<img
-
-id="guildLogo"
-
-class="guild-logo"
-
->
-
-
-
-<h2 id="guildTitle">
-
-</h2>
-
-
-<p id="guildDescription">
-
-</p>
-
-
-
-<h3>
-
-Фракция
-
-</h3>
-
-
-<p id="guildFaction">
-
-</p>
-
-
-
-<h3>
-
-Участники
-
-</h3>
-
-
-<div id="membersList">
-
-</div>
-
-
-
-
-
-
-<div id="leaderPanel" hidden>
-
-
-<h3>
-
-Панель главы
-
-</h3>
-
-
-<button onclick="openGuildSettings()">
-
-Настройки
-
-</button>
-
-
-</div>
-
-
-
-</div>
-
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<!-- ======================
- PROFILE
-====================== -->
-
-
-<section id="profileView" hidden>
-
-
-<div class="content-block">
-
-
-<h2>
-Профиль
-</h2>
-
-
-<div id="profileInfo">
-
-</div>
-
-
-
-<button onclick="logout()">
-
-Выйти
-
-</button>
-
-
-</div>
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<!-- ======================
- AUTH
-====================== -->
-
-
-<div id="authWindow" class="modal" hidden>
-
-
-<div class="modal-box">
-
-
-<h2>
-Вход
-</h2>
-
-
-<input
-
-id="loginEmail"
-
-placeholder="Email"
-
->
-
-
-<input
-
-id="loginPassword"
-
-type="password"
-
-placeholder="Пароль"
-
->
-
-
-<button onclick="login()">
-
-Войти
-
-</button>
-
-
-
-
-
-<hr>
-
-
-
-<h3>
-Регистрация
-</h3>
-
-
-
-<input
-
-id="regName"
-
-placeholder="Никнейм"
-
->
-
-
-<input
-
-id="regEmail"
-
-placeholder="Email"
-
->
-
-
-<input
-
-id="regPassword"
-
-type="password"
-
-placeholder="Пароль"
-
->
-
-
-
-<button onclick="register()">
-
-Создать аккаунт
-
-</button>
-
-
-
-
-<button onclick="closeAuth()">
-
-Закрыть
-
-</button>
-
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-
-
-
-
-<!-- ======================
- CREATE GAME
-====================== -->
-
-
-<div id="createGameWindow" class="modal" hidden>
-
-
-<div class="modal-box">
-
-
-<h2>
-Новая игра
-</h2>
-
-
-
-<input
-
-id="gameName"
-
-placeholder="Название"
-
->
-
-
-
-<textarea
-
-id="gameDescriptionInput"
-
-placeholder="Описание">
-
-</textarea>
-
-
-
-<input
-
-id="gameLogo"
-
-placeholder="Ссылка на логотип"
-
->
-
-
-
-
-<button onclick="createGame()">
-
-Создать
-
-</button>
-
-
-
-<button onclick="closeCreateGame()">
-
-Закрыть
-
-</button>
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-
-
-
-
-<!-- ======================
- CREATE GUILD
-====================== -->
-
-
-<div id="createGuildWindow" class="modal" hidden>
-
-
-<div class="modal-box">
-
-
-<h2>
-Новая гильдия
-</h2>
-
-
-
-<input
-
-id="guildNameInput"
-
-placeholder="Название"
-
->
-
-
-
-<input
-
-id="guildTagInput"
-
-placeholder="Тег"
-
->
-
-
-
-<textarea
-
-id="guildDescriptionInput"
-
-placeholder="Описание">
-
-</textarea>
-
-
-
-
-<button onclick="createGuild()">
-
-Создать
-
-</button>
-
-
-
-<button onclick="closeCreateGuild()">
-
-Закрыть
-
-</button>
-
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-
-
-
-
-<!-- ======================
- SETTINGS
-====================== -->
-
-
-<div id="guildSettingsWindow" class="modal" hidden>
-
-
-<div class="modal-box">
-
-
-<h2>
-Настройки гильдии
-</h2>
-
-
-
-<input
-
-id="themeColor"
-
-type="color"
-
->
-
-
-
-<input
-
-id="factionName"
-
-placeholder="Фракция"
-
->
-
-
-
-<input
-
-id="factionFlag"
-
-placeholder="URL флага"
-
->
-
-
-
-<button onclick="saveGuildSettings()">
-
-Сохранить
-
-</button>
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-
-
-
-
-</div>
-
-
-
-
-
-
-
-<div id="siteVersion">
-
-v4.1
-
-</div>
-
-
-
-
-
-
-
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="supabase-config.js"></script>
-
-
 <script src="app.js"></script>
-
-
-
 </body>
-
-
 </html>
