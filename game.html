@@ -9,11 +9,9 @@
 
 
 <title>
-Игра
+Game Page
 </title>
 
-
-<link rel="stylesheet" href="style.css">
 
 <link rel="stylesheet" href="game.css">
 
@@ -24,34 +22,24 @@
 <body>
 
 
+<div class="game-wrapper">
 
-<div id="gamePage">
+
 
 
 
 <header class="game-header">
 
 
-<img
-id="gameLogo"
-class="game-logo"
-src=""
-alt="Логотип"
->
+<a href="index.html">
+
+← Назад
+
+</a>
 
 
-<div>
 
-
-<h1 id="gameName">
-Загрузка...
-</h1>
-
-
-<p id="gameDescription">
-
-</p>
-
+<div id="profileBlock">
 
 </div>
 
@@ -65,43 +53,27 @@ alt="Логотип"
 
 
 
-<nav class="game-menu">
+
+<section id="gameInfo"
+class="game-card">
 
 
-<button onclick="openGameTab('guilds')">
-
-Гильдии
-
-</button>
+<img id="gameLogo">
 
 
-<button onclick="openGameTab('info')">
+<h1 id="gameName">
 
-Информация
-
-</button>
-
-
-<button onclick="openGameTab('modules')">
-
-Модули
-
-</button>
+</h1>
 
 
 
-<button
-id="createGuildButton"
-onclick="openCreateGuild()"
->
+<p id="gameDescription">
 
-Создать гильдию
-
-</button>
+</p>
 
 
 
-</nav>
+</section>
 
 
 
@@ -111,25 +83,28 @@ onclick="openCreateGuild()"
 
 
 
-<main>
+<section class="guild-section">
 
 
 
-
-
-<section
-id="guilds"
-class="game-tab"
->
+<div class="guild-title">
 
 
 <h2>
+
 Гильдии
+
 </h2>
 
 
 
-<div id="guildsList">
+<button onclick="openCreateGuild()">
+
++ Создать гильдию
+
+</button>
+
+
 
 </div>
 
@@ -137,45 +112,73 @@ class="game-tab"
 
 
 
-<section
-id="createGuild"
-class="card"
-hidden
+
+
+<input
+id="guildSearch"
+placeholder="Поиск гильдий..."
+oninput="searchGuilds()"
 >
 
 
 
-<h3>
-Новая гильдия
-</h3>
+
+
+
+<div id="guildList"
+class="guild-grid">
+
+
+</div>
+
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<section id="createGuild"
+class="create-box"
+hidden>
+
+
+<h2>
+
+Создание гильдии
+
+</h2>
+
 
 
 
 <input
-id="guildNameInput"
+id="guildName"
 placeholder="Название гильдии"
 >
 
 
 
+
+
 <input
-id="guildTagInput"
+id="guildTag"
 placeholder="Тег"
 >
 
 
 
+
 <textarea
-id="guildDescriptionInput"
+id="guildDescription"
 placeholder="Описание">
 </textarea>
 
-
-
-<input
-id="guildLogoInput"
-placeholder="Ссылка на логотип"
->
 
 
 
@@ -191,72 +194,8 @@ placeholder="Ссылка на логотип"
 </section>
 
 
-</section>
 
 
-
-
-
-
-
-
-
-<section
-id="info"
-class="game-tab"
-hidden
->
-
-
-<h2>
-Информация об игре
-</h2>
-
-
-
-<div id="gameInfo">
-
-</div>
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<section
-id="modules"
-class="game-tab"
-hidden
->
-
-
-<h2>
-Модули игры
-</h2>
-
-
-
-<div id="modulesList">
-
-</div>
-
-
-</section>
-
-
-
-
-
-
-
-
-</main>
 
 
 
@@ -268,7 +207,13 @@ hidden
 
 
 
-<div id="siteVersion"></div>
+
+
+
+<div id="siteVersion">
+
+</div>
+
 
 
 
