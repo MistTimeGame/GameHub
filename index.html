@@ -22,37 +22,63 @@ Game Guild Platform
 <body>
 
 
+
 <div id="app">
 
 
 
 
 
-<header class="main-header">
+<!-- =========================
+HEADER
+========================= -->
+
+
+<header class="top-header">
 
 
 <div class="logo">
 
-GG
+GGP
 
 </div>
 
 
 
-
-<h1>
-
-Game Guild Platform
-
-</h1>
+<nav>
 
 
+<button onclick="showHome()">
+
+Игры
+
+</button>
+
+
+<button onclick="showGuilds()">
+
+Гильдии
+
+</button>
+
+
+<button onclick="showProfile()">
+
+Профиль
+
+</button>
+
+
+</nav>
 
 
 
-<div id="profileBlock">
 
-<button onclick="openLogin()">
+
+<div id="authBlock">
+
+
+<button onclick="openAuth()">
 
 Войти
 
@@ -60,6 +86,7 @@ Game Guild Platform
 
 
 </div>
+
 
 
 </header>
@@ -71,26 +98,432 @@ Game Guild Platform
 
 
 
+
 <!-- =========================
- AUTH
+HOME
 ========================= -->
 
 
-<section id="authWindow"
-class="modal">
-
-
-<div class="modal-box">
+<section id="homeView">
 
 
 
-<button class="close-btn"
-onclick="closeLogin()">
+<div class="hero">
 
-✖
+
+
+<div class="hero-content">
+
+
+<h1>
+
+Создавай игровые сообщества
+
+</h1>
+
+
+<p>
+
+Игры.
+Гильдии.
+Альянсы.
+Свои миры.
+
+</p>
+
+
+
+<div class="hero-buttons">
+
+
+<button onclick="openCreateGame()">
+
+Создать игру
 
 </button>
 
+
+
+<button onclick="showGames()">
+
+Найти игру
+
+</button>
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+<section class="content-block">
+
+
+<h2>
+
+Игры
+
+</h2>
+
+
+
+<div class="search-line">
+
+
+<input
+
+id="gameSearch"
+
+placeholder="Поиск игры..."
+
+oninput="searchGames()"
+
+>
+
+
+</div>
+
+
+
+
+
+
+<div id="gamesList"
+
+class="cards">
+
+
+</div>
+
+
+
+</section>
+
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<!-- =========================
+GAME VIEW
+========================= -->
+
+
+<section
+
+id="gameView"
+
+hidden>
+
+
+
+<div class="game-banner">
+
+
+<img
+
+id="currentGameLogo"
+
+>
+
+
+<h1 id="currentGameName">
+
+</h1>
+
+
+<p id="currentGameDescription">
+
+</p>
+
+
+</div>
+
+
+
+
+
+<section class="content-block">
+
+
+<h2>
+
+Гильдии
+
+</h2>
+
+
+
+<div id="guildsList"
+
+class="cards">
+
+
+</div>
+
+
+
+
+<button onclick="openCreateGuild()">
+
+Создать гильдию
+
+</button>
+
+
+
+</section>
+
+
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<!-- =========================
+GUILD VIEW
+========================= -->
+
+
+<section
+
+id="guildView"
+
+hidden>
+
+
+
+<div
+
+id="guildBanner"
+
+class="guild-banner">
+
+
+
+
+
+<div>
+
+
+<img
+
+id="guildLogo"
+
+class="guild-logo"
+
+>
+
+
+
+<h1
+
+id="guildName">
+
+</h1>
+
+
+
+<p
+
+id="guildFaction">
+
+</p>
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+<section class="content-block">
+
+
+<h2>
+
+Описание
+
+</h2>
+
+
+<p id="guildDescription">
+
+</p>
+
+
+
+</section>
+
+
+
+
+
+
+
+
+<section class="content-block">
+
+
+<h2>
+
+Участники
+
+</h2>
+
+
+
+<div id="membersList">
+
+
+</div>
+
+
+</section>
+
+
+
+
+
+
+
+
+<section
+
+id="leaderPanel"
+
+class="content-block"
+
+hidden>
+
+
+
+<h2>
+
+Панель главы
+
+</h2>
+
+
+
+<button onclick="openGuildSettings()">
+
+🎨 Оформление
+
+</button>
+
+
+<button>
+
+👥 Управление участниками
+
+</button>
+
+
+</section>
+
+
+
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<!-- =========================
+PROFILE
+========================= -->
+
+
+<section
+
+id="profileView"
+
+hidden>
+
+
+
+<section class="content-block">
+
+
+<h2>
+
+Профиль
+
+</h2>
+
+
+
+<div id="profileInfo">
+
+
+</div>
+
+
+
+</section>
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<!-- =========================
+AUTH WINDOW
+========================= -->
+
+
+<div
+
+id="authWindow"
+
+class="modal"
+
+hidden>
+
+
+<div class="modal-box">
 
 
 
@@ -102,24 +535,24 @@ onclick="closeLogin()">
 
 
 
-
-
 <input
+
 id="loginEmail"
-type="email"
+
 placeholder="Email"
+
 >
-
-
-
 
 
 <input
-id="loginPassword"
-type="password"
-placeholder="Пароль"
->
 
+id="loginPassword"
+
+type="password"
+
+placeholder="Пароль"
+
+>
 
 
 
@@ -128,8 +561,6 @@ placeholder="Пароль"
 Войти
 
 </button>
-
-
 
 
 
@@ -149,35 +580,33 @@ placeholder="Пароль"
 
 
 
-
-
 <input
-id="regEmail"
-type="email"
-placeholder="Email"
->
 
-
-
-
-
-<input
-id="regPassword"
-type="password"
-placeholder="Пароль"
->
-
-
-
-
-
-<input
 id="regName"
+
 placeholder="Никнейм"
+
 >
 
 
+<input
 
+id="regEmail"
+
+placeholder="Email"
+
+>
+
+
+<input
+
+id="regPassword"
+
+type="password"
+
+placeholder="Пароль"
+
+>
 
 
 
@@ -191,79 +620,17 @@ placeholder="Никнейм"
 
 
 
-</div>
+<button onclick="closeAuth()">
 
-
-</section>
-
-
-
-
-
-
-
-
-
-<main>
-
-
-
-
-
-<section class="hero">
-
-
-<h2>
-
-Игровая платформа гильдий
-
-</h2>
-
-
-
-<p>
-
-Создавайте игровые сообщества,
-гильдии, альянсы и развивайте свои проекты.
-
-</p>
-
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<section class="games-section">
-
-
-
-<div class="section-header">
-
-
-<h2>
-
-Игры
-
-</h2>
-
-
-
-
-
-<button onclick="openCreateGame()">
-
-Добавить игру
+Закрыть
 
 </button>
 
 
+
+</div>
+
+
 </div>
 
 
@@ -273,85 +640,60 @@ placeholder="Никнейм"
 
 
 
-<input
-id="gameSearch"
-placeholder="Поиск игр..."
-oninput="searchGames()"
->
+
+<!-- =========================
+CREATE GAME
+========================= -->
 
 
+<div
 
+id="createGameWindow"
 
+class="modal"
 
-
-
-
-
-<div id="gamesList"
-class="games-grid">
-
-
-</div>
-
-
-
-
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<!-- CREATE GAME -->
-
-<section id="createGame"
-class="card"
 hidden>
 
 
 
+<div class="modal-box">
+
+
 <h2>
 
-Добавить игру
+Новая игра
 
 </h2>
 
 
 
-
-
 <input
+
 id="gameName"
+
 placeholder="Название игры"
+
 >
-
-
 
 
 
 <textarea
+
 id="gameDescription"
-placeholder="Описание игры">
+
+placeholder="Описание">
+
 </textarea>
 
 
 
-
-
-
 <input
+
 id="gameLogo"
+
 placeholder="Ссылка на логотип"
+
 >
-
-
-
 
 
 
@@ -363,7 +705,17 @@ placeholder="Ссылка на логотип"
 
 
 
-</section>
+<button onclick="closeCreateGame()">
+
+Закрыть
+
+</button>
+
+
+</div>
+
+
+</div>
 
 
 
@@ -373,47 +725,209 @@ placeholder="Ссылка на логотип"
 
 
 
-<!-- PROFILE -->
+<!-- =========================
+CREATE GUILD
+========================= -->
 
 
-<section id="profile"
-class="card"
+<div
+
+id="createGuildWindow"
+
+class="modal"
+
 hidden>
+
+
+
+<div class="modal-box">
 
 
 <h2>
 
-Профиль
+Новая гильдия
 
 </h2>
 
 
 
+<input
 
-<p id="profileName">
+id="guildNameInput"
 
-</p>
+placeholder="Название"
 
-
-
-
+>
 
 
-<button onclick="logout()">
 
-Выйти
+<input
+
+id="guildTagInput"
+
+placeholder="Тег"
+
+>
+
+
+
+
+<textarea
+
+id="guildDescriptionInput"
+
+placeholder="Описание">
+
+</textarea>
+
+
+
+
+
+<button onclick="createGuild()">
+
+Создать
 
 </button>
 
 
 
-</section>
+<button onclick="closeCreateGuild()">
+
+Закрыть
+
+</button>
+
+
+
+</div>
+
+
+</div>
 
 
 
 
 
-</main>
+
+
+
+
+<!-- =========================
+GUILD SETTINGS
+========================= -->
+
+
+<div
+
+id="guildSettingsWindow"
+
+class="modal"
+
+hidden>
+
+
+
+<div class="modal-box">
+
+
+<h2>
+
+Настройки гильдии
+
+</h2>
+
+
+
+<label>
+
+Цвет темы
+
+</label>
+
+
+<input
+
+id="themeColor"
+
+type="color"
+
+>
+
+
+
+
+
+<label>
+
+Цвет кнопок
+
+</label>
+
+
+<input
+
+id="buttonColor"
+
+type="color"
+
+>
+
+
+
+
+
+
+<input
+
+id="backgroundUrl"
+
+placeholder="Фон страницы"
+
+>
+
+
+
+
+<input
+
+id="factionName"
+
+placeholder="Фракция"
+
+>
+
+
+
+
+<input
+
+id="factionFlag"
+
+placeholder="Флаг фракции"
+
+>
+
+
+
+
+
+
+<button onclick="saveGuildSettings()">
+
+Сохранить
+
+</button>
+
+
+
+</div>
+
+
+</div>
+
+
+
 
 
 
@@ -421,7 +935,6 @@ hidden>
 
 
 </div>
-
 
 
 
@@ -431,7 +944,10 @@ hidden>
 
 <div id="siteVersion">
 
+v4.0
+
 </div>
+
 
 
 
@@ -454,5 +970,6 @@ hidden>
 
 
 </body>
+
 
 </html>
