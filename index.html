@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>GameHub — игровая платформа</title>
+
+    <meta
+        name="description"
+        content="Игровая платформа для игр, гильдий, союзов, форумов, рейтингов, рынка и игровых инструментов."
+    >
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- =========================================================
+         ШАПКА
+    ========================================================== -->
+
+    <header class="site-header">
+
+        <div class="header-inner">
+
+            <!-- Логотип -->
+            <a href="#/" class="logo">
+                <span class="logo-mark">G</span>
+                <span class="logo-text">GameHub</span>
+            </a>
+
+            <!-- Основная навигация -->
+            <nav class="main-navigation">
+
+                <a href="#/" class="nav-link">
+                    Игры
+                </a>
+
+                <a href="#/search" class="nav-link">
+                    Поиск
+                </a>
+
+                <a href="#/create-game" class="nav-link">
+                    Создать игру
+                </a>
+
+            </nav>
+
+            <!-- Правая часть -->
+            <div id="header-user-area" class="header-user-area">
+
+                <!-- Заполняется через app.js -->
+
+            </div>
+
+        </div>
+
+    </header>
+
+
+    <!-- =========================================================
+         ОСНОВНОЙ КОНТЕНТ
+    ========================================================== -->
+
+    <main id="app" class="app-container">
+
+        <!-- Контент страниц создаётся через app.js -->
+
+        <div class="page-loading">
+
+            <div class="loading-spinner"></div>
+
+            <p>
+                Загрузка...
+            </p>
+
+        </div>
+
+    </main>
+
+
+    <!-- =========================================================
+         УВЕДОМЛЕНИЯ
+    ========================================================== -->
+
+    <div
+        id="toast"
+        class="toast"
+        aria-live="polite"
+        aria-atomic="true"
+    ></div>
+
+
+    <!-- =========================================================
+         МОДАЛЬНОЕ ОКНО
+    ========================================================== -->
+
+    <div
+        id="modal-overlay"
+        class="modal-overlay"
+        hidden
+    >
+
+        <div
+            id="modal"
+            class="modal"
+            role="dialog"
+            aria-modal="true"
+        >
+
+            <button
+                id="modal-close"
+                class="modal-close"
+                type="button"
+                aria-label="Закрыть"
+            >
+                ×
+            </button>
+
+            <div id="modal-content">
+
+                <!-- Контент модального окна -->
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================================
+         SUPABASE
+    ========================================================== -->
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+    ></script>
+
+
+    <!-- =========================================================
+         НАСТРОЙКИ SUPABASE
+    ========================================================== -->
+
+    <script src="supabase-config.js"></script>
+
+
+    <!-- =========================================================
+         ОСНОВНОЙ JAVASCRIPT
+    ========================================================== -->
+
+    <script src="app.js"></script>
+
+</body>
+</html>
