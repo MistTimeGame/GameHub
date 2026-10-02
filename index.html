@@ -22,50 +22,28 @@ Game Guild Platform
 <body>
 
 
-
 <div id="app">
 
-
-
-
-
-<!-- =========================
-HEADER
-========================= -->
 
 
 <header class="top-header">
 
 
 <div class="logo">
-
 GGP
-
 </div>
 
 
 
 <nav>
 
-
 <button onclick="showHome()">
-
 Игры
-
-</button>
-
-
-<button onclick="showGuilds()">
-
-Гильдии
-
 </button>
 
 
 <button onclick="showProfile()">
-
 Профиль
-
 </button>
 
 
@@ -73,17 +51,11 @@ GGP
 
 
 
-
-
 <div id="authBlock">
 
-
 <button onclick="openAuth()">
-
 Войти
-
 </button>
-
 
 </div>
 
@@ -98,10 +70,9 @@ GGP
 
 
 
-
-<!-- =========================
-HOME
-========================= -->
+<!-- ======================
+ HOME
+====================== -->
 
 
 <section id="homeView">
@@ -111,72 +82,36 @@ HOME
 <div class="hero">
 
 
-
-<div class="hero-content">
-
-
 <h1>
-
-Создавай игровые сообщества
-
+Game Guild Platform
 </h1>
 
 
 <p>
-
-Игры.
-Гильдии.
-Альянсы.
-Свои миры.
-
+Создавай игровые сообщества и гильдии
 </p>
 
 
-
-<div class="hero-buttons">
-
-
 <button onclick="openCreateGame()">
-
 Создать игру
-
-</button>
-
-
-
-<button onclick="showGames()">
-
-Найти игру
-
 </button>
 
 
 </div>
 
 
-</div>
-
-
-</div>
 
 
 
 
 
-
-
-<section class="content-block">
+<div class="content-block">
 
 
 <h2>
-
 Игры
-
 </h2>
 
-
-
-<div class="search-line">
 
 
 <input
@@ -190,23 +125,15 @@ oninput="searchGames()"
 >
 
 
-</div>
 
 
-
-
-
-
-<div id="gamesList"
-
-class="cards">
+<div id="gamesList">
 
 
 </div>
 
 
-
-</section>
+</div>
 
 
 
@@ -220,63 +147,37 @@ class="cards">
 
 
 
-<!-- =========================
-GAME VIEW
-========================= -->
+<!-- ======================
+ GAME
+====================== -->
 
 
-<section
-
-id="gameView"
-
-hidden>
+<section id="gameView" hidden>
 
 
-
-<div class="game-banner">
-
-
-<img
-
-id="currentGameLogo"
-
->
+<div class="content-block">
 
 
-<h1 id="currentGameName">
-
-</h1>
-
-
-<p id="currentGameDescription">
-
-</p>
-
-
-</div>
-
-
-
-
-
-<section class="content-block">
-
-
-<h2>
-
-Гильдии
+<h2 id="gameTitle">
 
 </h2>
 
 
+<p id="gameDescription">
 
-<div id="guildsList"
+</p>
 
-class="cards">
 
+
+<h3>
+Гильдии
+</h3>
+
+
+
+<div id="guildsList">
 
 </div>
-
 
 
 
@@ -287,10 +188,7 @@ class="cards">
 </button>
 
 
-
-</section>
-
-
+</div>
 
 
 </section>
@@ -303,30 +201,15 @@ class="cards">
 
 
 
-<!-- =========================
-GUILD VIEW
-========================= -->
+<!-- ======================
+ GUILD
+====================== -->
 
 
-<section
-
-id="guildView"
-
-hidden>
+<section id="guildView" hidden>
 
 
-
-<div
-
-id="guildBanner"
-
-class="guild-banner">
-
-
-
-
-
-<div>
+<div class="content-block">
 
 
 <img
@@ -339,39 +222,7 @@ class="guild-logo"
 
 
 
-<h1
-
-id="guildName">
-
-</h1>
-
-
-
-<p
-
-id="guildFaction">
-
-</p>
-
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-
-
-<section class="content-block">
-
-
-<h2>
-
-Описание
+<h2 id="guildTitle">
 
 </h2>
 
@@ -382,114 +233,54 @@ id="guildFaction">
 
 
 
-</section>
+<h3>
+
+Фракция
+
+</h3>
+
+
+<p id="guildFaction">
+
+</p>
 
 
 
-
-
-
-
-
-<section class="content-block">
-
-
-<h2>
+<h3>
 
 Участники
 
-</h2>
-
+</h3>
 
 
 <div id="membersList">
 
-
 </div>
 
 
-</section>
 
 
 
 
+<div id="leaderPanel" hidden>
 
 
-
-
-<section
-
-id="leaderPanel"
-
-class="content-block"
-
-hidden>
-
-
-
-<h2>
+<h3>
 
 Панель главы
 
-</h2>
-
+</h3>
 
 
 <button onclick="openGuildSettings()">
 
-🎨 Оформление
+Настройки
 
 </button>
 
 
-<button>
+</div>
 
-👥 Управление участниками
-
-</button>
-
-
-</section>
-
-
-
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<!-- =========================
-PROFILE
-========================= -->
-
-
-<section
-
-id="profileView"
-
-hidden>
-
-
-
-<section class="content-block">
-
-
-<h2>
-
-Профиль
-
-</h2>
-
-
-
-<div id="profileInfo">
 
 
 </div>
@@ -499,6 +290,45 @@ hidden>
 </section>
 
 
+
+
+
+
+
+
+
+<!-- ======================
+ PROFILE
+====================== -->
+
+
+<section id="profileView" hidden>
+
+
+<div class="content-block">
+
+
+<h2>
+Профиль
+</h2>
+
+
+<div id="profileInfo">
+
+</div>
+
+
+
+<button onclick="logout()">
+
+Выйти
+
+</button>
+
+
+</div>
+
+
 </section>
 
 
@@ -509,30 +339,20 @@ hidden>
 
 
 
-<!-- =========================
-AUTH WINDOW
-========================= -->
+<!-- ======================
+ AUTH
+====================== -->
 
 
-<div
-
-id="authWindow"
-
-class="modal"
-
-hidden>
+<div id="authWindow" class="modal" hidden>
 
 
 <div class="modal-box">
 
 
-
 <h2>
-
-Авторизация
-
+Вход
 </h2>
-
 
 
 <input
@@ -555,7 +375,6 @@ placeholder="Пароль"
 >
 
 
-
 <button onclick="login()">
 
 Войти
@@ -570,12 +389,8 @@ placeholder="Пароль"
 
 
 
-
-
 <h3>
-
 Регистрация
-
 </h3>
 
 
@@ -619,7 +434,6 @@ placeholder="Пароль"
 
 
 
-
 <button onclick="closeAuth()">
 
 Закрыть
@@ -641,28 +455,19 @@ placeholder="Пароль"
 
 
 
-<!-- =========================
-CREATE GAME
-========================= -->
+<!-- ======================
+ CREATE GAME
+====================== -->
 
 
-<div
-
-id="createGameWindow"
-
-class="modal"
-
-hidden>
-
+<div id="createGameWindow" class="modal" hidden>
 
 
 <div class="modal-box">
 
 
 <h2>
-
 Новая игра
-
 </h2>
 
 
@@ -671,7 +476,7 @@ hidden>
 
 id="gameName"
 
-placeholder="Название игры"
+placeholder="Название"
 
 >
 
@@ -679,7 +484,7 @@ placeholder="Название игры"
 
 <textarea
 
-id="gameDescription"
+id="gameDescriptionInput"
 
 placeholder="Описание">
 
@@ -694,6 +499,7 @@ id="gameLogo"
 placeholder="Ссылка на логотип"
 
 >
+
 
 
 
@@ -725,28 +531,19 @@ placeholder="Ссылка на логотип"
 
 
 
-<!-- =========================
-CREATE GUILD
-========================= -->
+<!-- ======================
+ CREATE GUILD
+====================== -->
 
 
-<div
-
-id="createGuildWindow"
-
-class="modal"
-
-hidden>
-
+<div id="createGuildWindow" class="modal" hidden>
 
 
 <div class="modal-box">
 
 
 <h2>
-
 Новая гильдия
-
 </h2>
 
 
@@ -771,7 +568,6 @@ placeholder="Тег"
 
 
 
-
 <textarea
 
 id="guildDescriptionInput"
@@ -779,7 +575,6 @@ id="guildDescriptionInput"
 placeholder="Описание">
 
 </textarea>
-
 
 
 
@@ -813,37 +608,21 @@ placeholder="Описание">
 
 
 
-<!-- =========================
-GUILD SETTINGS
-========================= -->
+<!-- ======================
+ SETTINGS
+====================== -->
 
 
-<div
-
-id="guildSettingsWindow"
-
-class="modal"
-
-hidden>
-
+<div id="guildSettingsWindow" class="modal" hidden>
 
 
 <div class="modal-box">
 
 
 <h2>
-
 Настройки гильдии
-
 </h2>
 
-
-
-<label>
-
-Цвет темы
-
-</label>
 
 
 <input
@@ -853,39 +632,6 @@ id="themeColor"
 type="color"
 
 >
-
-
-
-
-
-<label>
-
-Цвет кнопок
-
-</label>
-
-
-<input
-
-id="buttonColor"
-
-type="color"
-
->
-
-
-
-
-
-
-<input
-
-id="backgroundUrl"
-
-placeholder="Фон страницы"
-
->
-
 
 
 
@@ -899,17 +645,13 @@ placeholder="Фракция"
 
 
 
-
 <input
 
 id="factionFlag"
 
-placeholder="Флаг фракции"
+placeholder="URL флага"
 
 >
-
-
-
 
 
 
@@ -918,7 +660,6 @@ placeholder="Флаг фракции"
 Сохранить
 
 </button>
-
 
 
 </div>
@@ -944,10 +685,9 @@ placeholder="Флаг фракции"
 
 <div id="siteVersion">
 
-v4.0
+v4.1
 
 </div>
-
 
 
 
@@ -960,9 +700,6 @@ v4.0
 
 
 <script src="supabase-config.js"></script>
-
-
-<script src="version.js"></script>
 
 
 <script src="app.js"></script>
