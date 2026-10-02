@@ -1,19 +1,16 @@
 /*
 =================================================
 GAME GUILD PLATFORM
-GAME PAGE v2.0.0
+GUILD PAGE v2.0.0
 =================================================
 */
 
 
-let gameId = null;
+let guildId = null;
 
-let currentGame = null;
-
-let guildsCache = [];
+let guildData = null;
 
 let currentUser = null;
-
 
 
 
@@ -27,7 +24,8 @@ document.addEventListener(
 async()=>{
 
 
-gameId =
+guildId =
+
 new URLSearchParams(
 window.location.search
 )
@@ -36,11 +34,12 @@ window.location.search
 
 
 
-if(!gameId){
+
+if(!guildId){
 
 
 alert(
-"Игра не найдена"
+"Гильдия не найдена"
 );
 
 
@@ -53,16 +52,13 @@ return;
 
 
 
-
 await checkSession();
 
 
-
-await loadGame();
-
+await loadGuild();
 
 
-await loadGuilds();
+await loadMembers();
 
 
 
@@ -95,6 +91,7 @@ data
 
 
 
+
 if(data.session){
 
 
@@ -118,12 +115,12 @@ data.session.user;
 
 /*
 =========================
-LOAD GAME
+LOAD GUILD
 =========================
 */
 
 
-async function loadGame(){
+async function loadGuild(){
 
 
 
@@ -135,13 +132,13 @@ error
 
 }=await supabaseClient
 
-.from("games")
+.from("guilds")
 
 .select("*")
 
 .eq(
 "id",
-gameId
+guildId
 )
 
 .single();
@@ -151,12 +148,11 @@ gameId
 
 
 
+
 if(error){
 
 
-alert(
-error.message
-);
+alert(error.message);
 
 
 return;
@@ -170,8 +166,9 @@ return;
 
 
 
-currentGame =
+guildData =
 data;
+
 
 
 
@@ -179,7 +176,7 @@ data;
 
 document
 .getElementById(
-"gameName"
+"guildName"
 )
 .innerText =
 data.name;
@@ -189,12 +186,35 @@ data.name;
 
 
 
+
 document
 .getElementById(
-"gameDescription"
+"guildTag"
 )
 .innerText =
+
+data.tag
+?
+"[ "+data.tag+" ]"
+:
+"";
+
+
+
+
+
+
+
+
+document
+.getElementById(
+"guildDescription"
+)
+.innerText =
+
 data.description || "";
+
+
 
 
 
@@ -205,9 +225,8 @@ const logo =
 
 document
 .getElementById(
-"gameLogo"
+"guildLogo"
 );
-
 
 
 
@@ -222,11 +241,25 @@ data.logo_url;
 
 }
 
-else{
 
 
-logo.style.display =
-"none";
+
+
+
+
+
+/*
+=========================
+THEME
+=========================
+*/
+
+
+if(data.theme_color){
+
+
+document.body.style.background =
+data.theme_color;
 
 
 }
@@ -235,8 +268,54 @@ logo.style.display =
 
 
 
+
+
+if(data.background_url){
+
+
+document.body.style.backgroundImage =
+
+`url(${data.background_url})`;
+
+
+
+document.body.style.backgroundSize =
+"cover";
+
+
+
 }
 
+
+
+
+
+
+
+
+const banner =
+
+document
+.getElementById(
+"guildBanner"
+);
+
+
+
+
+
+
+if(data.banner_url){
+
+
+
+banner.style.backgroundImage =
+
+`url(${data.banner_url})`;
+
+
+
+}
 
 
 
@@ -247,160 +326,52 @@ logo.style.display =
 
 /*
 =========================
-GUILDS
+FACTION
 =========================
 */
 
 
-async function loadGuilds(){
-
-
-
-const {
-
-data,
-
-error
-
-}=await supabaseClient
-
-.from("guilds")
-
-.select("*")
-
-.eq(
-"game_id",
-gameId
-)
-
-.order(
-"created_at",
-{
-ascending:false
-}
-);
-
-
-
-
-
-
-if(error){
-
-
-console.error(error);
-
-
-return;
-
-
-}
-
-
-
-
-
-guildsCache =
-data || [];
-
-
-
-
-
-renderGuilds(
-guildsCache
-);
-
-
-
-}
-
-
-
-
-
-
-
-
-
-function renderGuilds(list){
-
-
-
-const box =
+const faction =
 
 document
 .getElementById(
-"guildList"
+"factionBlock"
 );
 
 
 
 
 
-box.innerHTML="";
+
+
+if(data.faction_name){
 
 
 
+faction.innerHTML = `
 
 
-
-list.forEach(guild=>{
-
+<div class="faction">
 
 
-box.innerHTML += `
+<img src="${
+
+data.faction_flag_url || ""
+
+}">
 
 
-<div class="guild-card"
-
-onclick="openGuild('${guild.id}')">
-
-
-${
-
-guild.logo_url
-
-?
-
-`
-
-<img src="${guild.logo_url}">
-
-`
-
-:
-
-""
-
-}
-
-
+<div>
 
 
 <h3>
 
-${guild.name}
+${data.faction_name}
 
 </h3>
 
 
-
-<p>
-
-${guild.tag || ""}
-
-</p>
-
-
-
-
-<p>
-
-${guild.description || ""}
-
-</p>
-
+</div>
 
 
 </div>
@@ -410,7 +381,16 @@ ${guild.description || ""}
 
 
 
-});
+}
+
+
+
+
+
+
+
+
+await checkLeader();
 
 
 
@@ -426,184 +406,19 @@ ${guild.description || ""}
 
 /*
 =========================
-SEARCH
+LEADER
 =========================
 */
 
 
-function searchGuilds(){
+async function checkLeader(){
 
 
 
-const text =
-
-document
-.getElementById(
-"guildSearch"
-)
-.value
-.toLowerCase();
-
-
-
-
-
-
-const result =
-
-guildsCache.filter(
-
-guild =>
-
-
-guild.name
-
-.toLowerCase()
-
-.includes(text)
-
-
-);
-
-
-
-
-
-
-renderGuilds(result);
-
-
-
-}
-
-
-
-
-
-
-
-
-
-/*
-=========================
-CREATE GUILD
-=========================
-*/
-
-
-function openCreateGuild(){
-
-
-
-if(!currentUser){
-
-
-
-alert(
-"Сначала войдите"
-);
-
+if(!currentUser)
 
 return;
 
-
-}
-
-
-
-
-
-
-
-document
-.getElementById(
-"createGuild"
-)
-.hidden=false;
-
-
-
-}
-
-
-
-
-
-
-
-
-
-async function createGuild(){
-
-
-
-if(!currentUser){
-
-
-return;
-
-
-}
-
-
-
-
-
-
-const name =
-
-document
-.getElementById(
-"guildName"
-)
-.value
-.trim();
-
-
-
-
-
-
-const tag =
-
-document
-.getElementById(
-"guildTag"
-)
-.value
-.trim();
-
-
-
-
-
-
-const description =
-
-document
-.getElementById(
-"guildDescription"
-)
-.value;
-
-
-
-
-
-
-
-if(!name){
-
-
-alert(
-"Введите название"
-);
-
-
-return;
-
-
-}
 
 
 
@@ -619,30 +434,320 @@ error
 
 }=await supabaseClient
 
-.from("guilds")
+.from("guild_members")
 
-.insert({
+.select("*")
 
-game_id:
-gameId,
+.eq(
+"guild_id",
+guildId
+)
 
-name:name,
-
-tag:tag,
-
-description:description,
-
-created_by:
-currentUser.id,
-
-is_public:true
-
-
-})
-
-.select()
+.eq(
+"user_id",
+currentUser.id
+)
 
 .single();
+
+
+
+
+
+
+
+if(error)
+
+
+return;
+
+
+
+
+
+
+
+if(data.role==="leader"){
+
+
+
+document
+
+.getElementById(
+"leaderPanel"
+)
+
+.hidden=false;
+
+
+
+}
+
+
+
+}
+
+
+
+
+
+
+
+
+
+/*
+=========================
+SETTINGS OPEN
+=========================
+*/
+
+
+function openGuildSettings(){
+
+
+
+document
+
+.getElementById(
+"guildSettings"
+)
+
+.hidden=false;
+
+
+
+
+
+
+if(!guildData)
+
+return;
+
+
+
+
+
+
+document
+.getElementById(
+"themeColor"
+)
+.value =
+
+guildData.theme_color ||
+"#ffffff";
+
+
+
+
+
+
+
+document
+.getElementById(
+"buttonColor"
+)
+.value =
+
+guildData.button_color ||
+"#ffcc00";
+
+
+
+
+
+
+
+
+document
+.getElementById(
+"buttonStyle"
+)
+.value =
+
+guildData.button_style ||
+"round";
+
+
+
+
+
+
+
+
+document
+.getElementById(
+"backgroundUrl"
+)
+.value =
+
+guildData.background_url ||
+"";
+
+
+
+
+
+
+
+document
+.getElementById(
+"bannerUrl"
+)
+.value =
+
+guildData.banner_url ||
+"";
+
+
+
+
+
+
+
+document
+.getElementById(
+"factionName"
+)
+.value =
+
+guildData.faction_name ||
+"";
+
+
+
+
+
+
+
+document
+.getElementById(
+"factionFlag"
+)
+.value =
+
+guildData.faction_flag_url ||
+"";
+
+
+
+}
+
+
+
+
+
+
+
+
+
+/*
+=========================
+SAVE SETTINGS
+=========================
+*/
+
+
+async function saveGuildSettings(){
+
+
+
+const update = {
+
+
+theme_color:
+
+document
+.getElementById(
+"themeColor"
+)
+.value,
+
+
+
+button_color:
+
+document
+.getElementById(
+"buttonColor"
+)
+.value,
+
+
+
+button_style:
+
+document
+.getElementById(
+"buttonStyle"
+)
+.value,
+
+
+
+background_url:
+
+document
+.getElementById(
+"backgroundUrl"
+)
+.value,
+
+
+
+banner_url:
+
+document
+.getElementById(
+"bannerUrl"
+)
+.value,
+
+
+
+faction_name:
+
+document
+.getElementById(
+"factionName"
+)
+.value,
+
+
+
+faction_flag_url:
+
+document
+.getElementById(
+"factionFlag"
+)
+.value
+
+
+
+};
+
+
+
+
+
+
+
+
+const {
+
+error
+
+}=await supabaseClient
+
+.from("guilds")
+
+.update(update)
+
+.eq(
+"id",
+guildId
+);
 
 
 
@@ -653,9 +758,7 @@ is_public:true
 if(error){
 
 
-alert(
-error.message
-);
+alert(error.message);
 
 
 return;
@@ -669,45 +772,8 @@ return;
 
 
 
-/*
-создаем главу
-*/
-
-
-
-await supabaseClient
-
-.from("guild_members")
-
-.insert({
-
-guild_id:
-data.id,
-
-game_id:
-gameId,
-
-user_id:
-currentUser.id,
-
-nickname:
-currentUser.email,
-
-role:
-"leader"
-
-
-});
-
-
-
-
-
-
-
-
 alert(
-"Гильдия создана"
+"Настройки сохранены"
 );
 
 
@@ -726,15 +792,150 @@ location.reload();
 
 
 
-function openGuild(id){
+/*
+=========================
+MEMBERS
+=========================
+*/
+
+
+async function openMembers(){
 
 
 
-window.location.href =
+document
 
-"guild.html?id="
-+
-id;
+.getElementById(
+"membersPanel"
+)
+
+.hidden=false;
+
+
+
+}
+
+
+
+
+
+
+
+
+
+async function loadMembers(){
+
+
+
+const {
+
+data,
+
+error
+
+}=await supabaseClient
+
+.from("guild_members")
+
+.select("*")
+
+.eq(
+"guild_id",
+guildId
+)
+
+.order(
+"joined_at",
+{
+ascending:true
+}
+);
+
+
+
+
+
+
+
+const box =
+
+document
+
+.getElementById(
+"membersList"
+);
+
+
+
+
+
+
+
+if(!box)
+
+return;
+
+
+
+
+
+
+box.innerHTML="";
+
+
+
+
+
+
+
+if(error)
+
+return;
+
+
+
+
+
+
+
+data.forEach(member=>{
+
+
+
+box.innerHTML += `
+
+
+<div class="member">
+
+
+<div>
+
+
+${member.nickname || "Игрок"}
+
+
+</div>
+
+
+
+<div class="member-role">
+
+
+${member.role}
+
+
+</div>
+
+
+
+</div>
+
+
+`;
+
+
+
+});
 
 
 
