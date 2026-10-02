@@ -1,15 +1,19 @@
 /*
 =================================================
-GAME PAGE SYSTEM v2.0.0
+GUILD SYSTEM v2.0.0
 =================================================
 */
 
 
-let gameId = null;
+let guildId = null;
 
-let gameData = null;
+let guildData = null;
 
 let currentUser = null;
+
+let currentRole = "member";
+
+
 
 
 
@@ -44,43 +48,36 @@ data.session.user;
 
 
 
+
 const params =
 new URLSearchParams(
-window.location.search
+location.search
 );
 
 
 
-gameId =
+guildId =
 params.get("id");
 
 
 
 
-if(!gameId){
 
+if(!guildId){
 
 alert(
-"Игра не найдена"
+"Гильдия не найдена"
 );
 
-
 return;
-
 
 }
 
 
 
 
-await loadGame();
 
-
-await loadGuilds();
-
-
-await loadModules();
-
+await loadGuild();
 
 
 });
@@ -95,12 +92,12 @@ await loadModules();
 
 /*
 ==============================
-LOAD GAME
+LOAD GUILD
 ==============================
 */
 
 
-async function loadGame(){
+async function loadGuild(){
 
 
 
@@ -112,13 +109,13 @@ error
 
 }=await supabaseClient
 
-.from("games")
+.from("guilds")
 
 .select("*")
 
 .eq(
 "id",
-gameId
+guildId
 )
 
 .single();
@@ -129,10 +126,135 @@ gameId
 
 if(error){
 
+alert(error.message);
 
-alert(
-error.message
-);
+return;
+
+}
+
+
+
+
+guildData=data;
+
+
+
+
+document
+.getElementById(
+"guildName"
+)
+.innerText =
+data.name;
+
+
+
+document
+.getElementById(
+"guildTag"
+)
+.innerText =
+data.tag || "";
+
+
+
+document
+.getElementById(
+"guildFaction"
+)
+.innerText =
+data.faction_name || "";
+
+
+
+document
+.getElementById(
+"guildDescription"
+)
+.innerText =
+data.description || "";
+
+
+
+
+
+
+
+if(data.logo_url)
+
+guildLogo.src=data.logo_url;
+
+
+
+
+if(data.faction_flag_url)
+
+factionFlag.src=data.faction_flag_url;
+
+
+
+
+if(data.banner_url)
+
+guildBanner.style.backgroundImage =
+`url(${data.banner_url})`;
+
+
+
+
+
+editName.value=data.name;
+
+editTag.value=data.tag || "";
+
+editDescription.value=data.description || "";
+
+factionName.value=data.faction_name || "";
+
+
+
+
+applyTheme(data);
+
+
+
+await checkRole();
+
+
+await loadMembers();
+
+await loadNews();
+
+});
+
+
+
+
+
+
+
+
+
+/*
+==============================
+ROLE CHECK
+==============================
+*/
+
+
+async function checkRole(){
+
+
+
+if(
+guildData.created_by === currentUser?.id
+){
+
+
+currentRole="leader";
+
+
+enableControl();
 
 
 return;
@@ -143,64 +265,103 @@ return;
 
 
 
-gameData=data;
+
+if(!currentUser)
+
+return;
 
 
 
-document
-.getElementById(
-"gameName"
+
+const {
+
+data
+
+}=await supabaseClient
+
+.from("guild_members")
+
+.select("role")
+
+.eq(
+"guild_id",
+guildId
 )
-.innerText =
-data.name;
 
-
-
-
-document
-.getElementById(
-"gameDescription"
+.eq(
+"user_id",
+currentUser.id
 )
-.innerText =
-data.description || "";
 
-
-
-
-
-document
-.getElementById(
-"gameInfo"
+.is(
+"left_at",
+null
 )
-.innerHTML = `
 
-<p>
-
-${data.description || ""}
-
-</p>
-
-`;
+.single();
 
 
 
 
 
-if(data.logo_url){
+if(data){
 
 
-document
-.getElementById(
-"gameLogo"
-)
-.src =
-data.logo_url;
+currentRole=data.role;
+
+
+
+if(
+
+data.role==="leader"
+
+||
+
+data.role==="officer"
+
+){
+
+
+enableControl();
 
 
 }
 
 
 }
+
+
+
+}
+
+
+
+
+
+
+
+
+
+function enableControl(){
+
+
+
+settingsButton.hidden=false;
+
+memberControl.hidden=false;
+
+newsControl.hidden=false;
+
+galleryControl.hidden=false;
+
+documentControl.hidden=false;
+
+diplomacyControl.hidden=false;
+
+
+
+}
+
 
 
 
@@ -216,14 +377,13 @@ TABS
 */
 
 
-function openGameTab(id){
+function openGuildTab(id){
 
 
 
 document
-.querySelectorAll(
-".game-tab"
-)
+
+.querySelectorAll(".guild-tab")
 
 .forEach(
 
@@ -250,35 +410,534 @@ document
 
 /*
 ==============================
-GUILDS LOAD
+SAVE GUILD
 ==============================
 */
 
 
-async function loadGuilds(){
+async function saveGuild(){
+
+
+
+await supabaseClient
+
+.from("guilds")
+
+.update({
+
+
+name:
+editName.value,
+
+
+tag:
+editTag.value,
+
+
+description:
+editDescription.value
+
+
+
+})
+
+.eq(
+"id",
+guildId
+);
+
+
+
+
+location.reload();
+
+
+}
+
+
+
+
+
+
+
+
+
+/*
+==============================
+THEME
+==============================
+*/
+
+
+function applyTheme(data){
+
+
+
+if(data.theme_color)
+
+
+document.documentElement.style
+.setProperty(
+"--guild-theme",
+data.theme_color
+);
+
+
+
+
+if(data.button_color)
+
+
+document.documentElement.style
+.setProperty(
+"--guild-button",
+data.button_color
+);
+
+
+
+}
+
+
+
+
+async function saveTheme(){
+
+
+
+await supabaseClient
+
+.from("guilds")
+
+.update({
+
+
+theme_color:
+themeColor.value,
+
+
+button_color:
+buttonColor.value,
+
+
+button_style:
+buttonStyle.value,
+
+
+faction_name:
+factionName.value
+
+
+
+})
+
+.eq(
+"id",
+guildId
+);
+
+
+
+
+location.reload();
+
+
+}
+
+
+
+
+
+
+
+
+
+/*
+==============================
+UPLOAD
+==============================
+*/
+
+
+async function uploadImage(file,folder){
+
+
+
+if(!file)
+
+return null;
+
+
+
+
+let path =
+
+folder
++
+"/"
++
+guildId
++
+"/"
++
+Date.now()
++
+"_"
++
+file.name;
+
+
 
 
 
 const {
 
-data,
-
 error
 
 }=await supabaseClient
 
+.storage
+
+.from(
+"guild-assets"
+)
+
+.upload(
+
+path,
+
+file
+
+);
+
+
+
+
+
+if(error){
+
+alert(error.message);
+
+return null;
+
+}
+
+
+
+
+
+const {
+
+data
+
+}=supabaseClient
+
+.storage
+
+.from(
+"guild-assets"
+)
+
+.getPublicUrl(path);
+
+
+
+
+
+return data.publicUrl;
+
+
+}
+
+
+
+
+
+
+
+
+
+async function uploadLogo(){
+
+
+
+let url =
+await uploadImage(
+logoFile.files[0],
+"logos"
+);
+
+
+
+if(url)
+
+
+await supabaseClient
+
 .from("guilds")
+
+.update({
+
+logo_url:url
+
+})
+
+.eq(
+"id",
+guildId
+);
+
+
+
+location.reload();
+
+
+}
+
+
+
+
+
+
+
+async function uploadBanner(){
+
+
+
+let url =
+await uploadImage(
+bannerFile.files[0],
+"banners"
+);
+
+
+
+if(url)
+
+
+await supabaseClient
+
+.from("guilds")
+
+.update({
+
+banner_url:url
+
+})
+
+.eq(
+"id",
+guildId
+);
+
+
+
+location.reload();
+
+
+}
+
+
+
+
+
+
+
+async function uploadFlag(){
+
+
+
+let url =
+await uploadImage(
+flagFile.files[0],
+"flags"
+);
+
+
+
+if(url)
+
+
+await supabaseClient
+
+.from("guilds")
+
+.update({
+
+faction_flag_url:url
+
+})
+
+.eq(
+"id",
+guildId
+);
+
+
+
+location.reload();
+
+
+}
+
+
+
+
+
+
+
+
+
+/*
+==============================
+MEMBERS
+==============================
+*/
+
+
+async function loadMembers(){
+
+
+
+const {
+
+data
+
+}=await supabaseClient
+
+.from("guild_members")
 
 .select("*")
 
 .eq(
-"game_id",
-gameId
-)
+guild_id,
+guildId
+);
+
+
+
+
+
+let html="";
+
+
+
+(data||[])
+
+.forEach(m=>{
+
+
+html+=`
+
+<div class="member-card">
+
+<b>
+
+${m.nickname || "Игрок"}
+
+</b>
+
+
+<br>
+
+${m.role}
+
+</div>
+
+`;
+
+
+
+});
+
+
+
+
+membersList.innerHTML=html;
+
+
+}
+
+
+
+
+
+
+
+
+
+async function addMember(){
+
+
+
+await supabaseClient
+
+.from("guild_members")
+
+.insert({
+
+
+guild_id:guildId,
+
+
+game_id:guildData.game_id,
+
+
+user_id:
+memberUser.value,
+
+
+nickname:
+memberNickname.value,
+
+
+role:
+memberRole.value
+
+
+
+});
+
+
+
+
+location.reload();
+
+
+}
+
+
+
+
+
+
+
+
+
+/*
+==============================
+NEWS
+==============================
+*/
+
+
+async function loadNews(){
+
+
+
+const {
+
+data
+
+}=await supabaseClient
+
+.from("guild_news")
+
+.select("*")
 
 .eq(
-"is_public",
-true
+"guild_id",
+guildId
 )
 
 .order(
@@ -291,455 +950,29 @@ ascending:false
 
 
 
-
-if(error){
-
-
-console.log(error.message);
-
-
-return;
-
-
-}
+let html="";
 
 
 
+(data||[])
 
-const box =
-document.getElementById(
-"guildsList"
-);
+.forEach(n=>{
 
 
+html+=`
 
-box.innerHTML="";
-
-
-
-
-
-(data || []).forEach(g=>{
-
-
-
-box.innerHTML +=`
-
-<div
-class="guild-card"
-onclick="openGuild('${g.id}')"
->
-
-
-${
-
-g.logo_url
-
-?
-
-`
-<img src="${g.logo_url}">
-`
-
-:
-
-""
-
-}
-
-
+<div class="news-card">
 
 <h3>
 
-${g.name}
-
-</h3>
-
-
-
-<p>
-
-${g.description || ""}
-
-</p>
-
-
-
-</div>
-
-`;
-
-
-
-});
-
-
-
-}
-
-
-
-
-
-
-
-
-/*
-==============================
-OPEN GUILD
-==============================
-*/
-
-
-function openGuild(id){
-
-
-
-location.href=
-
-"guild.html?id="+id;
-
-
-}
-
-
-
-
-
-
-
-
-/*
-==============================
-CREATE GUILD WINDOW
-==============================
-*/
-
-
-function openCreateGuild(){
-
-
-
-if(!currentUser){
-
-
-alert(
-"Нужно войти"
-);
-
-
-return;
-
-
-}
-
-
-
-
-document
-.getElementById(
-"createGuild"
-)
-.hidden=false;
-
-
-
-}
-
-
-
-
-
-
-
-
-/*
-==============================
-CREATE GUILD
-==============================
-*/
-
-
-async function createGuild(){
-
-
-
-if(!currentUser){
-
-
-return;
-
-
-}
-
-
-
-
-
-const name =
-
-document
-.getElementById(
-"guildNameInput"
-)
-.value;
-
-
-
-const tag =
-
-document
-.getElementById(
-"guildTagInput"
-)
-.value;
-
-
-
-const description =
-
-document
-.getElementById(
-"guildDescriptionInput"
-)
-.value;
-
-
-
-const logo =
-
-document
-.getElementById(
-"guildLogoInput"
-)
-.value;
-
-
-
-
-
-const {
-
-data,
-
-error
-
-}=await supabaseClient
-
-.from("guilds")
-
-.insert({
-
-
-game_id:
-gameId,
-
-
-name:name,
-
-
-tag:tag,
-
-
-description:description,
-
-
-logo_url:logo,
-
-
-created_by:
-currentUser.id,
-
-
-is_public:true
-
-
-
-})
-
-.select()
-
-.single();
-
-
-
-
-
-
-if(error){
-
-
-alert(error.message);
-
-
-return;
-
-
-}
-
-
-
-
-
-
-
-/*
-Добавляем создателя
-как главу
-*/
-
-
-const {
-
-error:memberError
-
-}=await supabaseClient
-
-.from("guild_members")
-
-.insert({
-
-
-guild_id:data.id,
-
-
-game_id:gameId,
-
-
-user_id:
-currentUser.id,
-
-
-nickname:
-currentUser.email,
-
-
-role:
-"leader"
-
-
-
-});
-
-
-
-
-
-
-if(memberError){
-
-
-console.log(
-memberError.message
-);
-
-
-}
-
-
-
-
-
-
-alert(
-"Гильдия создана"
-);
-
-
-
-location.href =
-"guild.html?id="
-+
-data.id;
-
-
-
-}
-
-
-
-
-
-
-
-
-
-/*
-==============================
-MODULES
-==============================
-*/
-
-
-async function loadModules(){
-
-
-
-const {
-
-data,
-
-error
-
-}=await supabaseClient
-
-.from("game_modules")
-
-.select("*")
-
-.eq(
-"game_id",
-gameId
-);
-
-
-
-
-
-if(error){
-
-console.log(error.message);
-
-return;
-
-}
-
-
-
-
-
-const box =
-document.getElementById(
-"modulesList"
-);
-
-
-
-box.innerHTML="";
-
-
-
-
-
-(data || []).forEach(m=>{
-
-
-
-box.innerHTML +=`
-
-<div class="module-card">
-
-
-<h3>
-
-${m.name}
+${n.title}
 
 </h3>
 
 
 <p>
 
-${m.description || ""}
+${n.content}
 
 </p>
 
@@ -749,9 +982,92 @@ ${m.description || ""}
 `;
 
 
+});
+
+
+
+newsList.innerHTML=html;
+
+
+}
+
+
+
+
+
+async function createNews(){
+
+
+
+await supabaseClient
+
+.from("guild_news")
+
+.insert({
+
+
+guild_id:guildId,
+
+
+author_id:
+currentUser.id,
+
+
+title:
+newsTitle.value,
+
+
+content:
+newsText.value
+
 
 });
 
 
+
+location.reload();
+
+
+}
+
+
+
+
+
+
+
+
+
+/*
+==============================
+EMPTY MODULES
+==============================
+*/
+
+
+function uploadGallery(){
+
+alert(
+"Галерея подключается следующим модулем"
+);
+
+}
+
+
+function uploadDocument(){
+
+alert(
+"Документы подключаются следующим модулем"
+);
+
+}
+
+
+
+function createAlliance(){
+
+alert(
+"Дипломатия подключается следующим модулем"
+);
 
 }
