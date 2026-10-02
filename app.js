@@ -1,8 +1,8 @@
 /*
 =================================================
 GAME GUILD PLATFORM
-MAIN APP v2.0.1
-AUTH FIX
+APP CORE v2.1.0
+AUTH + GAMES
 =================================================
 */
 
@@ -16,31 +16,33 @@ let gamesCache = [];
 
 
 /*
-=========================
-START
-=========================
+=================================================
+INIT
+=================================================
 */
 
 
 document.addEventListener(
 "DOMContentLoaded",
-async()=>{
+async function(){
 
 
 console.log(
-"APP START"
+"APP INIT"
 );
 
 
 
-await checkSession();
+await restoreSession();
+
 
 
 await loadGames();
 
 
 
-});
+}
+);
 
 
 
@@ -51,13 +53,14 @@ await loadGames();
 
 
 /*
-=========================
+=================================================
 SESSION
-=========================
+=================================================
 */
 
 
-async function checkSession(){
+async function restoreSession(){
+
 
 
 try{
@@ -74,7 +77,7 @@ error
 
 
 console.log(
-"SESSION",
+"SESSION:",
 data,
 error
 );
@@ -90,13 +93,9 @@ currentUser =
 data.session.user;
 
 
-console.log(
-"USER:",
-currentUser.email
-);
-
 
 showProfile();
+
 
 
 }
@@ -105,6 +104,7 @@ else{
 
 
 showLoginButton();
+
 
 
 }
@@ -116,10 +116,13 @@ showLoginButton();
 catch(e){
 
 
-console.error(e);
+console.error(
+e
+);
 
 
 }
+
 
 
 }
@@ -133,15 +136,16 @@ console.error(e);
 
 
 /*
-=========================
+=================================================
 LOGIN WINDOW
-=========================
+=================================================
 */
 
 
 function openLogin(){
 
 
+
 const win =
 document.getElementById(
 "authWindow"
@@ -149,9 +153,21 @@ document.getElementById(
 
 
 
-if(win)
+if(!win){
+
+console.error(
+"authWindow not found"
+);
+
+return;
+
+}
+
+
 
 win.hidden=false;
+
+win.style.display="flex";
 
 
 
@@ -159,7 +175,11 @@ win.hidden=false;
 
 
 
+
+
+
 function closeLogin(){
+
 
 
 const win =
@@ -169,9 +189,24 @@ document.getElementById(
 
 
 
-if(win)
+if(!win){
+
+return;
+
+}
+
+
+
 
 win.hidden=true;
+
+win.style.display="none";
+
+
+
+console.log(
+"LOGIN WINDOW CLOSED"
+);
 
 
 
@@ -186,9 +221,9 @@ win.hidden=true;
 
 
 /*
-=========================
+=================================================
 REGISTER
-=========================
+=================================================
 */
 
 
@@ -220,24 +255,11 @@ document
 
 
 
-const nickname =
-
-document
-.getElementById(
-"regName"
-)
-.value
-.trim();
-
-
-
-
-
 if(!email || !password){
 
 
 alert(
-"Заполните email и пароль"
+"Введите email и пароль"
 );
 
 
@@ -260,36 +282,9 @@ error
 
 email,
 
-password,
-
-options:{
-
-
-data:{
-
-
-username:nickname
-
-
-}
-
-
-}
-
+password
 
 });
-
-
-
-
-
-
-console.log(
-"REGISTER",
-data,
-error
-);
-
 
 
 
@@ -310,9 +305,8 @@ return;
 
 
 
-
 alert(
-"Регистрация успешна"
+"Регистрация выполнена"
 );
 
 
@@ -328,9 +322,9 @@ alert(
 
 
 /*
-=========================
-LOGIN FIXED
-=========================
+=================================================
+LOGIN
+=================================================
 */
 
 
@@ -371,11 +365,12 @@ document
 
 
 
+
 if(!email || !password){
 
 
 alert(
-"Введите email и пароль"
+"Введите логин и пароль"
 );
 
 
@@ -383,6 +378,7 @@ return;
 
 
 }
+
 
 
 
@@ -403,7 +399,6 @@ error
 email:email,
 
 password:password
-
 
 });
 
@@ -449,19 +444,17 @@ data.user;
 
 
 
-alert(
-"Вход выполнен"
-);
-
-
-
-
 
 closeLogin();
 
 
 
+
+
+
 showProfile();
+
+
 
 
 
@@ -471,20 +464,28 @@ await loadGames();
 
 
 
-}
 
-catch(err){
-
-
-console.error(
-err
+alert(
+"Добро пожаловать!"
 );
 
 
+
+
+
+
+}
+
+catch(e){
+
+
+
+console.error(e);
+
+
+
 alert(
-"Ошибка входа: "
-+
-err.message
+e.message
 );
 
 
@@ -504,9 +505,9 @@ err.message
 
 
 /*
-=========================
+=================================================
 LOGOUT
-=========================
+=================================================
 */
 
 
@@ -537,9 +538,9 @@ location.reload();
 
 
 /*
-=========================
+=================================================
 PROFILE
-=========================
+=================================================
 */
 
 
@@ -555,14 +556,21 @@ document.getElementById(
 
 
 
+
+
 if(block){
+
 
 
 block.innerHTML=`
 
-<button onclick="openProfile()">
+<button onclick="logout()">
 
 ${currentUser.email}
+
+<br>
+
+Выйти
 
 </button>
 
@@ -574,41 +582,22 @@ ${currentUser.email}
 
 
 
-
-
-
-const profile =
+const loginButton =
 
 document.getElementById(
-"profile"
+"loginButton"
 );
 
 
 
-if(profile)
+if(loginButton)
 
-profile.hidden=false;
-
-
-
-
-
-const name =
-
-document.getElementById(
-"profileName"
-);
-
-
-
-if(name)
-
-name.innerText =
-currentUser.email;
+loginButton.style.display="none";
 
 
 
 }
+
 
 
 
@@ -628,7 +617,10 @@ document.getElementById(
 
 
 
+
+
 if(block){
+
 
 
 block.innerHTML=`
@@ -642,32 +634,8 @@ block.innerHTML=`
 `;
 
 
-}
-
-
 
 }
-
-
-
-
-
-
-
-function openProfile(){
-
-
-const profile =
-
-document.getElementById(
-"profile"
-);
-
-
-
-if(profile)
-
-profile.hidden=false;
 
 
 
@@ -682,9 +650,9 @@ profile.hidden=false;
 
 
 /*
-=========================
-LOAD GAMES
-=========================
+=================================================
+GAMES LOAD
+=================================================
 */
 
 
@@ -705,26 +673,10 @@ error
 .select("*")
 
 .order(
-
 "created_at",
-
 {
-
 ascending:false
-
 }
-
-);
-
-
-
-
-
-
-console.log(
-"GAMES",
-data,
-error
 );
 
 
@@ -773,9 +725,9 @@ gamesCache
 
 
 /*
-=========================
+=================================================
 SEARCH
-=========================
+=================================================
 */
 
 
@@ -783,7 +735,7 @@ function searchGames(){
 
 
 
-const value =
+const text =
 
 document
 .getElementById(
@@ -800,15 +752,14 @@ const result =
 
 gamesCache.filter(
 
-g=>
+game =>
 
-g.name
-
+game.name
 .toLowerCase()
-
-.includes(value)
+.includes(text)
 
 );
+
 
 
 
@@ -827,9 +778,9 @@ renderGames(result);
 
 
 /*
-=========================
-RENDER
-=========================
+=================================================
+RENDER GAMES
+=================================================
 */
 
 
@@ -863,15 +814,10 @@ list.forEach(game=>{
 
 
 
-box.innerHTML +=`
+box.innerHTML+=`
 
-<div
-
-class="game-card"
-
-onclick="openGame('${game.id}')"
-
->
+<div class="game-card"
+onclick="openGame('${game.id}')">
 
 
 ${
@@ -934,9 +880,7 @@ function openGame(id){
 
 location.href=
 
-"game.html?id="
-+
-id;
+"game.html?id="+id;
 
 
 
@@ -951,9 +895,9 @@ id;
 
 
 /*
-=========================
+=================================================
 CREATE GAME
-=========================
+=================================================
 */
 
 
@@ -962,12 +906,6 @@ function openCreateGame(){
 
 
 if(!currentUser){
-
-
-alert(
-"Сначала войдите"
-);
-
 
 
 openLogin();
@@ -982,13 +920,17 @@ return;
 
 
 
-document
+const box =
 
-.getElementById(
+document.getElementById(
 "createGame"
-)
+);
 
-.hidden=false;
+
+
+if(box)
+
+box.hidden=false;
 
 
 
@@ -1021,7 +963,10 @@ document
 .getElementById(
 "gameName"
 )
-.value.trim();
+.value
+.trim();
+
+
 
 
 
@@ -1034,17 +979,6 @@ document
 )
 .value;
 
-
-
-
-
-const logo =
-
-document
-.getElementById(
-"gameLogo"
-)
-.value;
 
 
 
@@ -1067,7 +1001,6 @@ return;
 
 
 
-
 const {
 
 error
@@ -1078,17 +1011,20 @@ error
 
 .insert({
 
+
 name:name,
+
 
 description:description,
 
-logo_url:logo,
 
 created_by:
 currentUser.id,
 
+
 status:
 "published"
+
 
 });
 
@@ -1114,25 +1050,14 @@ return;
 
 
 
+
 alert(
 "Игра создана"
 );
 
 
 
-
-
-document
-.getElementById(
-"createGame"
-)
-.hidden=true;
-
-
-
-
-
-loadGames();
+location.reload();
 
 
 
