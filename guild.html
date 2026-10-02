@@ -22,13 +22,13 @@ Guild Page
 <body>
 
 
-
 <div id="guildApp">
 
 
 
-
-
+<!-- =========================
+ HEADER
+========================= -->
 
 
 <header class="guild-header">
@@ -42,11 +42,9 @@ Guild Page
 
 
 
-
 <div id="userPanel">
 
 </div>
-
 
 
 </header>
@@ -57,42 +55,44 @@ Guild Page
 
 
 
+<!-- =========================
+ GUILD BANNER
+========================= -->
 
 
-<!-- ======================
-BANNER
-====================== -->
+<section id="guildBanner" class="banner">
 
-
-<section
-id="guildBanner"
-class="banner">
 
 
 <div class="banner-overlay">
 
 
+
 <img
 id="guildLogo"
 class="guild-logo"
+src=""
 >
-
 
 
 
 <h1 id="guildName">
 
+Загрузка...
+
 </h1>
 
 
 
-<p id="guildTag">
 
-</p>
+<div id="guildTag">
+
+</div>
 
 
 
 </div>
+
 
 
 </section>
@@ -105,17 +105,18 @@ class="guild-logo"
 
 
 
-<!-- ======================
-MAIN INFO
-====================== -->
+<!-- =========================
+ CONTENT
+========================= -->
 
 
-<section class="guild-content">
+<main class="guild-content">
 
 
 
-<div class="info-card">
 
+
+<section class="info-card">
 
 
 <h2>
@@ -126,21 +127,20 @@ MAIN INFO
 
 
 
-
 <p id="guildDescription">
 
 </p>
 
 
 
+
 <div id="factionBlock">
 
-
 </div>
 
 
 
-</div>
+</section>
 
 
 
@@ -149,31 +149,43 @@ MAIN INFO
 
 
 
-<!-- ======================
-LEADER PANEL
-====================== -->
+
+<!-- =========================
+ LEADER PANEL
+========================= -->
 
 
 <section
-id="leaderPanel"
-class="info-card"
-hidden>
 
+id="leaderPanel"
+
+class="info-card"
+
+hidden>
 
 
 <h2>
 
-Управление гильдией
+Панель главы
 
 </h2>
 
 
 
+<p>
+
+Вам доступны настройки гильдии.
+
+</p>
+
+
+
 <button onclick="openGuildSettings()">
 
-⚙ Настройки темы
+⚙ Настройки оформления
 
 </button>
+
 
 
 
@@ -185,7 +197,6 @@ hidden>
 
 
 
-
 </section>
 
 
@@ -196,21 +207,24 @@ hidden>
 
 
 
-<!-- ======================
-SETTINGS
-====================== -->
+<!-- =========================
+ SETTINGS
+========================= -->
 
 
 <section
+
 id="guildSettings"
+
 class="info-card"
+
 hidden>
 
 
 
 <h2>
 
-Оформление
+Оформление гильдии
 
 </h2>
 
@@ -226,9 +240,16 @@ hidden>
 
 
 <input
+
 id="themeColor"
+
 type="color"
+
+value="#ffffff"
+
 >
+
+
 
 
 
@@ -242,9 +263,17 @@ type="color"
 
 
 <input
+
 id="buttonColor"
+
 type="color"
+
+value="#ffcc00"
+
 >
+
+
+
 
 
 
@@ -252,10 +281,9 @@ type="color"
 
 <label>
 
-Стиль кнопок
+Форма кнопок
 
 </label>
-
 
 
 <select id="buttonStyle">
@@ -268,18 +296,19 @@ type="color"
 </option>
 
 
+<option value="soft">
+
+Мягкие
+
+</option>
+
+
 <option value="square">
 
 Квадратные
 
 </option>
 
-
-<option value="soft">
-
-Скруглённые
-
-</option>
 
 
 </select>
@@ -290,18 +319,23 @@ type="color"
 
 
 
+
+
 <label>
 
-Фон страницы
+Фоновое изображение страницы
 
 </label>
 
 
-
 <input
+
 id="backgroundUrl"
-placeholder="URL изображения"
+
+placeholder="https://..."
+
 >
+
 
 
 
@@ -311,18 +345,49 @@ placeholder="URL изображения"
 
 <label>
 
-Баннер
+Баннер гильдии
 
 </label>
 
 
-
 <input
+
 id="bannerUrl"
-placeholder="URL баннера"
+
+placeholder="https://..."
+
 >
 
 
+
+
+
+
+
+
+
+<h3>
+
+Фракция
+
+</h3>
+
+
+
+<label>
+
+Название фракции
+
+</label>
+
+
+<input
+
+id="factionName"
+
+placeholder="Например: Антилия"
+
+>
 
 
 
@@ -335,23 +400,13 @@ placeholder="URL баннера"
 </label>
 
 
-
 <input
-id="factionName"
-placeholder="Название фракции"
->
 
-
-
-
-
-<input
 id="factionFlag"
+
 placeholder="URL флага"
+
 >
-
-
-
 
 
 
@@ -359,11 +414,9 @@ placeholder="URL флага"
 
 <button onclick="saveGuildSettings()">
 
-Сохранить
+💾 Сохранить
 
 </button>
-
-
 
 
 
@@ -378,16 +431,18 @@ placeholder="URL флага"
 
 
 
-<!-- ======================
-MEMBERS
-====================== -->
+<!-- =========================
+ MEMBERS
+========================= -->
 
 
 <section
-id="membersPanel"
-class="info-card"
-hidden>
 
+id="membersPanel"
+
+class="info-card"
+
+hidden>
 
 
 <h2>
@@ -414,9 +469,7 @@ hidden>
 
 
 
-</section>
-
-
+</main>
 
 
 
@@ -431,6 +484,8 @@ hidden>
 
 
 
+
+<!-- VERSION -->
 
 <div id="siteVersion">
 
@@ -444,14 +499,18 @@ hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+
 <script src="supabase-config.js"></script>
 
+
 <script src="version.js"></script>
+
 
 <script src="guild.js"></script>
 
 
 
 </body>
+
 
 </html>
