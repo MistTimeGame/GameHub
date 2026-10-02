@@ -1,18 +1,18 @@
 /*
-================================================
-GAME GUILD PLATFORM
-APP v5.0
-================================================
+====================================================
+GGP UNIVERSE v6.0
+CORE SYSTEM
+====================================================
 */
 
 
-let db;
+let client;
 
-let currentUser=null;
+let currentUser = null;
 
-let currentGame=null;
+let currentGame = null;
 
-let currentGuild=null;
+let currentGuild = null;
 
 
 
@@ -21,7 +21,7 @@ document.addEventListener(
 async()=>{
 
 
-db=supabase.createClient(
+client = supabase.createClient(
 
 SUPABASE_URL,
 
@@ -31,7 +31,7 @@ SUPABASE_ANON_KEY
 
 
 
-await checkSession();
+await loadSession();
 
 
 loadGames();
@@ -45,23 +45,21 @@ loadGames();
 
 
 
-
-
 /*
 ==============================
-SESSION
+AUTH SESSION
 ==============================
 */
 
 
-async function checkSession(){
+async function loadSession(){
 
 
 const {
 
 data
 
-}=await db.auth.getSession();
+}=await client.auth.getSession();
 
 
 
@@ -71,14 +69,36 @@ if(data.session){
 currentUser=data.session.user;
 
 
-updateUserPanel();
+renderUser();
 
 
 checkAdmin();
 
 
+}
+
 
 }
+
+
+
+
+
+
+
+function renderUser(){
+
+
+userPanel.innerHTML=`
+
+<button onclick="showPage('profile')">
+
+${currentUser.email}
+
+</button>
+
+`;
+
 
 
 }
@@ -93,23 +113,31 @@ checkAdmin();
 
 /*
 ==============================
-AUTH
+LOGIN WINDOW
 ==============================
 */
 
 
 function openLogin(){
 
+
 loginModal.hidden=false;
 
+
 }
+
 
 
 function closeLogin(){
 
+
 loginModal.hidden=true;
 
+
 }
+
+
+
 
 
 
@@ -118,18 +146,19 @@ async function register(){
 
 
 
-let email=
+let email =
 registerEmail.value;
 
 
 
-let password=
+let password =
 registerPassword.value;
 
 
 
-let name=
+let nickname =
 registerName.value;
+
 
 
 
@@ -140,11 +169,12 @@ data,
 
 error
 
-}=await db.auth.signUp({
+}=await client.auth.signUp({
 
 email,
 
 password
+
 
 });
 
@@ -163,22 +193,28 @@ return;
 
 
 
-await db
+
+await client
+
 .from("profiles")
+
 .insert({
 
 id:data.user.id,
 
-username:name,
+username:nickname,
 
-display_name:name
+display_name:nickname,
+
+role:"user"
 
 });
 
 
 
+
 alert(
-"Регистрация создана"
+"Аккаунт создан"
 );
 
 
@@ -203,7 +239,7 @@ data,
 
 error
 
-}=await db.auth.signInWithPassword({
+}=await client.auth.signInWithPassword({
 
 email:
 loginEmail.value,
@@ -214,7 +250,6 @@ loginPassword.value
 
 
 });
-
 
 
 
@@ -231,6 +266,7 @@ return;
 
 
 
+
 currentUser=data.user;
 
 
@@ -238,10 +274,13 @@ currentUser=data.user;
 closeLogin();
 
 
-updateUserPanel();
+
+renderUser();
+
 
 
 loadGames();
+
 
 
 }
@@ -257,7 +296,9 @@ loadGames();
 async function logout(){
 
 
-await db.auth.signOut();
+
+await client.auth.signOut();
+
 
 
 location.reload();
@@ -273,38 +314,9 @@ location.reload();
 
 
 
-function updateUserPanel(){
-
-
-
-userPanel.innerHTML=
-
-
-`
-
-<button onclick="showPage('profile')">
-
-${currentUser.email}
-
-</button>
-
-`;
-
-
-
-}
-
-
-
-
-
-
-
-
-
 /*
 ==============================
-PAGES
+PAGE SYSTEM
 ==============================
 */
 
@@ -312,16 +324,11 @@ PAGES
 function showPage(page){
 
 
-homePage.hidden=true;
 
-gamePage.hidden=true;
-
-guildPage.hidden=true;
-
-profilePage.hidden=true;
-
-adminPage.hidden=true;
-
+document.querySelectorAll(".page")
+.forEach(
+p=>p.hidden=true
+);
 
 
 
@@ -340,13 +347,8 @@ guildPage.hidden=false;
 
 
 
-if(page==="profile"){
-
+if(page==="profile")
 profilePage.hidden=false;
-
-loadProfile();
-
-}
 
 
 
@@ -382,7 +384,7 @@ data,
 
 error
 
-}=await db
+}=await client
 
 .from("games")
 
@@ -398,6 +400,7 @@ ascending:false
 
 
 
+
 if(error){
 
 console.log(error);
@@ -409,7 +412,9 @@ return;
 
 
 
+
 gamesList.innerHTML="";
+
 
 
 
@@ -417,12 +422,12 @@ gamesList.innerHTML="";
 data.forEach(game=>{
 
 
-gamesList.innerHTML+=
 
+gamesList.innerHTML+=`
 
-`
 
 <div class="game-card"
+
 onclick="openGame('${game.id}')">
 
 
@@ -442,11 +447,13 @@ ${game.description || ""}
 
 </div>
 
+
 `;
 
 
 
 });
+
 
 
 
@@ -456,30 +463,26 @@ ${game.description || ""}
 
 
 
-
-
-
-
 function searchGames(){
 
 
-let text=
 
+let value =
 gameSearch.value.toLowerCase();
 
 
 
-document.querySelectorAll(
-".game-card"
-)
+
+document
+.querySelectorAll(".game-card")
 .forEach(card=>{
 
 
-card.style.display=
+card.style.display =
 
 card.innerText
 .toLowerCase()
-.includes(text)
+.includes(value)
 
 ?
 
@@ -492,6 +495,7 @@ card.innerText
 
 
 });
+
 
 
 }
@@ -507,6 +511,7 @@ card.innerText
 function openCreateGame(){
 
 
+
 if(!currentUser){
 
 openLogin();
@@ -514,6 +519,7 @@ openLogin();
 return;
 
 }
+
 
 
 createGameModal.hidden=false;
@@ -544,42 +550,35 @@ async function createGame(){
 
 const {
 
-data,
-
 error
 
-}=await db
+}=await client
 
 .from("games")
 
 .insert({
 
-name:
 
+name:
 newGameName.value,
 
 
 description:
-
 newGameDescription.value,
 
 
 logo_url:
-
 newGameLogo.value,
 
 
 created_by:
-
 currentUser.id,
 
 
 is_public:true
 
 
-})
-
-.select();
+});
 
 
 
@@ -592,6 +591,7 @@ alert(error.message);
 return;
 
 }
+
 
 
 
@@ -619,7 +619,7 @@ const {
 
 data
 
-}=await db
+}=await client
 
 .from("games")
 
@@ -635,25 +635,22 @@ id
 
 
 
+
 currentGame=data;
 
 
 
-gameTitle.innerText=
-
-data.name;
-
+gameTitle.innerText=data.name;
 
 
 gameDescription.innerText=
-
 data.description || "";
 
 
 
 gameLogo.src=
-
 data.logo_url || "";
+
 
 
 
@@ -690,7 +687,7 @@ const {
 
 data
 
-}=await db
+}=await client
 
 .from("guilds")
 
@@ -710,15 +707,15 @@ guildList.innerHTML="";
 
 
 
+
 data.forEach(g=>{
 
 
-guildList.innerHTML+=
+guildList.innerHTML+=`
 
-
-`
 
 <div class="guild-card"
+
 onclick="openGuild('${g.id}')">
 
 
@@ -737,6 +734,7 @@ ${g.tag || ""}
 
 
 </div>
+
 
 
 `;
@@ -760,6 +758,7 @@ ${g.tag || ""}
 function openCreateGuild(){
 
 
+
 if(!currentUser){
 
 openLogin();
@@ -769,7 +768,9 @@ return;
 }
 
 
+
 createGuildModal.hidden=false;
+
 
 
 }
@@ -802,34 +803,29 @@ data,
 
 error
 
-}=await db
+}=await client
 
 .from("guilds")
 
 .insert({
 
 game_id:
-
 currentGame.id,
 
 
 name:
-
 newGuildName.value,
 
 
 tag:
-
 newGuildTag.value,
 
 
 description:
-
 newGuildDescription.value,
 
 
 created_by:
-
 currentUser.id,
 
 
@@ -839,9 +835,7 @@ is_public:true
 })
 
 .select()
-
 .single();
-
 
 
 
@@ -858,7 +852,9 @@ return;
 
 
 
-await db
+
+
+await client
 
 .from("guild_members")
 
@@ -873,7 +869,8 @@ game_id:currentGame.id,
 user_id:currentUser.id,
 
 
-nickname:currentUser.email,
+nickname:
+currentUser.email,
 
 
 role:"leader"
@@ -887,6 +884,7 @@ role:"leader"
 
 
 closeCreateGuild();
+
 
 
 openGuild(data.id);
@@ -911,7 +909,7 @@ const {
 
 data
 
-}=await db
+}=await client
 
 .from("guilds")
 
@@ -932,7 +930,6 @@ currentGuild=data;
 
 
 
-
 guildTitle.innerText=data.name;
 
 
@@ -942,7 +939,7 @@ data.description || "";
 
 
 guildFaction.innerText=
-data.faction_name || "";
+data.faction_name || "None";
 
 
 
@@ -956,9 +953,6 @@ showPage("guild");
 
 
 loadMembers();
-
-
-checkGuildRole();
 
 
 
@@ -980,7 +974,7 @@ const {
 
 data
 
-}=await db
+}=await client
 
 .from("guild_members")
 
@@ -994,7 +988,9 @@ currentGuild.id
 
 
 
+
 membersList.innerHTML="";
+
 
 
 
@@ -1002,13 +998,9 @@ membersList.innerHTML="";
 data.forEach(m=>{
 
 
-membersList.innerHTML+=
-
-
-`
+membersList.innerHTML+=`
 
 <div class="member">
-
 
 <span>
 ${m.nickname}
@@ -1022,12 +1014,12 @@ ${m.role}
 
 </div>
 
-
 `;
 
 
 
 });
+
 
 
 }
@@ -1043,6 +1035,7 @@ ${m.role}
 async function joinGuild(){
 
 
+
 if(!currentUser){
 
 openLogin();
@@ -1053,18 +1046,20 @@ return;
 
 
 
+
+
 const {
 
 data
 
-}=await db
+}=await client
 
 .from("guild_members")
 
 .select("*")
 
 .eq(
-guild_id,
+"guild_id",
 currentGuild.id
 )
 
@@ -1072,6 +1067,8 @@ currentGuild.id
 "user_id",
 currentUser.id
 );
+
+
 
 
 
@@ -1088,44 +1085,34 @@ return;
 
 
 
-await db
+
+await client
 
 .from("guild_members")
 
 .insert({
 
 guild_id:
-
 currentGuild.id,
 
 
 game_id:
-
 currentGame.id,
 
 
 user_id:
-
 currentUser.id,
 
 
 nickname:
-
 currentUser.email,
 
 
-role:
-
-"member"
+role:"member"
 
 
 });
 
-
-
-alert(
-"Вы вступили"
-);
 
 
 
@@ -1147,7 +1134,7 @@ async function leaveGuild(){
 
 
 
-await db
+await client
 
 .from("guild_members")
 
@@ -1165,97 +1152,8 @@ currentUser.id
 
 
 
-alert(
-"Вы вышли"
-);
-
-
 
 loadMembers();
-
-
-
-}
-
-
-
-
-
-
-
-
-
-async function checkGuildRole(){
-
-
-
-if(!currentUser)
-return;
-
-
-
-const {
-
-data
-
-}=await db
-
-.from("guild_members")
-
-.select("*")
-
-.eq(
-"guild_id",
-currentGuild.id
-)
-
-.eq(
-"user_id",
-currentUser.id
-);
-
-
-
-
-if(
-data &&
-data[0] &&
-data[0].role==="leader"
-
-){
-
-guildControl.hidden=false;
-
-
-}
-
-
-
-}
-
-
-
-
-
-
-
-
-
-/*
-==============================
-PROFILE
-==============================
-*/
-
-
-async function loadProfile(){
-
-
-
-profileEmail.innerText=
-
-currentUser.email;
-
 
 
 }
@@ -1283,11 +1181,11 @@ const {
 
 data
 
-}=await db
+}=await client
 
 .from("profiles")
 
-.select("*")
+.select("role")
 
 .eq(
 "id",
@@ -1306,10 +1204,11 @@ data.role==="platform_admin"
 
 ){
 
+
 adminButton.hidden=false;
 
-}
 
+}
 
 
 }
