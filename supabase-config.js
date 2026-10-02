@@ -1,58 +1,95 @@
-// supabase-config.js
+// =====================================
+// SUPABASE CONFIG
+// =====================================
 
-const SUPABASE_URL = 
+
+window.SUPABASE_URL =
 "https://istzefagggvkrhwfjbox.supabase.co";
 
 
-const SUPABASE_KEY =
+window.SUPABASE_ANON_KEY =
 "sb_publishable_4s5x20f-Odw5CYCLiBbWIg_5tsF2qQL";
 
 
 
-const supabaseClient = supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY,
+// =====================================
+// CREATE CLIENT
+// =====================================
+
+
+window.supabaseClient =
+supabase.createClient(
+
+    window.SUPABASE_URL,
+
+    window.SUPABASE_ANON_KEY,
+
     {
+
         auth:{
+
             persistSession:true,
+
             autoRefreshToken:true,
+
             detectSessionInUrl:true,
+
             storage:window.localStorage
+
         }
+
     }
+
 );
 
 
 
-async function getSession(){
+// =====================================
+// AUTH HELPERS
+// =====================================
+
+
+window.getCurrentSession = async function(){
+
 
     const {
+
         data,
+
         error
-    } = await supabaseClient.auth.getSession();
+
+    } =
+    await window.supabaseClient
+    .auth
+    .getSession();
+
 
 
     if(error){
 
         console.error(
-            "SESSION ERROR",
+            "Session error:",
             error
         );
 
         return null;
+
     }
 
 
+
     return data.session;
-}
+
+};
 
 
 
-async function requireAuth(){
+
+window.requireAuth = async function(){
 
 
     const session =
-        await getSession();
+    await window.getCurrentSession();
 
 
 
@@ -60,19 +97,16 @@ async function requireAuth(){
 
 
         console.log(
-            "Сессия отсутствует"
+            "Нет активной сессии"
         );
 
 
-        window.location.href =
-        "index.html";
-
-
         return null;
+
     }
 
 
 
     return session.user;
 
-}
+};
