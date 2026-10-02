@@ -1,7 +1,21 @@
-let currentUser = null;
+// =====================================
+// GUILD SYSTEM
+// =====================================
+
 
 let guildId = null;
 
+let currentUser = null;
+
+let currentRole = null;
+
+
+
+
+
+// =====================================
+// START
+// =====================================
 
 
 document.addEventListener(
@@ -10,17 +24,26 @@ async()=>{
 
 
 console.log(
-"Проверяем авторизацию..."
+"Открытие гильдии"
 );
 
 
 
-currentUser =
-await requireAuth();
+const session =
+await getSession();
 
 
 
-if(!currentUser){
+if(!session){
+
+
+alert(
+"Необходимо войти"
+);
+
+
+location.href="index.html";
+
 
 return;
 
@@ -28,10 +51,9 @@ return;
 
 
 
-console.log(
-"Пользователь:",
-currentUser.id
-);
+currentUser =
+session.user;
+
 
 
 
@@ -47,22 +69,19 @@ params.get("id");
 
 
 
-console.log(
-"Guild ID:",
-guildId
-);
-
-
 
 if(!guildId){
 
+
 alert(
-"Нет ID гильдии"
+"Гильдия не найдена"
 );
+
 
 return;
 
 }
+
 
 
 
@@ -76,35 +95,51 @@ await loadGuild();
 
 
 
+
+
+
+
+// =====================================
+// LOAD GUILD
+// =====================================
+
+
 async function loadGuild(){
 
 
+
 const {
+
 data,
+
 error
+
 }=await supabaseClient
+
 .from("guilds")
+
 .select("*")
-.eq("id",guildId)
+
+.eq(
+"id",
+guildId
+)
+
 .single();
+
+
 
 
 
 if(error){
 
+
 console.error(error);
 
 
-document.body.innerHTML =
-`
-<h2>
-Не удалось открыть гильдию
-</h2>
-
-<p>
-${error.message}
-</p>
-`;
+alert(
+error.message
+);
 
 
 return;
@@ -113,11 +148,17 @@ return;
 
 
 
+
+// название
+
+
 document
 .getElementById(
 "guildName"
 )
-.innerText=data.name;
+.innerText =
+data.name;
+
 
 
 
@@ -125,7 +166,8 @@ document
 .getElementById(
 "guildDescription"
 )
-.innerText=data.description || "";
+.innerText =
+data.description || "";
 
 
 
@@ -133,8 +175,76 @@ document
 .getElementById(
 "aboutText"
 )
-.innerText=data.description || "";
+.innerText =
+data.description || "";
 
+
+
+
+// фракция
+
+
+document
+.getElementById(
+"guildFaction"
+)
+.innerText =
+data.faction_name || "";
+
+
+
+
+
+// картинки
+
+
+if(data.logo_url){
+
+
+document
+.getElementById(
+"guildLogo"
+)
+.src =
+data.logo_url;
+
+
+}
+
+
+
+if(data.banner_url){
+
+
+document
+.getElementById(
+"guildBanner"
+)
+.style.backgroundImage =
+`url(${data.banner_url})`;
+
+
+}
+
+
+
+
+// тема
+
+
+applyTheme(data);
+
+
+
+
+// проверяем роль
+
+
+await checkRole();
+
+
+
+// загрузки
 
 
 loadMembers();
@@ -150,6 +260,7 @@ loadRelations();
 loadApplications();
 
 
+
 }
 
 
@@ -157,25 +268,512 @@ loadApplications();
 
 
 
-async function loadMembers(){
+
+
+
+// =====================================
+// CHECK ROLE
+// =====================================
+
+
+async function checkRole(){
+
 
 
 const {
+
 data,
+
 error
+
 }=await supabaseClient
+
 .from("guild_members")
+
 .select("*")
-.eq("guild_id",guildId);
+
+.eq(
+"guild_id",
+guildId
+)
+
+.eq(
+"user_id",
+currentUser.id
+)
+
+.single();
+
 
 
 
 if(error){
 
-console.log(error);
+
+console.log(
+"Роль не найдена"
+);
+
+
 return;
 
 }
+
+
+
+currentRole =
+data.role;
+
+
+
+console.log(
+"Роль:",
+currentRole
+);
+
+
+
+if(
+currentRole==="leader"
+){
+
+
+enableAdmin();
+
+
+}
+
+
+
+}
+
+
+
+
+
+
+
+
+
+// =====================================
+// ADMIN ACCESS
+// =====================================
+
+
+function enableAdmin(){
+
+
+
+document
+.getElementById(
+"settingsButton"
+)
+.hidden=false;
+
+
+
+document
+.getElementById(
+"aboutEdit"
+)
+.hidden=false;
+
+
+
+document
+.getElementById(
+"newsAdd"
+)
+.hidden=false;
+
+
+
+document
+.getElementById(
+"memberAdd"
+)
+.hidden=false;
+
+
+
+document
+.getElementById(
+"galleryAdd"
+)
+.hidden=false;
+
+
+
+document
+.getElementById(
+"documentAdd"
+)
+.hidden=false;
+
+
+
+document
+.getElementById(
+"createAlliance"
+)
+.hidden=false;
+
+
+}
+
+
+
+
+
+
+
+
+
+// =====================================
+// TABS
+// =====================================
+
+
+function openTab(id){
+
+
+document
+.querySelectorAll(
+".tab"
+)
+.forEach(
+x=>x.hidden=true
+);
+
+
+
+document
+.getElementById(id)
+.hidden=false;
+
+
+}
+
+
+
+
+
+
+
+
+
+// =====================================
+// SAVE DESCRIPTION
+// =====================================
+
+
+async function saveDescription(){
+
+
+
+const text =
+document
+.getElementById(
+"descriptionInput"
+)
+.value;
+
+
+
+
+await supabaseClient
+
+.from("guilds")
+
+.update({
+
+description:text
+
+})
+
+.eq(
+"id",
+guildId
+);
+
+
+
+document
+.getElementById(
+"guildDescription"
+)
+.innerText=text;
+
+
+}
+
+
+
+
+
+
+
+
+
+
+// =====================================
+// APPLY THEME
+// =====================================
+
+
+function applyTheme(data){
+
+
+
+if(data.theme_color){
+
+
+document.documentElement.style
+.setProperty(
+"--guild-theme",
+data.theme_color
+);
+
+
+}
+
+
+
+if(data.button_color){
+
+
+document.documentElement.style
+.setProperty(
+"--guild-button",
+data.button_color
+);
+
+
+}
+
+
+
+
+
+if(data.background_url){
+
+
+document.body.style.backgroundImage =
+`url(${data.background_url})`;
+
+}
+
+
+
+if(data.button_style){
+
+
+document.body
+.className =
+data.button_style;
+
+
+}
+
+
+}
+
+
+
+
+
+
+
+
+
+// =====================================
+// SAVE THEME
+// =====================================
+
+
+async function saveTheme(){
+
+
+
+const theme =
+document
+.getElementById(
+"themeColor"
+)
+.value;
+
+
+
+const button =
+document
+.getElementById(
+"buttonColor"
+)
+.value;
+
+
+
+const style =
+document
+.getElementById(
+"buttonStyle"
+)
+.value;
+
+
+
+
+const faction =
+document
+.getElementById(
+"factionName"
+)
+.value;
+
+
+
+
+
+
+const {
+
+error
+
+}=await supabaseClient
+
+.from("guilds")
+
+.update({
+
+theme_color:theme,
+
+button_color:button,
+
+button_style:style,
+
+faction_name:faction
+
+})
+
+.eq(
+"id",
+guildId
+);
+
+
+
+
+if(error){
+
+
+alert(
+error.message
+);
+
+
+return;
+
+}
+
+
+
+
+alert(
+"Оформление сохранено"
+);
+
+
+
+location.reload();
+
+
+
+}
+
+
+
+
+
+
+
+
+
+// =====================================
+// ADD MEMBER
+// =====================================
+
+
+async function addMember(){
+
+
+
+const nickname =
+document
+.getElementById(
+"memberNickname"
+)
+.value;
+
+
+
+
+await supabaseClient
+
+.from("guild_members")
+
+.insert({
+
+guild_id:guildId,
+
+game_id:null,
+
+user_id:null,
+
+nickname:nickname,
+
+role:"member"
+
+});
+
+
+
+location.reload();
+
+
+}
+
+
+
+
+
+
+
+
+
+// =====================================
+// LOAD MEMBERS
+// =====================================
+
+
+async function loadMembers(){
+
+
+
+const {
+
+data
+
+}=await supabaseClient
+
+.from("guild_members")
+
+.select("*")
+
+.eq(
+"guild_id",
+guildId
+);
+
 
 
 
@@ -183,24 +781,20 @@ let html="";
 
 
 
-data.forEach(m=>{
+(data||[]).forEach(m=>{
 
 
-html +=
-`
+html+=`
+
 <div>
 
-<b>
-${m.nickname}
-</b>
+<b>${m.nickname}</b>
 
 <br>
 
-Роль:
 ${m.role}
 
 </div>
-<hr>
 
 `;
 
@@ -223,277 +817,39 @@ document
 
 
 
-async function loadNews(){
 
 
-const {
-data
-}=await supabaseClient
-.from("guild_news")
-.select("*")
-.eq("guild_id",guildId)
-.order(
-"created_at",
-{
-ascending:false
-}
+// =====================================
+// EMPTY MODULES
+// =====================================
+
+
+async function loadNews(){}
+
+async function loadGallery(){}
+
+async function loadDocuments(){}
+
+async function loadRelations(){}
+
+async function loadApplications(){}
+
+
+
+
+
+
+// =====================================
+// ALLIANCE PLACEHOLDER
+// =====================================
+
+
+function createAlliance(){
+
+
+alert(
+"Система союзов будет добавлена"
 );
-
-
-
-let html="";
-
-
-
-(data||[])
-.forEach(n=>{
-
-
-html+=
-`
-<h3>
-${n.title}
-</h3>
-
-<p>
-${n.content}
-</p>
-
-<hr>
-`;
-
-});
-
-
-
-document
-.getElementById(
-"newsList"
-)
-.innerHTML=html;
-
-
-}
-
-
-
-
-
-
-
-
-async function loadGallery(){
-
-
-const {
-data
-}=await supabaseClient
-.from("guild_gallery")
-.select("*")
-.eq("guild_id",guildId);
-
-
-
-let html="";
-
-
-
-(data||[])
-.forEach(g=>{
-
-
-html+=
-`
-<img 
-src="${g.image_url}"
-width="200">
-
-`;
-
-});
-
-
-document
-.getElementById(
-"galleryList"
-)
-.innerHTML=html;
-
-
-}
-
-
-
-
-
-
-
-
-async function loadDocuments(){
-
-
-const {
-data
-}=await supabaseClient
-.from("guild_documents")
-.select("*")
-.eq("guild_id",guildId);
-
-
-
-let html="";
-
-
-
-(data||[])
-.forEach(d=>{
-
-
-html+=
-`
-<p>
-${d.name}
-</p>
-`;
-
-});
-
-
-document
-.getElementById(
-"documentsList"
-)
-.innerHTML=html;
-
-
-}
-
-
-
-
-
-
-
-
-async function loadRelations(){
-
-
-const {
-data
-}=await supabaseClient
-.from("guild_relations")
-.select("*")
-.or(
-`guild_a_id.eq.${guildId},guild_b_id.eq.${guildId}`
-);
-
-
-
-let html="";
-
-
-(data||[])
-.forEach(r=>{
-
-
-html+=
-`
-<p>
-${r.relation_type}
-:
-${r.status}
-</p>
-`;
-
-});
-
-
-
-document
-.getElementById(
-"relationsList"
-)
-.innerHTML=html;
-
-
-}
-
-
-
-
-
-
-
-
-async function loadApplications(){
-
-
-const {
-data
-}=await supabaseClient
-.from("guild_applications")
-.select("*")
-.eq("guild_id",guildId);
-
-
-
-let html="";
-
-
-
-(data||[])
-.forEach(a=>{
-
-
-html+=
-`
-<p>
-${a.nickname}
--
-${a.status}
-</p>
-`;
-
-});
-
-
-
-document
-.getElementById(
-"applicationsList"
-)
-.innerHTML=html;
-
-
-}
-
-
-
-
-
-
-
-
-function showSection(id){
-
-
-document
-.querySelectorAll(
-"main section"
-)
-.forEach(s=>{
-
-
-s.hidden=true;
-
-
-});
-
-
-
-document
-.getElementById(id)
-.hidden=false;
 
 
 }
