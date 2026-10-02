@@ -1,6 +1,7 @@
 /*
 =================================================
-ADMIN PANEL SYSTEM v2.0.0
+GAME GUILD PLATFORM
+ADMIN PANEL v2.0.0
 =================================================
 */
 
@@ -18,37 +19,6 @@ document.addEventListener(
 async()=>{
 
 
-const {
-
-data
-
-}=await supabaseClient.auth.getSession();
-
-
-
-if(!data.session){
-
-
-alert(
-"Необходимо войти"
-);
-
-
-location.href="index.html";
-
-
-return;
-
-
-}
-
-
-
-adminUser =
-data.session.user;
-
-
-
 await checkAdmin();
 
 
@@ -64,9 +34,9 @@ await checkAdmin();
 
 
 /*
-=========================
+=================================================
 CHECK ADMIN
-=========================
+=================================================
 */
 
 
@@ -80,11 +50,48 @@ data,
 
 error
 
+}=await supabaseClient.auth.getSession();
+
+
+
+
+
+
+if(error || !data.session){
+
+
+showDenied();
+
+
+return;
+
+
+}
+
+
+
+
+
+adminUser =
+data.session.user;
+
+
+
+
+
+
+
+const {
+
+data:profile,
+
+error:profileError
+
 }=await supabaseClient
 
 .from("profiles")
 
-.select("platform_role")
+.select("*")
 
 .eq(
 "id",
@@ -97,18 +104,16 @@ adminUser.id
 
 
 
-if(error || !data){
 
 
-alert(
-"Профиль не найден"
+
+console.log(
+"PROFILE",
+profile,
+profileError
 );
 
 
-return;
-
-
-}
 
 
 
@@ -116,20 +121,22 @@ return;
 
 if(
 
-data.platform_role !== "owner"
+profileError ||
+
+!profile ||
+
+profile.platform_role !== "owner"
 
 ){
 
 
-alert(
-"Нет доступа"
-);
 
+showDenied();
 
-location.href="index.html";
 
 
 return;
+
 
 
 }
@@ -137,11 +144,43 @@ return;
 
 
 
+
+
+
+
+document
+.getElementById(
+"adminPanel"
+)
+.hidden=false;
+
+
+
+
+
 loadGamesAdmin();
 
-loadUsersAdmin();
 
-loadGuildsAdmin();
+
+}
+
+
+
+
+
+
+
+
+
+function showDenied(){
+
+
+
+document
+.getElementById(
+"accessDenied"
+)
+.hidden=false;
 
 
 
@@ -156,9 +195,9 @@ loadGuildsAdmin();
 
 
 /*
-=========================
+=================================================
 GAMES
-=========================
+=================================================
 */
 
 
@@ -168,7 +207,9 @@ async function loadGamesAdmin(){
 
 const {
 
-data
+data,
+
+error
 
 }=await supabaseClient
 
@@ -177,48 +218,141 @@ data
 .select("*")
 
 .order(
+
 "created_at",
+
 {
+
 ascending:false
+
 }
+
 );
 
 
 
 
-let html="";
+
+
+
+const box =
+
+document
+.getElementById(
+"gamesAdmin"
+);
 
 
 
 
-(data||[])
-
-.forEach(g=>{
 
 
-html+=`
+if(error){
+
+
+box.innerHTML =
+error.message;
+
+
+return;
+
+
+}
+
+
+
+
+
+
+
+box.innerHTML="";
+
+
+
+
+
+
+
+data.forEach(game=>{
+
+
+
+
+
+box.innerHTML += `
+
 
 <div class="admin-item">
 
 
-<div>
+
+${
+
+game.logo_url
+
+?
+
+`
+
+<img src="${game.logo_url}">
+
+`
+
+:
+
+""
+
+}
 
 
-<b>
-
-${g.name}
-
-</b>
 
 
-<br>
+<div class="admin-info">
 
 
-<span class="status-${g.status}">
+<h3>
 
-${g.status}
+${game.name}
+
+</h3>
+
+
+
+<p>
+
+${game.description || ""}
+
+</p>
+
+
+
+
+<p>
+
+Статус:
+
+<span class="${
+
+game.status==="published"
+
+?
+
+"status-public"
+
+:
+
+"status-hidden"
+
+}">
+
+
+${game.status}
+
 
 </span>
+
+</p>
+
 
 
 </div>
@@ -227,18 +361,38 @@ ${g.status}
 
 
 
-<div>
 
 
-<button onclick="toggleGame('${g.id}','${g.status}')">
+<div class="admin-actions">
 
-Изменить статус
+
+
+<button onclick="toggleGame('${game.id}','${game.status}')">
+
+
+${
+
+game.status==="published"
+
+?
+
+"Скрыть"
+
+:
+
+"Опубликовать"
+
+}
+
+
 
 </button>
 
 
 
-<button onclick="deleteGame('${g.id}')">
+
+<button onclick="deleteGame('${game.id}')">
+
 
 Удалить
 
@@ -246,10 +400,14 @@ ${g.status}
 
 
 
+
 </div>
 
 
+
+
 </div>
+
 
 `;
 
@@ -259,13 +417,11 @@ ${g.status}
 
 
 
-
-
-gamesAdminList.innerHTML=html;
-
-
-
 }
+
+
+
+
 
 
 
@@ -276,6 +432,7 @@ async function toggleGame(id,status){
 
 
 let newStatus =
+
 
 status==="published"
 
@@ -291,7 +448,13 @@ status==="published"
 
 
 
-await supabaseClient
+
+
+const {
+
+error
+
+}=await supabaseClient
 
 .from("games")
 
@@ -310,11 +473,28 @@ id
 
 
 
+
+
+if(error){
+
+
+alert(error.message);
+
+
+return;
+
+
+}
+
+
+
 loadGamesAdmin();
 
 
 
 }
+
+
 
 
 
@@ -330,341 +510,9 @@ if(!confirm(
 "Удалить игру?"
 ))
 
-return;
-
-
-
-
-await supabaseClient
-
-.from("games")
-
-.delete()
-
-.eq(
-"id",
-id
-);
-
-
-
-loadGamesAdmin();
-
-
-}
-
-
-
-
-
-
-
-
-
-/*
-=========================
-USERS
-=========================
-*/
-
-
-async function loadUsersAdmin(){
-
-
-
-const {
-
-data
-
-}=await supabaseClient
-
-.from("profiles")
-
-.select("*")
-
-.order(
-"created_at",
-{
-ascending:false
-}
-);
-
-
-
-
-let html="";
-
-
-
-
-
-(data||[])
-
-.forEach(u=>{
-
-
-
-html+=`
-
-<div class="admin-item">
-
-
-<div>
-
-
-<b>
-
-${u.display_name || u.username}
-
-</b>
-
-
-<br>
-
-
-Роль:
-${u.platform_role}
-
-
-</div>
-
-
-</div>
-
-`;
-
-
-
-});
-
-
-
-
-usersAdminList.innerHTML=html;
-
-
-}
-
-
-
-
-
-
-
-
-
-/*
-=========================
-GUILDS
-=========================
-*/
-
-
-async function loadGuildsAdmin(){
-
-
-
-const {
-
-data
-
-}=await supabaseClient
-
-.from("guilds")
-
-.select("*")
-
-.order(
-"created_at",
-{
-ascending:false
-}
-);
-
-
-
-
-let html="";
-
-
-
-
-
-(data||[])
-
-.forEach(g=>{
-
-
-html+=`
-
-<div class="admin-item">
-
-
-<div>
-
-
-<b>
-
-${g.name}
-
-</b>
-
-
-<br>
-
-
-${g.tag || ""}
-
-
-</div>
-
-
-
-
-<button onclick="deleteGuild('${g.id}')">
-
-Удалить
-
-</button>
-
-
-
-</div>
-
-`;
-
-
-
-});
-
-
-
-
-guildsAdminList.innerHTML=html;
-
-
-}
-
-
-
-
-
-async function deleteGuild(id){
-
-
-
-if(!confirm(
-"Удалить гильдию?"
-))
 
 return;
 
-
-
-await supabaseClient
-
-.from("guilds")
-
-.delete()
-
-.eq(
-"id",
-id
-);
-
-
-
-loadGuildsAdmin();
-
-
-}
-
-
-
-
-
-
-
-
-
-/*
-=========================
-MODULES
-=========================
-*/
-
-
-async function loadModuleGames(){
-
-
-
-const {
-
-data
-
-}=await supabaseClient
-
-.from("games")
-
-.select("id,name");
-
-
-
-
-
-moduleGame.innerHTML="";
-
-
-
-
-
-(data||[])
-
-.forEach(g=>{
-
-
-moduleGame.innerHTML +=`
-
-<option value="${g.id}">
-
-${g.name}
-
-</option>
-
-
-`;
-
-
-
-});
-
-
-}
-
-
-
-
-async function addModule(){
-
-
-
-const game =
-moduleGame.value;
-
-
-
-const name =
-moduleName.value;
-
-
-
-const description =
-moduleDescription.value;
-
-
-
-const json =
-moduleJson.value;
 
 
 
@@ -676,28 +524,17 @@ error
 
 }=await supabaseClient
 
-.from("game_modules")
+.from("games")
 
-.insert({
+.delete()
 
-
-game_id:game,
-
-
-name:name,
-
-
-description:description,
+.eq(
+"id",
+id
+);
 
 
-module_data:{
 
-json:json
-
-}
-
-
-});
 
 
 
@@ -717,9 +554,8 @@ return;
 
 
 
-alert(
-"Модуль добавлен"
-);
+
+loadGamesAdmin();
 
 
 
@@ -727,4 +563,262 @@ alert(
 
 
 
-loadModuleGames();
+
+
+
+
+
+
+/*
+=================================================
+USERS
+=================================================
+*/
+
+
+async function loadUsers(){
+
+
+
+const {
+
+data,
+
+error
+
+}=await supabaseClient
+
+.from("profiles")
+
+.select("*")
+
+.order(
+"created_at",
+{
+ascending:false
+}
+);
+
+
+
+
+
+
+const box =
+
+document
+.getElementById(
+"usersAdmin"
+);
+
+
+
+
+
+
+
+if(error){
+
+
+box.innerHTML =
+error.message;
+
+
+return;
+
+
+}
+
+
+
+
+
+
+box.innerHTML="";
+
+
+
+
+
+
+
+data.forEach(user=>{
+
+
+
+box.innerHTML += `
+
+
+<div class="admin-item">
+
+
+<div class="admin-info">
+
+
+<h3>
+
+${user.display_name || user.username || "Без имени"}
+
+</h3>
+
+
+<p>
+
+Роль:
+${user.platform_role}
+
+</p>
+
+
+</div>
+
+
+
+</div>
+
+
+`;
+
+
+
+});
+
+
+
+}
+
+
+
+
+
+
+
+
+
+/*
+=================================================
+GUILDS
+=================================================
+*/
+
+
+async function loadGuilds(){
+
+
+
+const {
+
+data,
+
+error
+
+}=await supabaseClient
+
+.from("guilds")
+
+.select("*")
+
+.order(
+
+"created_at",
+
+{
+
+ascending:false
+
+}
+
+);
+
+
+
+
+
+
+
+const box =
+
+document
+.getElementById(
+"guildsAdmin"
+);
+
+
+
+
+
+
+
+if(error){
+
+
+box.innerHTML =
+error.message;
+
+
+return;
+
+
+}
+
+
+
+
+
+
+
+box.innerHTML="";
+
+
+
+
+
+
+data.forEach(guild=>{
+
+
+
+box.innerHTML += `
+
+
+<div class="admin-item">
+
+
+
+<div class="admin-info">
+
+
+<h3>
+
+${guild.name}
+
+[${guild.tag || ""}]
+
+</h3>
+
+
+
+<p>
+
+${guild.description || ""}
+
+</p>
+
+
+
+</div>
+
+
+
+</div>
+
+
+`;
+
+
+
+});
+
+
+
+}
