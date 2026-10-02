@@ -1,6 +1,6 @@
-/* =====================================
-   GUILD PAGE STYLE
-===================================== */
+/* =========================================
+   GUILD PAGE STYLE v2.0.0
+========================================= */
 
 
 :root{
@@ -9,17 +9,21 @@
 
     --guild-button:#ffcc00;
 
-    --guild-text:#ffffff;
+    --guild-background:#f2f2f2;
 
-    --guild-bg:#f4f4f4;
+    --guild-card:#ffffff;
+
+    --guild-text:#222222;
 
 }
 
 
 
-/* =====================================
-   ОСНОВА
-===================================== */
+
+
+/* =========================================
+   BODY
+========================================= */
 
 
 body{
@@ -30,14 +34,18 @@ body{
 
     font-family:
     Arial,
+    Helvetica,
     sans-serif;
 
     background:
-    var(--guild-bg);
+    var(--guild-background);
 
-    color:#222;
+    color:
+    var(--guild-text);
 
 }
+
+
 
 
 
@@ -49,20 +57,25 @@ body{
 
 
 
-/* =====================================
-   ШАПКА
-===================================== */
+
+
+
+
+/* =========================================
+   HEADER
+========================================= */
 
 
 .guild-header{
+
 
     display:flex;
 
     align-items:center;
 
-    gap:20px;
+    gap:25px;
 
-    padding:20px;
+    padding:25px;
 
     background:
     var(--guild-theme);
@@ -73,17 +86,47 @@ body{
 
 
 
+.guild-images{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:15px;
+
+}
+
+
+
 .guild-logo{
 
-    width:90px;
 
-    height:90px;
+    width:100px;
+
+    height:100px;
 
     object-fit:cover;
 
     border-radius:50%;
 
-    border:3px solid white;
+    border:4px solid white;
+
+}
+
+
+
+.faction-flag{
+
+
+    width:70px;
+
+    height:70px;
+
+    object-fit:cover;
+
+    border-radius:10px;
+
+    border:2px solid white;
 
 }
 
@@ -91,9 +134,10 @@ body{
 
 .guild-title h1{
 
+
     margin:0;
 
-    font-size:32px;
+    font-size:34px;
 
 }
 
@@ -101,7 +145,10 @@ body{
 
 .guild-title p{
 
-    margin-top:8px;
+
+    margin-top:10px;
+
+    font-size:18px;
 
     opacity:.8;
 
@@ -111,22 +158,27 @@ body{
 
 
 
-/* =====================================
-   БАННЕР
-===================================== */
+
+
+/* =========================================
+   BANNER
+========================================= */
 
 
 .guild-banner{
 
+
+    height:280px;
+
     width:100%;
 
-    height:260px;
-
-    background-size:cover;
 
     background-position:center;
 
+    background-size:cover;
+
     background-repeat:no-repeat;
+
 
 }
 
@@ -135,12 +187,14 @@ body{
 
 
 
-/* =====================================
-   МЕНЮ
-===================================== */
+
+/* =========================================
+   MENU
+========================================= */
 
 
 .guild-nav{
+
 
     display:flex;
 
@@ -153,7 +207,8 @@ body{
     background:white;
 
     box-shadow:
-    0 2px 8px rgba(0,0,0,.15);
+    0 2px 10px rgba(0,0,0,.15);
+
 
 }
 
@@ -163,18 +218,19 @@ body{
 
 .guild-nav button{
 
-    padding:12px 20px;
-
-    border:none;
-
-    cursor:pointer;
 
     background:
     var(--guild-button);
 
     color:#000;
 
+    border:none;
+
+    padding:12px 20px;
+
     font-weight:bold;
+
+    cursor:pointer;
 
     transition:.2s;
 
@@ -183,17 +239,28 @@ body{
 
 
 
+.guild-nav button:hover{
 
 
-/* =====================================
-   ФОРМЫ КНОПОК
-===================================== */
+    transform:translateY(-2px);
+
+    opacity:.85;
+
+}
 
 
-/* скругленные */
 
-.button-rounded,
-.guild-nav button{
+
+
+
+
+/* =========================================
+   BUTTON MODES
+========================================= */
+
+
+.rounded button,
+.rounded .guild-nav button{
 
     border-radius:18px;
 
@@ -201,27 +268,19 @@ body{
 
 
 
+.circle button,
+.circle .guild-nav button{
 
-
-/* круглые */
-
-.button-circle{
 
     border-radius:50%;
-
-    width:45px;
-
-    height:45px;
-
-    padding:0;
 
 }
 
 
 
-/* квадратные */
+.square button,
+.square .guild-nav button{
 
-.button-square{
 
     border-radius:0;
 
@@ -233,30 +292,39 @@ body{
 
 
 
-/* =====================================
-   КОНТЕНТ
-===================================== */
+/* =========================================
+   CONTENT
+========================================= */
 
 
 main{
 
-    padding:20px;
+
+    padding:25px;
 
 }
 
 
 
+
+
 .tab{
 
-    background:white;
+
+    background:
+    var(--guild-card);
+
+
+    border-radius:18px;
+
 
     padding:25px;
 
-    border-radius:16px;
 
     box-shadow:
 
-    0 3px 10px rgba(0,0,0,.12);
+    0 4px 15px rgba(0,0,0,.12);
+
 
 }
 
@@ -266,33 +334,14 @@ main{
 
 .tab h2{
 
+
     margin-top:0;
 
-}
+    border-bottom:
 
+    2px solid var(--guild-button);
 
-
-
-
-
-/* =====================================
-   СПИСКИ
-===================================== */
-
-
-#membersList div,
-#newsList div,
-#documentsList p,
-#relationsList p,
-#applicationsList p{
-
-    padding:12px;
-
-    margin-bottom:10px;
-
-    background:#fafafa;
-
-    border-radius:10px;
+    padding-bottom:10px;
 
 }
 
@@ -302,9 +351,9 @@ main{
 
 
 
-/* =====================================
-   ФОРМЫ
-===================================== */
+/* =========================================
+   INPUTS
+========================================= */
 
 
 input,
@@ -314,7 +363,7 @@ select{
 
     width:100%;
 
-    max-width:500px;
+    max-width:600px;
 
     padding:12px;
 
@@ -328,16 +377,18 @@ select{
 
     font-size:15px;
 
+
 }
+
 
 
 
 textarea{
 
+
     min-height:120px;
 
 }
-
 
 
 
@@ -353,9 +404,12 @@ button{
 
     border:none;
 
+
     padding:12px 20px;
 
+
     cursor:pointer;
+
 
     font-weight:bold;
 
@@ -364,9 +418,29 @@ button{
 
 
 
-button:hover{
 
-    opacity:.8;
+
+
+/* =========================================
+   LISTS
+========================================= */
+
+
+#membersList div,
+#newsList div,
+#documentsList div,
+#relationsList div,
+#applicationsList div{
+
+
+    background:#fafafa;
+
+    padding:15px;
+
+    margin-bottom:12px;
+
+    border-radius:12px;
+
 
 }
 
@@ -375,18 +449,20 @@ button:hover{
 
 
 
-/* =====================================
-   ГАЛЕРЕЯ
-===================================== */
+/* =========================================
+   GALLERY
+========================================= */
 
 
 #galleryList{
+
 
     display:flex;
 
     flex-wrap:wrap;
 
     gap:15px;
+
 
 }
 
@@ -399,9 +475,12 @@ button:hover{
 
     height:160px;
 
+
     object-fit:cover;
 
-    border-radius:12px;
+
+    border-radius:15px;
+
 
 }
 
@@ -410,18 +489,36 @@ button:hover{
 
 
 
-/* =====================================
-   НАСТРОЙКИ
-===================================== */
+
+/* =========================================
+   SETTINGS
+========================================= */
+
+
+#settings h3{
+
+
+    margin-top:25px;
+
+    color:
+
+    var(--guild-theme);
+
+
+}
+
+
 
 
 #settings label{
 
+
     display:block;
+
+    font-weight:bold;
 
     margin-top:15px;
 
-    font-weight:bold;
 
 }
 
@@ -431,42 +528,124 @@ button:hover{
 
 
 
-/* =====================================
-   МОБИЛЬНАЯ ВЕРСИЯ
-===================================== */
+/* =========================================
+   VERSION
+========================================= */
+
+
+#siteVersion{
+
+
+    position:fixed;
+
+
+    right:10px;
+
+
+    bottom:10px;
+
+
+    background:rgba(0,0,0,.65);
+
+
+    color:white;
+
+
+    padding:7px 12px;
+
+
+    border-radius:12px;
+
+
+    font-size:12px;
+
+
+    z-index:9999;
+
+
+}
+
+
+
+
+
+
+
+/* =========================================
+   MOBILE
+========================================= */
 
 
 @media(max-width:700px){
 
 
+
 .guild-header{
+
 
     flex-direction:column;
 
     text-align:center;
 
+
 }
 
 
-.guild-nav{
+
+
+.guild-images{
+
 
     flex-direction:column;
 
 }
 
 
+
+
+.guild-nav{
+
+
+    flex-direction:column;
+
+}
+
+
+
 .guild-nav button{
+
 
     width:100%;
 
 }
 
 
+
 .guild-banner{
+
 
     height:160px;
 
 }
+
+
+
+main{
+
+
+    padding:10px;
+
+}
+
+
+
+.tab{
+
+
+    padding:15px;
+
+}
+
 
 
 }
