@@ -24,9 +24,14 @@
     <a href="#/games" data-nav="games">Игры</a>
     <a href="#/guilds" data-nav="guilds">Гильдии</a>
     <a href="#/profile" data-nav="profile">Профиль</a>
+    <a href="#/admin" data-nav="admin" id="nav-admin" class="hidden">Админ</a>
   </nav>
 
   <div class="header-right">
+    <button id="btn-notifications" class="btn btn-ghost btn-icon hidden" type="button" data-action="toggle-notifications" title="Уведомления">
+      🔔<span id="notif-count" class="notif-count hidden">0</span>
+    </button>
+
     <button id="btn-login" class="btn btn-ghost" type="button" data-action="open-auth">Войти</button>
 
     <div id="user-chip" class="user-chip hidden">
@@ -34,6 +39,14 @@
       <span id="user-name" class="user-name">Игрок</span>
       <button id="btn-logout" class="btn btn-mini" type="button" data-action="logout">Выйти</button>
     </div>
+  </div>
+
+  <div id="notif-panel" class="notif-panel hidden">
+    <div class="notif-head">
+      <span>Уведомления</span>
+      <button class="btn btn-mini" data-action="mark-all-read">Прочитать все</button>
+    </div>
+    <div id="notif-list" class="notif-list"></div>
   </div>
 </header>
 
@@ -50,12 +63,11 @@
 
 <div id="toasts" class="toasts" aria-live="polite"></div>
 
-<!-- AUTH MODAL -->
-<div id="modal-auth" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+<!-- ==================== MODAL: AUTH ==================== -->
+<div id="modal-auth" class="modal hidden" role="dialog" aria-modal="true">
   <div class="modal-backdrop" data-action="close-modal" data-modal="modal-auth"></div>
   <div class="modal-card glass">
     <button class="modal-close" type="button" data-action="close-modal" data-modal="modal-auth">✕</button>
-
     <h2 id="auth-title" class="modal-title">Вход в GGP</h2>
     <p class="modal-sub">Игровая платформа сообществ</p>
 
@@ -69,288 +81,190 @@
         <span>Никнейм</span>
         <input type="text" id="auth-nickname" placeholder="NightRider" autocomplete="nickname" />
       </label>
-
       <label class="field">
         <span>Email</span>
         <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email" required />
       </label>
-
       <label class="field">
         <span>Пароль</span>
         <input type="password" id="auth-password" placeholder="Минимум 6 символов" autocomplete="current-password" required />
       </label>
-
       <div id="auth-status" class="status hidden"></div>
-
       <button type="submit" id="auth-submit" class="btn btn-primary btn-block">Войти</button>
     </form>
   </div>
 </div>
 
-<!-- CREATE GAME MODAL -->
-<div id="modal-game" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="game-title">
+<!-- ==================== MODAL: CREATE GAME ==================== -->
+<div id="modal-game" class="modal hidden" role="dialog" aria-modal="true">
   <div class="modal-backdrop" data-action="close-modal" data-modal="modal-game"></div>
   <div class="modal-card glass modal-wide">
     <button class="modal-close" type="button" data-action="close-modal" data-modal="modal-game">✕</button>
-
-    <h2 id="game-title" class="modal-title">Создать игру</h2>
+    <h2 class="modal-title">Создать игру</h2>
     <p class="modal-sub">Добавьте игру, чтобы открывать внутри неё гильдии</p>
 
     <form id="game-form" class="form" novalidate>
       <div class="form-grid">
-        <label class="field field-full">
-          <span>Название игры *</span>
-          <input type="text" id="game-name" placeholder="Например: Starfall Odyssey" required />
+        <label class="field field-full"><span>Название игры *</span><input type="text" id="game-name" required /></label>
+        <label class="field field-full"><span>Описание</span><textarea id="game-description" rows="3"></textarea></label>
+        <label class="field"><span>Логотип</span><input type="file" id="game-logo" accept="image/*" /></label>
+        <label class="field"><span>Баннер</span><input type="file" id="game-banner" accept="image/*" /></label>
+        <label class="field"><span>Фон страницы</span><input type="file" id="game-background" accept="image/*" /></label>
+        <label class="field"><span>Сайт</span><input type="url" id="game-website" placeholder="https://..." /></label>
+        <label class="field"><span>Discord</span><input type="url" id="game-discord" placeholder="https://discord.gg/..." /></label>
+        <label class="field"><span>Цвет темы</span><input type="color" id="game-theme-color" value="#7c3aed" /></label>
+        <label class="field"><span>Цвет кнопок</span><input type="color" id="game-button-color" value="#2563eb" /></label>
+        <label class="field"><span>Стиль кнопок</span>
+          <select id="game-button-style"><option value="solid">Solid</option><option value="outline">Outline</option><option value="gradient">Gradient</option></select>
         </label>
-
-        <label class="field field-full">
-          <span>Описание</span>
-          <textarea id="game-description" rows="3" placeholder="Коротко о жанре, мире и особенностях игры"></textarea>
-        </label>
-
-        <label class="field">
-          <span>Логотип (изображение)</span>
-          <input type="file" id="game-logo" accept="image/*" />
-        </label>
-
-        <label class="field">
-          <span>Баннер (изображение)</span>
-          <input type="file" id="game-banner" accept="image/*" />
-        </label>
-
-        <label class="field">
-          <span>Фон страницы (изображение)</span>
-          <input type="file" id="game-background" accept="image/*" />
-        </label>
-
-        <label class="field">
-          <span>Сайт</span>
-          <input type="url" id="game-website" placeholder="https://example.com" />
-        </label>
-
-        <label class="field">
-          <span>Discord</span>
-          <input type="url" id="game-discord" placeholder="https://discord.gg/xxxxxx" />
-        </label>
-
-        <label class="field">
-          <span>Цвет темы</span>
-          <input type="color" id="game-theme-color" value="#7c3aed" />
-        </label>
-
-        <label class="field">
-          <span>Цвет кнопок</span>
-          <input type="color" id="game-button-color" value="#2563eb" />
-        </label>
-
-        <label class="field">
-          <span>Стиль кнопок</span>
-          <select id="game-button-style">
-            <option value="solid">Solid</option>
-            <option value="outline">Outline</option>
-            <option value="gradient">Gradient</option>
-          </select>
-        </label>
-
-        <label class="field field-check">
-          <input type="checkbox" id="game-public" checked />
-          <span>Публичная игра</span>
-        </label>
+        <label class="field field-check"><input type="checkbox" id="game-public" checked /><span>Публичная игра</span></label>
       </div>
-
       <div id="game-status" class="status hidden"></div>
-
       <button type="submit" id="game-submit" class="btn btn-primary btn-block">Создать игру</button>
     </form>
   </div>
 </div>
 
-<!-- CREATE GUILD MODAL -->
-<div id="modal-guild" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="guild-title">
+<!-- ==================== MODAL: CREATE GUILD ==================== -->
+<div id="modal-guild" class="modal hidden" role="dialog" aria-modal="true">
   <div class="modal-backdrop" data-action="close-modal" data-modal="modal-guild"></div>
   <div class="modal-card glass modal-wide">
     <button class="modal-close" type="button" data-action="close-modal" data-modal="modal-guild">✕</button>
-
-    <h2 id="guild-title" class="modal-title">Создать гильдию</h2>
-    <p class="modal-sub" id="guild-modal-sub">Заполните основные данные гильдии</p>
+    <h2 class="modal-title">Создать гильдию</h2>
+    <p class="modal-sub">Заполните основные данные гильдии</p>
 
     <form id="guild-form" class="form" novalidate>
       <input type="hidden" id="guild-game-id" value="" />
-
       <div class="form-grid">
-        <label class="field">
-          <span>Название гильдии *</span>
-          <input type="text" id="guild-name" placeholder="Например: Void Reapers" required />
+        <label class="field"><span>Название *</span><input type="text" id="guild-name" required /></label>
+        <label class="field"><span>Тег</span><input type="text" id="guild-tag" maxlength="8" /></label>
+        <label class="field field-full"><span>Описание</span><textarea id="guild-description" rows="3"></textarea></label>
+        <label class="field"><span>Фракция</span><input type="text" id="guild-faction" /></label>
+        <label class="field"><span>Флаг фракции</span><input type="file" id="guild-faction-flag" accept="image/*" /></label>
+        <label class="field"><span>Логотип</span><input type="file" id="guild-logo" accept="image/*" /></label>
+        <label class="field"><span>Баннер</span><input type="file" id="guild-banner" accept="image/*" /></label>
+        <label class="field"><span>Фон страницы</span><input type="file" id="guild-background" accept="image/*" /></label>
+        <label class="field"><span>Сайт</span><input type="url" id="guild-website" /></label>
+        <label class="field"><span>Discord</span><input type="url" id="guild-discord" /></label>
+        <label class="field"><span>Цвет темы</span><input type="color" id="guild-theme-color" value="#7c3aed" /></label>
+        <label class="field"><span>Цвет кнопок</span><input type="color" id="guild-button-color" value="#2563eb" /></label>
+        <label class="field"><span>Стиль кнопок</span>
+          <select id="guild-button-style"><option value="solid">Solid</option><option value="outline">Outline</option><option value="gradient">Gradient</option></select>
         </label>
-
-        <label class="field">
-          <span>Тег</span>
-          <input type="text" id="guild-tag" placeholder="VR" maxlength="8" />
-        </label>
-
-        <label class="field field-full">
-          <span>Описание</span>
-          <textarea id="guild-description" rows="3" placeholder="О гильдии, требованиях и активностях"></textarea>
-        </label>
-
-        <label class="field">
-          <span>Фракция</span>
-          <input type="text" id="guild-faction" placeholder="Например: Легион" />
-        </label>
-
-        <label class="field">
-          <span>Флаг фракции (изображение)</span>
-          <input type="file" id="guild-faction-flag" accept="image/*" />
-        </label>
-
-        <label class="field">
-          <span>Логотип (изображение)</span>
-          <input type="file" id="guild-logo" accept="image/*" />
-        </label>
-
-        <label class="field">
-          <span>Баннер (изображение)</span>
-          <input type="file" id="guild-banner" accept="image/*" />
-        </label>
-
-        <label class="field">
-          <span>Фон страницы (изображение)</span>
-          <input type="file" id="guild-background" accept="image/*" />
-        </label>
-
-        <label class="field">
-          <span>Сайт</span>
-          <input type="url" id="guild-website" placeholder="https://example.com" />
-        </label>
-
-        <label class="field">
-          <span>Discord</span>
-          <input type="url" id="guild-discord" placeholder="https://discord.gg/xxxxxx" />
-        </label>
-
-        <label class="field">
-          <span>Цвет темы</span>
-          <input type="color" id="guild-theme-color" value="#7c3aed" />
-        </label>
-
-        <label class="field">
-          <span>Цвет кнопок</span>
-          <input type="color" id="guild-button-color" value="#2563eb" />
-        </label>
-
-        <label class="field">
-          <span>Стиль кнопок</span>
-          <select id="guild-button-style">
-            <option value="solid">Solid</option>
-            <option value="outline">Outline</option>
-            <option value="gradient">Gradient</option>
+        <label class="field"><span>Режим вступления</span>
+          <select id="guild-join-mode">
+            <option value="open">Открытая — любой может вступить</option>
+            <option value="application">По заявке</option>
+            <option value="closed">Закрытая — вступление запрещено</option>
           </select>
         </label>
-
-        <label class="field field-check">
-          <input type="checkbox" id="guild-public" checked />
-          <span>Публичная гильдия</span>
-        </label>
+        <label class="field field-check"><input type="checkbox" id="guild-public" checked /><span>Публичная гильдия</span></label>
       </div>
-
       <div id="guild-status" class="status hidden"></div>
-
       <button type="submit" id="guild-submit" class="btn btn-primary btn-block">Создать гильдию</button>
     </form>
   </div>
 </div>
 
-<!-- GUILD SETTINGS MODAL -->
-<div id="modal-guild-settings" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="gs-title">
+<!-- ==================== MODAL: GUILD SETTINGS ==================== -->
+<div id="modal-guild-settings" class="modal hidden" role="dialog" aria-modal="true">
   <div class="modal-backdrop" data-action="close-modal" data-modal="modal-guild-settings"></div>
   <div class="modal-card glass modal-wide">
     <button class="modal-close" type="button" data-action="close-modal" data-modal="modal-guild-settings">✕</button>
-
-    <h2 id="gs-title" class="modal-title">Настройки гильдии</h2>
-    <p class="modal-sub">Оформление, фракция и ссылки</p>
+    <h2 class="modal-title">Настройки гильдии</h2>
+    <p class="modal-sub">Оформление, фракция, режим вступления и ссылки</p>
 
     <form id="guild-settings-form" class="form" novalidate>
       <input type="hidden" id="gs-id" value="" />
-
       <div class="form-grid">
-        <label class="field">
-          <span>Название гильдии *</span>
-          <input type="text" id="gs-name" required />
+        <label class="field"><span>Название *</span><input type="text" id="gs-name" required /></label>
+        <label class="field"><span>Тег</span><input type="text" id="gs-tag" maxlength="8" /></label>
+        <label class="field field-full"><span>Описание</span><textarea id="gs-description" rows="3"></textarea></label>
+        <label class="field"><span>Фракция</span><input type="text" id="gs-faction" /></label>
+        <label class="field"><span>Новый флаг фракции</span><input type="file" id="gs-faction-flag" accept="image/*" /></label>
+        <label class="field"><span>Новый логотип</span><input type="file" id="gs-logo" accept="image/*" /></label>
+        <label class="field"><span>Новый баннер</span><input type="file" id="gs-banner" accept="image/*" /></label>
+        <label class="field"><span>Новый фон</span><input type="file" id="gs-background" accept="image/*" /></label>
+        <label class="field"><span>Сайт</span><input type="url" id="gs-website" /></label>
+        <label class="field"><span>Discord</span><input type="url" id="gs-discord" /></label>
+        <label class="field"><span>Цвет темы</span><input type="color" id="gs-theme-color" value="#7c3aed" /></label>
+        <label class="field"><span>Цвет кнопок</span><input type="color" id="gs-button-color" value="#2563eb" /></label>
+        <label class="field"><span>Стиль кнопок</span>
+          <select id="gs-button-style"><option value="solid">Solid</option><option value="outline">Outline</option><option value="gradient">Gradient</option></select>
         </label>
-
-        <label class="field">
-          <span>Тег</span>
-          <input type="text" id="gs-tag" maxlength="8" />
-        </label>
-
-        <label class="field field-full">
-          <span>Описание</span>
-          <textarea id="gs-description" rows="3"></textarea>
-        </label>
-
-        <label class="field">
-          <span>Фракция</span>
-          <input type="text" id="gs-faction" />
-        </label>
-
-        <label class="field">
-          <span>Новый флаг фракции</span>
-          <input type="file" id="gs-faction-flag" accept="image/*" />
-        </label>
-
-        <label class="field">
-          <span>Новый логотип</span>
-          <input type="file" id="gs-logo" accept="image/*" />
-        </label>
-
-        <label class="field">
-          <span>Новый баннер</span>
-          <input type="file" id="gs-banner" accept="image/*" />
-        </label>
-
-        <label class="field">
-          <span>Новый фон страницы</span>
-          <input type="file" id="gs-background" accept="image/*" />
-        </label>
-
-        <label class="field">
-          <span>Сайт</span>
-          <input type="url" id="gs-website" />
-        </label>
-
-        <label class="field">
-          <span>Discord</span>
-          <input type="url" id="gs-discord" />
-        </label>
-
-        <label class="field">
-          <span>Цвет темы</span>
-          <input type="color" id="gs-theme-color" value="#7c3aed" />
-        </label>
-
-        <label class="field">
-          <span>Цвет кнопок</span>
-          <input type="color" id="gs-button-color" value="#2563eb" />
-        </label>
-
-        <label class="field">
-          <span>Стиль кнопок</span>
-          <select id="gs-button-style">
-            <option value="solid">Solid</option>
-            <option value="outline">Outline</option>
-            <option value="gradient">Gradient</option>
+        <label class="field"><span>Режим вступления</span>
+          <select id="gs-join-mode">
+            <option value="open">Открытая</option>
+            <option value="application">По заявке</option>
+            <option value="closed">Закрытая</option>
           </select>
         </label>
-
-        <label class="field field-check">
-          <input type="checkbox" id="gs-public" />
-          <span>Публичная гильдия</span>
-        </label>
+        <label class="field field-check"><input type="checkbox" id="gs-public" /><span>Публичная гильдия</span></label>
       </div>
-
       <div id="gs-status" class="status hidden"></div>
-
       <button type="submit" id="gs-submit" class="btn btn-primary btn-block">Сохранить изменения</button>
+    </form>
+  </div>
+</div>
+
+<!-- ==================== MODAL: APPLY TO GUILD ==================== -->
+<div id="modal-apply" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-backdrop" data-action="close-modal" data-modal="modal-apply"></div>
+  <div class="modal-card glass">
+    <button class="modal-close" type="button" data-action="close-modal" data-modal="modal-apply">✕</button>
+    <h2 class="modal-title">Заявка в гильдию</h2>
+    <p class="modal-sub" id="apply-guild-name"></p>
+
+    <form id="apply-form" class="form" novalidate>
+      <input type="hidden" id="apply-guild-id" value="" />
+      <label class="field">
+        <span>Сообщение (необязательно)</span>
+        <textarea id="apply-message" rows="4" placeholder="Расскажите о себе, опыт, онлайн..."></textarea>
+      </label>
+      <div id="apply-status" class="status hidden"></div>
+      <button type="submit" id="apply-submit" class="btn btn-primary btn-block">Отправить заявку</button>
+    </form>
+  </div>
+</div>
+
+<!-- ==================== MODAL: REPORT ==================== -->
+<div id="modal-report" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-backdrop" data-action="close-modal" data-modal="modal-report"></div>
+  <div class="modal-card glass">
+    <button class="modal-close" type="button" data-action="close-modal" data-modal="modal-report">✕</button>
+    <h2 class="modal-title">Пожаловаться</h2>
+    <p class="modal-sub" id="report-target-label"></p>
+
+    <form id="report-form" class="form" novalidate>
+      <input type="hidden" id="report-type" value="" />
+      <input type="hidden" id="report-id" value="" />
+      <label class="field">
+        <span>Причина *</span>
+        <textarea id="report-reason" rows="4" placeholder="Опишите, что не так" required></textarea>
+      </label>
+      <div id="report-status" class="status hidden"></div>
+      <button type="submit" id="report-submit" class="btn btn-primary btn-block">Отправить жалобу</button>
+    </form>
+  </div>
+</div>
+
+<!-- ==================== MODAL: BAN ==================== -->
+<div id="modal-ban" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-backdrop" data-action="close-modal" data-modal="modal-ban"></div>
+  <div class="modal-card glass">
+    <button class="modal-close" type="button" data-action="close-modal" data-modal="modal-ban">✕</button>
+    <h2 class="modal-title">Заблокировать игрока</h2>
+    <p class="modal-sub" id="ban-target-label"></p>
+
+    <form id="ban-form" class="form" novalidate>
+      <input type="hidden" id="ban-guild-id" value="" />
+      <input type="hidden" id="ban-user-id" value="" />
+      <label class="field">
+        <span>Причина (необязательно)</span>
+        <input type="text" id="ban-reason" placeholder="Например: нарушение правил" />
+      </label>
+      <div id="ban-status" class="status hidden"></div>
+      <button type="submit" id="ban-submit" class="btn btn-primary btn-block">Заблокировать</button>
     </form>
   </div>
 </div>
