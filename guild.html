@@ -9,11 +9,9 @@
 
 
 <title>
-Гильдия
+Guild Page
 </title>
 
-
-<link rel="stylesheet" href="style.css">
 
 <link rel="stylesheet" href="guild.css">
 
@@ -25,61 +23,27 @@
 
 
 
-<div id="guildPage">
+<div id="guildApp">
+
+
+
+
 
 
 
 <header class="guild-header">
 
 
+<a href="javascript:history.back()">
 
-<div class="guild-images">
+← Назад
 
-
-<img
-id="guildLogo"
-class="guild-logo"
-src=""
-alt="Логотип"
->
-
-
-
-<img
-id="factionFlag"
-class="faction-flag"
-src=""
-alt="Фракция"
->
-
-
-
-</div>
+</a>
 
 
 
 
-
-<div class="guild-title">
-
-
-<h1 id="guildName">
-Загрузка...
-</h1>
-
-
-
-<p id="guildTag">
-
-</p>
-
-
-
-<p id="guildFaction">
-
-</p>
-
-
+<div id="userPanel">
 
 </div>
 
@@ -92,80 +56,46 @@ alt="Фракция"
 
 
 
-<div
+
+
+
+<!-- ======================
+BANNER
+====================== -->
+
+
+<section
 id="guildBanner"
-class="guild-banner">
+class="banner">
+
+
+<div class="banner-overlay">
+
+
+<img
+id="guildLogo"
+class="guild-logo"
+>
+
+
+
+
+<h1 id="guildName">
+
+</h1>
+
+
+
+<p id="guildTag">
+
+</p>
+
+
 
 </div>
 
 
-
-
-
-
-
-
-<nav class="guild-nav">
-
-
-<button onclick="openGuildTab('about')">
-
-О гильдии
-
-</button>
-
-
-<button onclick="openGuildTab('members')">
-
-Участники
-
-</button>
-
-
-
-<button onclick="openGuildTab('news')">
-
-Новости
-
-</button>
-
-
-
-<button onclick="openGuildTab('gallery')">
-
-Галерея
-
-</button>
-
-
-
-<button onclick="openGuildTab('documents')">
-
-Документы
-
-</button>
-
-
-
-<button onclick="openGuildTab('diplomacy')">
-
-Дипломатия
-
-</button>
-
-
-
-<button onclick="openGuildTab('settings')"
-id="settingsButton"
-hidden
->
-
-⚙ Управление
-
-</button>
-
-
-</nav>
+</section>
 
 
 
@@ -175,23 +105,25 @@ hidden
 
 
 
-
-<main>
-
-
-
+<!-- ======================
+MAIN INFO
+====================== -->
 
 
-<section
-id="about"
-class="guild-tab"
->
+<section class="guild-content">
+
+
+
+<div class="info-card">
 
 
 
 <h2>
+
 О гильдии
+
 </h2>
+
 
 
 
@@ -201,6 +133,59 @@ class="guild-tab"
 
 
 
+<div id="factionBlock">
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+<!-- ======================
+LEADER PANEL
+====================== -->
+
+
+<section
+id="leaderPanel"
+class="info-card"
+hidden>
+
+
+
+<h2>
+
+Управление гильдией
+
+</h2>
+
+
+
+<button onclick="openGuildSettings()">
+
+⚙ Настройки темы
+
+</button>
+
+
+
+<button onclick="openMembers()">
+
+👥 Участники
+
+</button>
+
+
+
+
 </section>
 
 
@@ -211,62 +196,88 @@ class="guild-tab"
 
 
 
+<!-- ======================
+SETTINGS
+====================== -->
+
+
 <section
-id="members"
-class="guild-tab"
-hidden
->
+id="guildSettings"
+class="info-card"
+hidden>
+
 
 
 <h2>
-Участники
+
+Оформление
+
 </h2>
 
 
 
-<div id="membersList">
-
-</div>
 
 
+<label>
 
-<div id="memberControl" hidden>
+Цвет темы
+
+</label>
 
 
 <input
-id="memberUser"
-placeholder="ID игрока"
+id="themeColor"
+type="color"
 >
 
 
 
+
+
+<label>
+
+Цвет кнопок
+
+</label>
+
+
 <input
-id="memberNickname"
-placeholder="Никнейм"
+id="buttonColor"
+type="color"
 >
 
 
 
-<select id="memberRole">
 
 
-<option value="member">
+<label>
 
-Участник
+Стиль кнопок
+
+</label>
+
+
+
+<select id="buttonStyle">
+
+
+<option value="round">
+
+Круглые
 
 </option>
 
 
-<option value="officer">
+<option value="square">
 
-Офицер
+Квадратные
 
 </option>
 
 
-<option value="diplomat">
+<option value="soft">
 
-Дипломат
+Скруглённые
 
 </option>
 
@@ -275,269 +286,78 @@ placeholder="Никнейм"
 
 
 
-<button onclick="addMember()">
 
-Добавить
 
-</button>
 
 
-</div>
+<label>
 
+Фон страницы
 
-
-</section>
-
-
-
-
-
-
-
-
-
-<section
-id="news"
-class="guild-tab"
-hidden
->
-
-
-<h2>
-Новости
-</h2>
-
-
-<div id="newsList">
-
-</div>
-
-
-
-
-<div id="newsControl" hidden>
-
-
-<input
-id="newsTitle"
-placeholder="Заголовок"
->
-
-
-
-<textarea
-id="newsText"
-placeholder="Текст новости">
-</textarea>
-
-
-
-<button onclick="createNews()">
-
-Добавить
-
-</button>
-
-
-</div>
-
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<section
-id="gallery"
-class="guild-tab"
-hidden
->
-
-
-<h2>
-Галерея
-</h2>
-
-
-
-<div id="galleryList">
-
-</div>
-
-
-
-<div id="galleryControl" hidden>
-
-
-<input
-type="file"
-id="galleryFile"
->
-
-
-
-<button onclick="uploadGallery()">
-
-Загрузить
-
-</button>
-
-
-
-</div>
-
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<section
-id="documents"
-class="guild-tab"
-hidden
->
-
-
-<h2>
-Документы
-
-</h2>
-
-
-<div id="documentsList">
-
-</div>
-
-
-
-<div id="documentControl" hidden>
-
-
-<input
-type="file"
-id="documentFile"
->
-
-
-
-<button onclick="uploadDocument()">
-
-Загрузить
-
-</button>
-
-
-
-</div>
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<section
-id="diplomacy"
-class="guild-tab"
-hidden
->
-
-
-<h2>
-Дипломатия
-</h2>
-
-
-
-<div id="relationsList">
-
-</div>
-
-
-
-<div id="diplomacyControl" hidden>
-
-
-<button onclick="createAlliance()">
-
-Предложить союз
-
-</button>
-
-
-</div>
-
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<section
-id="settings"
-class="guild-tab"
-hidden
->
-
-
-<h2>
-Настройки гильдии
-</h2>
-
-
-
-
-
-<h3>
-Основная информация
-</h3>
-
-
-<input
-id="editName"
-placeholder="Название"
->
+</label>
 
 
 
 <input
-id="editTag"
-placeholder="Тег"
+id="backgroundUrl"
+placeholder="URL изображения"
 >
 
 
 
-<textarea
-id="editDescription">
-</textarea>
 
 
 
-<button onclick="saveGuild()">
+
+<label>
+
+Баннер
+
+</label>
+
+
+
+<input
+id="bannerUrl"
+placeholder="URL баннера"
+>
+
+
+
+
+
+
+
+<label>
+
+Флаг фракции
+
+</label>
+
+
+
+<input
+id="factionName"
+placeholder="Название фракции"
+>
+
+
+
+
+
+<input
+id="factionFlag"
+placeholder="URL флага"
+>
+
+
+
+
+
+
+
+
+<button onclick="saveGuildSettings()">
 
 Сохранить
 
@@ -548,157 +368,39 @@ id="editDescription">
 
 
 
+</section>
 
 
 
-<h3>
-Оформление
-</h3>
 
 
 
-<label>
-Цвет темы
-</label>
 
 
-<input
-type="color"
-id="themeColor"
->
 
+<!-- ======================
+MEMBERS
+====================== -->
 
 
-<label>
-Цвет кнопок
-</label>
+<section
+id="membersPanel"
+class="info-card"
+hidden>
 
 
-<input
-type="color"
-id="buttonColor"
->
 
+<h2>
 
+Участники
 
+</h2>
 
-<label>
-Форма кнопок
-</label>
 
 
+<div id="membersList">
 
-<select id="buttonStyle">
-
-
-<option value="rounded">
-
-Скруглённые
-
-</option>
-
-
-
-<option value="square">
-
-Квадратные
-
-</option>
-
-
-
-<option value="circle">
-
-Круглые
-
-</option>
-
-
-
-</select>
-
-
-
-
-<button onclick="saveTheme()">
-
-Сохранить тему
-
-</button>
-
-
-
-
-
-
-
-
-
-<h3>
-Изображения
-</h3>
-
-
-
-<input
-type="file"
-id="logoFile"
->
-
-
-
-<button onclick="uploadLogo()">
-
-Логотип
-
-</button>
-
-
-
-
-
-<input
-type="file"
-id="bannerFile"
->
-
-
-
-<button onclick="uploadBanner()">
-
-Баннер
-
-</button>
-
-
-
-
-
-<h3>
-Фракция
-
-</h3>
-
-
-<input
-id="factionName"
-placeholder="Название фракции"
->
-
-
-
-<input
-type="file"
-id="flagFile"
->
-
-
-
-<button onclick="uploadFlag()">
-
-Установить флаг
-
-</button>
+</div>
 
 
 
@@ -709,7 +411,17 @@ id="flagFile"
 
 
 
-</main>
+
+
+
+</section>
+
+
+
+
+
+
+
 
 
 </div>
@@ -720,7 +432,9 @@ id="flagFile"
 
 
 
-<div id="siteVersion"></div>
+<div id="siteVersion">
+
+</div>
 
 
 
@@ -730,12 +444,9 @@ id="flagFile"
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-
 <script src="supabase-config.js"></script>
 
-
 <script src="version.js"></script>
-
 
 <script src="guild.js"></script>
 
