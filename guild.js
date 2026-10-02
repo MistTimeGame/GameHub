@@ -1,8 +1,7 @@
 /*
 =================================================
 GAME GUILD PLATFORM
-GUILD.JS v3.0
-GUILD PAGE
+GUILD.JS v3.1
 =================================================
 */
 
@@ -12,9 +11,6 @@ let guildId = null;
 let guildData = null;
 
 let currentUser = null;
-
-
-
 
 
 
@@ -37,12 +33,11 @@ window.location.search
 
 
 
-
 if(!guildId){
 
 
 alert(
-"Гильдия не найдена"
+"Нет ID гильдии"
 );
 
 
@@ -55,14 +50,10 @@ return;
 
 
 
-
-
-await getSession();
-
+await loadSession();
 
 
 await loadGuild();
-
 
 
 await loadMembers();
@@ -80,21 +71,38 @@ await loadMembers();
 
 
 /*
-=================================================
+=================================
 SESSION
-=================================================
+=================================
 */
 
 
-async function getSession(){
+async function loadSession(){
 
 
 
 const {
 
-data
+data,
+
+error
 
 }=await supabaseClient.auth.getSession();
+
+
+
+
+
+if(error){
+
+
+console.error(error);
+
+
+return;
+
+
+}
 
 
 
@@ -121,9 +129,9 @@ data.session.user;
 
 
 /*
-=================================================
+=================================
 LOAD GUILD
-=================================================
+=================================
 */
 
 
@@ -160,13 +168,16 @@ if(error){
 console.error(error);
 
 
-alert(error.message);
+alert(
+"Ошибка загрузки гильдии"
+);
 
 
 return;
 
 
 }
+
 
 
 
@@ -185,7 +196,6 @@ return;
 
 
 }
-
 
 
 
@@ -217,7 +227,6 @@ guildData.name;
 
 
 
-
 document
 
 .getElementById(
@@ -227,8 +236,8 @@ document
 .innerText =
 
 guildData.tag
-?
 
+?
 "[ "+guildData.tag+" ]"
 
 :
@@ -258,33 +267,19 @@ guildData.description || "";
 
 
 
-const logo =
+
+if(guildData.logo_url){
+
 
 document
 
 .getElementById(
 "guildLogo"
-);
+)
 
+.src =
 
-
-
-
-
-
-if(guildData.logo_url){
-
-
-logo.src =
 guildData.logo_url;
-
-
-}
-
-else{
-
-
-logo.style.display="none";
 
 
 }
@@ -298,16 +293,10 @@ logo.style.display="none";
 applyTheme();
 
 
-
-
-
 showFaction();
 
 
-
-
-
-await checkLeader();
+checkLeader();
 
 
 
@@ -322,9 +311,9 @@ await checkLeader();
 
 
 /*
-=================================================
+=================================
 THEME
-=================================================
+=================================
 */
 
 
@@ -360,21 +349,7 @@ document.body.style.backgroundSize =
 "cover";
 
 
-
 }
-
-
-
-
-
-
-const banner =
-
-document
-
-.getElementById(
-"guildBanner"
-);
 
 
 
@@ -384,7 +359,13 @@ document
 if(guildData.banner_url){
 
 
-banner.style.backgroundImage =
+document
+
+.getElementById(
+"guildBanner"
+)
+
+.style.backgroundImage =
 
 `url(${guildData.banner_url})`;
 
@@ -398,19 +379,16 @@ banner.style.backgroundImage =
 
 
 
-const buttons =
 
-document.querySelectorAll(
+
+document
+
+.querySelectorAll(
 "button"
-);
+)
 
+.forEach(btn=>{
 
-
-
-
-
-
-buttons.forEach(btn=>{
 
 
 if(guildData.button_color){
@@ -428,28 +406,30 @@ guildData.button_color;
 
 
 
-if(guildData.button_style==="square"){
 
+switch(guildData.button_style){
+
+
+case "square":
 
 btn.style.borderRadius="0";
 
+break;
 
-}
 
 
-if(guildData.button_style==="soft"){
-
+case "soft":
 
 btn.style.borderRadius="12px";
 
+break;
 
-}
 
 
-if(guildData.button_style==="round"){
-
+default:
 
 btn.style.borderRadius="25px";
+
 
 
 }
@@ -471,9 +451,9 @@ btn.style.borderRadius="25px";
 
 
 /*
-=================================================
+=================================
 FACTION
-=================================================
+=================================
 */
 
 
@@ -493,11 +473,11 @@ document
 
 
 
-
 if(!guildData.faction_name){
 
 
 box.innerHTML="";
+
 
 return;
 
@@ -516,11 +496,10 @@ box.innerHTML = `
 <div class="faction">
 
 
-<img src="${guildData.faction_flag_url || ""}">
+<img src="${guildData.faction_flag_url || ''}">
 
 
 <div>
-
 
 <h3>
 
@@ -530,7 +509,6 @@ ${guildData.faction_name}
 
 
 </div>
-
 
 
 </div>
@@ -551,9 +529,9 @@ ${guildData.faction_name}
 
 
 /*
-=================================================
+=================================
 CHECK LEADER
-=================================================
+=================================
 */
 
 
@@ -582,7 +560,11 @@ error
 
 .from("guild_members")
 
-.select("*")
+.select(
+
+"role"
+
+)
 
 .eq(
 "guild_id",
@@ -593,6 +575,7 @@ guildId
 "user_id",
 currentUser.id
 );
+
 
 
 
@@ -615,26 +598,23 @@ return;
 
 
 
-if(!data || data.length===0)
+
+if(!data || data.length===0){
 
 
 return;
 
 
+}
 
 
 
 
 
 
-const member=data[0];
 
+if(data[0].role==="leader"){
 
-
-
-
-
-if(member.role==="leader"){
 
 
 document
@@ -662,9 +642,9 @@ document
 
 
 /*
-=================================================
+=================================
 OPEN SETTINGS
-=================================================
+=================================
 */
 
 
@@ -747,6 +727,7 @@ guildData.background_url || "";
 
 
 
+
 document
 
 .getElementById(
@@ -778,6 +759,7 @@ guildData.faction_name || "";
 
 
 
+
 document
 
 .getElementById(
@@ -801,9 +783,9 @@ guildData.faction_flag_url || "";
 
 
 /*
-=================================================
+=================================
 SAVE SETTINGS
-=================================================
+=================================
 */
 
 
@@ -812,7 +794,6 @@ async function saveGuildSettings(){
 
 
 const update = {
-
 
 
 theme_color:
@@ -824,8 +805,6 @@ document
 )
 
 .value,
-
-
 
 
 
@@ -841,8 +820,6 @@ document
 
 
 
-
-
 button_style:
 
 document
@@ -852,8 +829,6 @@ document
 )
 
 .value,
-
-
 
 
 
@@ -869,8 +844,6 @@ document
 
 
 
-
-
 banner_url:
 
 document
@@ -880,8 +853,6 @@ document
 )
 
 .value,
-
-
 
 
 
@@ -897,8 +868,6 @@ document
 
 
 
-
-
 faction_flag_url:
 
 document
@@ -908,7 +877,6 @@ document
 )
 
 .value
-
 
 
 };
@@ -957,12 +925,10 @@ return;
 
 
 
+
 alert(
-"Сохранено"
+"Настройки сохранены"
 );
-
-
-
 
 
 
@@ -981,9 +947,9 @@ location.reload();
 
 
 /*
-=================================================
+=================================
 MEMBERS
-=================================================
+=================================
 */
 
 
@@ -1037,6 +1003,25 @@ guildId
 
 
 
+
+if(error){
+
+
+console.error(error);
+
+
+return;
+
+
+}
+
+
+
+
+
+
+
+
 const box =
 
 document
@@ -1060,22 +1045,6 @@ return;
 
 
 
-if(error){
-
-
-console.error(error);
-
-
-return;
-
-
-}
-
-
-
-
-
-
 box.innerHTML="";
 
 
@@ -1084,9 +1053,9 @@ box.innerHTML="";
 
 
 
+(data || [])
 
-(data || []).forEach(member=>{
-
+.forEach(member=>{
 
 
 box.innerHTML += `
@@ -1108,6 +1077,7 @@ ${member.nickname || "Игрок"}
 ${member.role}
 
 </div>
+
 
 
 </div>
