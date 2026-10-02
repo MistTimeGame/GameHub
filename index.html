@@ -22,8 +22,9 @@ Game Guild Platform
 <body>
 
 
-
 <div id="app">
+
+
 
 
 
@@ -38,17 +39,25 @@ GG
 
 
 
+
 <h1>
+
 Game Guild Platform
+
 </h1>
+
+
 
 
 
 <div id="profileBlock">
 
 <button onclick="openLogin()">
+
 Войти
+
 </button>
+
 
 </div>
 
@@ -62,21 +71,20 @@ Game Guild Platform
 
 
 
+<!-- =========================
+ AUTH
+========================= -->
 
-<!-- AUTH -->
 
-<section
-id="authWindow"
-class="modal"
-style="display:none;"
->
+<section id="authWindow"
+class="modal">
 
 
 <div class="modal-box">
 
 
-<button
-class="modal-close"
+
+<button class="close-btn"
 onclick="closeLogin()">
 
 ✖
@@ -85,9 +93,13 @@ onclick="closeLogin()">
 
 
 
+
 <h2>
+
 Авторизация
+
 </h2>
+
 
 
 
@@ -97,6 +109,8 @@ id="loginEmail"
 type="email"
 placeholder="Email"
 >
+
+
 
 
 
@@ -119,6 +133,8 @@ placeholder="Пароль"
 
 
 
+
+
 <hr>
 
 
@@ -126,8 +142,11 @@ placeholder="Пароль"
 
 
 <h3>
+
 Регистрация
+
 </h3>
+
 
 
 
@@ -141,11 +160,13 @@ placeholder="Email"
 
 
 
+
 <input
 id="regPassword"
 type="password"
 placeholder="Пароль"
 >
+
 
 
 
@@ -158,11 +179,15 @@ placeholder="Никнейм"
 
 
 
+
+
 <button onclick="register()">
 
 Создать аккаунт
 
 </button>
+
+
 
 
 
@@ -183,20 +208,26 @@ placeholder="Никнейм"
 
 
 
+
+
 <section class="hero">
 
 
 <h2>
+
 Игровая платформа гильдий
+
 </h2>
+
 
 
 <p>
 
-Создавайте гильдии, объединяйте игроков,
-стройте союзы и развивайте игровые сообщества.
+Создавайте игровые сообщества,
+гильдии, альянсы и развивайте свои проекты.
 
 </p>
+
 
 
 </section>
@@ -209,37 +240,30 @@ placeholder="Никнейм"
 
 
 
-<section class="game-search">
+<section class="games-section">
+
+
+
+<div class="section-header">
 
 
 <h2>
+
 Игры
+
 </h2>
 
-
-
-
-<div class="search-line">
-
-
-
-<input
-id="gameSearch"
-placeholder="Поиск игры..."
-oninput="searchGames()"
->
 
 
 
 
 <button onclick="openCreateGame()">
 
-Создать игру
+Добавить игру
 
 </button>
 
 
-
 </div>
 
 
@@ -247,9 +271,30 @@ oninput="searchGames()"
 
 
 
-<div id="gamesList">
+
+
+<input
+id="gameSearch"
+placeholder="Поиск игр..."
+oninput="searchGames()"
+>
+
+
+
+
+
+
+
+
+
+<div id="gamesList"
+class="games-grid">
+
 
 </div>
+
+
+
 
 
 
@@ -263,16 +308,21 @@ oninput="searchGames()"
 
 
 
-<section
-id="createGame"
+<!-- CREATE GAME -->
+
+<section id="createGame"
 class="card"
-hidden
->
+hidden>
+
 
 
 <h2>
-Создать игру
+
+Добавить игру
+
 </h2>
+
+
 
 
 
@@ -280,6 +330,8 @@ hidden
 id="gameName"
 placeholder="Название игры"
 >
+
+
 
 
 
@@ -291,10 +343,14 @@ placeholder="Описание игры">
 
 
 
+
+
 <input
 id="gameLogo"
 placeholder="Ссылка на логотип"
 >
+
+
 
 
 
@@ -317,22 +373,29 @@ placeholder="Ссылка на логотип"
 
 
 
-<section
-id="profile"
+<!-- PROFILE -->
+
+
+<section id="profile"
 class="card"
-hidden
->
+hidden>
 
 
 <h2>
+
 Профиль
+
 </h2>
+
 
 
 
 <p id="profileName">
 
 </p>
+
+
+
 
 
 
@@ -357,8 +420,9 @@ hidden
 
 
 
-
 </div>
+
+
 
 
 
@@ -378,9 +442,12 @@ hidden
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+
 <script src="supabase-config.js"></script>
 
+
 <script src="version.js"></script>
+
 
 <script src="app.js"></script>
 
