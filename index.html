@@ -1,1343 +1,402 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
-    <meta charset="UTF-8">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+<meta charset="UTF-8">
 
-    <title>GameHub — игровое сообщество</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link
-        rel="stylesheet"
-        href="style.css"
-    >
 
-    <style>
-        /* =====================================================
-           BASE
-           ===================================================== */
+<title>
+Game Guild Platform
+</title>
 
-        * {
-            box-sizing: border-box;
-        }
 
-        html {
-            min-height: 100%;
-        }
+<link rel="stylesheet" href="style.css">
 
-        body {
-            margin: 0;
-            min-height: 100vh;
 
-            font-family:
-                Inter,
-                -apple-system,
-                BlinkMacSystemFont,
-                "Segoe UI",
-                Arial,
-                sans-serif;
-
-            background: #f5f7fa;
-            color: #172033;
-        }
-
-        button,
-        input,
-        textarea {
-            font: inherit;
-        }
-
-        button {
-            cursor: pointer;
-        }
-
-        a {
-            color: inherit;
-            text-decoration: none;
-        }
-
-        /* =====================================================
-           HEADER
-           ===================================================== */
-
-        .site-header {
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-
-            width: 100%;
-
-            background: rgba(255, 255, 255, 0.96);
-
-            border-bottom:
-                1px solid #e5e9f0;
-
-            backdrop-filter: blur(12px);
-        }
-
-        .header-inner {
-            width: min(1400px, calc(100% - 40px));
-
-            min-height: 72px;
-
-            margin: 0 auto;
-
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-
-            gap: 25px;
-        }
-
-        /* =====================================================
-           LOGO
-           ===================================================== */
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-
-            flex-shrink: 0;
-        }
-
-        .logo-icon {
-            width: 44px;
-            height: 44px;
-
-            border-radius: 13px;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            background: #287be8;
-            color: #ffffff;
-
-            font-size: 22px;
-            font-weight: 800;
-
-            box-shadow:
-                0 5px 15px rgba(40, 123, 232, 0.25);
-        }
-
-        .logo-text {
-            font-size: 20px;
-            font-weight: 800;
-
-            letter-spacing: -0.3px;
-        }
-
-        .logo-subtitle {
-            margin-top: 2px;
-
-            font-size: 11px;
-
-            color: #8a93a3;
-        }
-
-        /* =====================================================
-           NAVIGATION
-           ===================================================== */
-
-        .main-nav {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-
-            flex: 1;
-        }
-
-        .nav-button {
-            border: 0;
-
-            background: transparent;
-
-            color: #687386;
-
-            padding: 10px 14px;
-
-            border-radius: 10px;
-
-            font-size: 14px;
-            font-weight: 600;
-
-            transition:
-                background .2s,
-                color .2s;
-        }
-
-        .nav-button:hover {
-            background: #f0f4f9;
-            color: #172033;
-        }
-
-        .nav-button.active {
-            background: #eaf2ff;
-            color: #287be8;
-        }
-
-        /* =====================================================
-           HEADER ACCOUNT
-           ===================================================== */
-
-        .header-account {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-
-            flex-shrink: 0;
-        }
-
-        .account-name {
-            color: #596579;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .button {
-            min-height: 42px;
-
-            border: 0;
-
-            border-radius: 11px;
-
-            padding: 0 17px;
-
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-
-            font-size: 14px;
-            font-weight: 700;
-
-            transition:
-                transform .15s,
-                box-shadow .2s,
-                background .2s;
-        }
-
-        .button:hover {
-            transform: translateY(-1px);
-        }
-
-        .button-primary {
-            background: #287be8;
-            color: #ffffff;
-
-            box-shadow:
-                0 5px 15px rgba(40, 123, 232, .2);
-        }
-
-        .button-primary:hover {
-            background: #1d6fd8;
-        }
-
-        .button-secondary {
-            background: #eef2f7;
-            color: #303b4f;
-        }
-
-        .button-secondary:hover {
-            background: #e3e8ef;
-        }
-
-        .button-danger {
-            background: #ffe8e8;
-            color: #b42323;
-        }
-
-        /* =====================================================
-           MAIN
-           ===================================================== */
-
-        main {
-            width: min(1400px, calc(100% - 40px));
-
-            margin: 0 auto;
-
-            padding: 35px 0 70px;
-        }
-
-        /* =====================================================
-           HERO
-           ===================================================== */
-
-        .hero {
-            position: relative;
-
-            overflow: hidden;
-
-            min-height: 250px;
-
-            padding: 40px;
-
-            border-radius: 24px;
-
-            background:
-                linear-gradient(
-                    135deg,
-                    #172033 0%,
-                    #263957 100%
-                );
-
-            color: #ffffff;
-
-            box-shadow:
-                0 15px 45px rgba(23, 32, 51, .12);
-        }
-
-        .hero::after {
-            content: "";
-
-            position: absolute;
-
-            width: 350px;
-            height: 350px;
-
-            right: -100px;
-            top: -140px;
-
-            border-radius: 50%;
-
-            background:
-                rgba(40, 123, 232, .25);
-        }
-
-        .hero-content {
-            position: relative;
-            z-index: 2;
-
-            max-width: 720px;
-        }
-
-        .hero-label {
-            display: inline-flex;
-
-            padding: 7px 11px;
-
-            margin-bottom: 14px;
-
-            border-radius: 8px;
-
-            background: rgba(255,255,255,.1);
-
-            color: #cbd9ee;
-
-            font-size: 12px;
-            font-weight: 700;
-
-            text-transform: uppercase;
-
-            letter-spacing: .8px;
-        }
-
-        .hero h1 {
-            margin: 0 0 13px;
-
-            font-size: clamp(32px, 5vw, 52px);
-
-            line-height: 1.05;
-
-            letter-spacing: -1.5px;
-        }
-
-        .hero p {
-            margin: 0;
-
-            max-width: 650px;
-
-            color: #c9d2df;
-
-            font-size: 16px;
-
-            line-height: 1.6;
-        }
-
-        /* =====================================================
-           SEARCH
-           ===================================================== */
-
-        .search-section {
-            margin-top: 30px;
-        }
-
-        .section-title {
-            margin-bottom: 14px;
-
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-
-            gap: 20px;
-        }
-
-        .section-title h2 {
-            margin: 0;
-
-            font-size: 25px;
-
-            letter-spacing: -.5px;
-        }
-
-        .section-title p {
-            margin: 5px 0 0;
-
-            color: #8993a3;
-
-            font-size: 14px;
-        }
-
-        .search-box {
-            display: flex;
-
-            gap: 10px;
-
-            padding: 8px;
-
-            background: #ffffff;
-
-            border:
-                1px solid #e2e7ee;
-
-            border-radius: 15px;
-
-            box-shadow:
-                0 5px 20px rgba(20, 40, 70, .04);
-        }
-
-        .search-box input {
-            flex: 1;
-
-            min-width: 0;
-
-            height: 48px;
-
-            border: 0;
-
-            outline: 0;
-
-            padding: 0 14px;
-
-            background: transparent;
-
-            color: #172033;
-
-            font-size: 15px;
-        }
-
-        .search-box input::placeholder {
-            color: #a2aab7;
-        }
-
-        .search-button {
-            min-width: 110px;
-        }
-
-        /* =====================================================
-           GAMES
-           ===================================================== */
-
-        .games-section {
-            margin-top: 35px;
-        }
-
-        #games-list {
-            display: grid;
-
-            grid-template-columns:
-                repeat(
-                    auto-fill,
-                    minmax(280px, 1fr)
-                );
-
-            gap: 18px;
-        }
-
-        .game-card {
-            transition:
-                transform .2s,
-                box-shadow .2s,
-                border-color .2s;
-        }
-
-        .game-card:hover {
-            transform: translateY(-3px);
-
-            border-color: #c8daf5 !important;
-
-            box-shadow:
-                0 12px 30px rgba(30, 70, 120, .09);
-        }
-
-        /* =====================================================
-           EMPTY
-           ===================================================== */
-
-        .empty-state {
-            grid-column: 1 / -1;
-
-            background: #ffffff;
-
-            border:
-                1px dashed #d9e0e9;
-
-            border-radius: 18px;
-
-            padding: 55px 20px;
-
-            text-align: center;
-        }
-
-        .empty-icon {
-            font-size: 44px;
-
-            margin-bottom: 10px;
-        }
-
-        .empty-state h3 {
-            margin: 0 0 8px;
-
-            font-size: 20px;
-        }
-
-        .empty-state p {
-            margin: 0;
-
-            color: #8993a3;
-        }
-
-        /* =====================================================
-           CREATE GAME
-           ===================================================== */
-
-        .create-section {
-            margin-top: 45px;
-
-            background: #ffffff;
-
-            border:
-                1px solid #e2e7ee;
-
-            border-radius: 20px;
-
-            padding: 28px;
-
-            box-shadow:
-                0 5px 20px rgba(20, 40, 70, .04);
-        }
-
-        .create-section h2 {
-            margin: 0 0 8px;
-
-            font-size: 22px;
-        }
-
-        .create-section-description {
-            margin: 0 0 22px;
-
-            color: #8993a3;
-
-            font-size: 14px;
-
-            line-height: 1.5;
-        }
-
-        .form-grid {
-            display: grid;
-
-            grid-template-columns:
-                repeat(2, minmax(0, 1fr));
-
-            gap: 15px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-
-            gap: 7px;
-        }
-
-        .form-group.full {
-            grid-column: 1 / -1;
-        }
-
-        .form-group label {
-            font-size: 13px;
-
-            font-weight: 700;
-
-            color: #465166;
-        }
-
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-
-            border:
-                1px solid #dfe5ed;
-
-            outline: none;
-
-            border-radius: 11px;
-
-            padding: 12px 13px;
-
-            background: #fbfcfd;
-
-            color: #172033;
-
-            transition:
-                border-color .2s,
-                box-shadow .2s;
-        }
-
-        .form-group textarea {
-            min-height: 100px;
-
-            resize: vertical;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-            border-color: #287be8;
-
-            box-shadow:
-                0 0 0 3px rgba(40,123,232,.1);
-
-            background: #ffffff;
-        }
-
-        .create-form-actions {
-            margin-top: 18px;
-
-            display: flex;
-            justify-content: flex-end;
-        }
-
-        /* =====================================================
-           AUTH
-           ===================================================== */
-
-        .auth-section {
-            margin-top: 45px;
-
-            display: grid;
-
-            grid-template-columns:
-                repeat(2, minmax(0, 1fr));
-
-            gap: 20px;
-        }
-
-        .auth-card {
-            background: #ffffff;
-
-            border:
-                1px solid #e2e7ee;
-
-            border-radius: 20px;
-
-            padding: 25px;
-
-            box-shadow:
-                0 5px 20px rgba(20, 40, 70, .04);
-        }
-
-        .auth-card h2 {
-            margin: 0 0 8px;
-
-            font-size: 21px;
-        }
-
-        .auth-card p {
-            margin: 0 0 20px;
-
-            color: #8993a3;
-
-            font-size: 14px;
-        }
-
-        .auth-form {
-            display: flex;
-
-            flex-direction: column;
-
-            gap: 12px;
-        }
-
-        .auth-form input {
-            width: 100%;
-
-            height: 45px;
-
-            border:
-                1px solid #dfe5ed;
-
-            border-radius: 11px;
-
-            outline: none;
-
-            padding: 0 13px;
-
-            background: #fbfcfd;
-        }
-
-        .auth-form input:focus {
-            border-color: #287be8;
-
-            box-shadow:
-                0 0 0 3px rgba(40,123,232,.1);
-        }
-
-        /* =====================================================
-           FOOTER
-           ===================================================== */
-
-        footer {
-            width: min(1400px, calc(100% - 40px));
-
-            margin: 0 auto;
-
-            padding: 25px 0 35px;
-
-            border-top:
-                1px solid #e5e9f0;
-
-            color: #8a93a3;
-
-            font-size: 13px;
-        }
-
-        .footer-inner {
-            display: flex;
-
-            align-items: center;
-            justify-content: space-between;
-
-            gap: 20px;
-        }
-
-        /* =====================================================
-           LOADING
-           ===================================================== */
-
-        .loading-state {
-            grid-column: 1 / -1;
-
-            background: #ffffff;
-
-            border-radius: 18px;
-
-            padding: 50px 20px;
-
-            text-align: center;
-
-            color: #8993a3;
-        }
-
-        .loading-spinner {
-            width: 35px;
-            height: 35px;
-
-            margin: 0 auto 15px;
-
-            border:
-                3px solid #e5ebf3;
-
-            border-top-color: #287be8;
-
-            border-radius: 50%;
-
-            animation:
-                gamehub-spin .8s linear infinite;
-        }
-
-        @keyframes gamehub-spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* =====================================================
-           MOBILE
-           ===================================================== */
-
-        @media (max-width: 850px) {
-
-            .header-inner {
-                min-height: auto;
-
-                padding: 13px 0;
-
-                flex-wrap: wrap;
-            }
-
-            .main-nav {
-                order: 3;
-
-                width: 100%;
-
-                overflow-x: auto;
-            }
-
-            .header-account {
-                margin-left: auto;
-            }
-
-            .hero {
-                padding: 30px 25px;
-            }
-
-            .form-grid,
-            .auth-section {
-                grid-template-columns: 1fr;
-            }
-
-            .form-group.full {
-                grid-column: auto;
-            }
-        }
-
-        @media (max-width: 600px) {
-
-            .header-inner,
-            main,
-            footer {
-                width:
-                    calc(100% - 24px);
-            }
-
-            .logo-subtitle {
-                display: none;
-            }
-
-            .account-name {
-                display: none;
-            }
-
-            .hero {
-                border-radius: 18px;
-            }
-
-            .hero h1 {
-                font-size: 34px;
-            }
-
-            .search-box {
-                flex-direction: column;
-            }
-
-            .search-button {
-                width: 100%;
-            }
-
-            .footer-inner {
-                flex-direction: column;
-
-                align-items: flex-start;
-            }
-        }
-    </style>
 </head>
+
 
 <body>
 
-    <!-- =====================================================
-         HEADER
-         ===================================================== -->
-
-    <header class="site-header">
-
-        <div class="header-inner">
-
-            <a
-                href="index.html"
-                class="logo"
-            >
-                <div class="logo-icon">
-                    G
-                </div>
-
-                <div>
-                    <div class="logo-text">
-                        GameHub
-                    </div>
-
-                    <div class="logo-subtitle">
-                        Игровое сообщество
-                    </div>
-                </div>
-            </a>
-
-
-            <nav class="main-nav">
-
-                <button
-                    class="nav-button active"
-                    type="button"
-                    onclick="window.scrollTo({top: 0, behavior: 'smooth'})"
-                >
-                    Главная
-                </button>
-
-                <button
-                    class="nav-button"
-                    type="button"
-                    onclick="document.querySelector('#games-section').scrollIntoView({behavior:'smooth'})"
-                >
-                    Игры
-                </button>
-
-                <button
-                    class="nav-button"
-                    type="button"
-                    onclick="document.querySelector('#search-section').scrollIntoView({behavior:'smooth'})"
-                >
-                    Поиск
-                </button>
 
-                <button
-                    class="nav-button"
-                    type="button"
-                    onclick="document.querySelector('#create-section').scrollIntoView({behavior:'smooth'})"
-                >
-                    Создать игру
-                </button>
 
-            </nav>
+<div id="app">
 
 
-            <div class="header-account">
 
-                <div
-                    class="account-name"
-                    data-user-name
-                    data-auth="logged-in"
-                    style="display:none;"
-                >
-                    Пользователь
-                </div>
+<!-- ==========================
+ HEADER
+========================== -->
 
 
-                <button
-                    class="button button-secondary"
-                    type="button"
-                    data-auth="logged-out"
-                    onclick="document.querySelector('#auth-section').scrollIntoView({behavior:'smooth'})"
-                >
-                    Войти
-                </button>
+<header class="main-header">
 
 
-                <button
-                    class="button button-danger"
-                    type="button"
-                    data-auth="logged-in"
-                    data-action="logout"
-                    style="display:none;"
-                >
-                    Выйти
-                </button>
+<div class="logo">
 
-            </div>
+GG
 
-        </div>
+</div>
 
-    </header>
 
+<h1>
+Game Guild Platform
+</h1>
 
-    <!-- =====================================================
-         MAIN
-         ===================================================== -->
 
-    <main>
 
-        <!-- =================================================
-             HERO
-             ================================================= -->
+<div id="profileBlock">
 
-        <section class="hero">
 
-            <div class="hero-content">
+<button onclick="openLogin()">
+Войти
+</button>
 
-                <div class="hero-label">
-                    Игровая платформа
-                </div>
 
-                <h1>
-                    Все твои игры<br>
-                    в одном месте
-                </h1>
+</div>
 
-                <p>
-                    Создавай игровые сообщества,
-                    находи гильдии, общайся на форуме,
-                    следи за рейтингами и собирай
-                    полезную информацию по любимым играм.
-                </p>
 
-            </div>
+</header>
 
-        </section>
 
 
-        <!-- =================================================
-             SEARCH
-             ================================================= -->
 
-        <section
-            class="search-section"
-            id="search-section"
-        >
 
-            <div class="section-title">
 
-                <div>
 
-                    <h2>
-                        Найти игру
-                    </h2>
+<!-- ==========================
+ AUTH WINDOW
+========================== -->
 
-                    <p>
-                        Поиск по названию и описанию игры
-                    </p>
 
-                </div>
+<section
+id="authWindow"
+class="modal"
+hidden
+>
 
-            </div>
 
+<div class="modal-box">
 
-            <div class="search-box">
 
-                <input
-                    id="game-search"
-                    type="search"
-                    placeholder="Например: World of Sea Battle"
-                    autocomplete="off"
-                >
+<h2>
+Авторизация
+</h2>
 
-                <button
-                    id="game-search-button"
-                    class="button button-primary search-button"
-                    type="button"
-                >
-                    Найти
-                </button>
 
-            </div>
 
-        </section>
+<input
+id="loginEmail"
+placeholder="Email"
+>
 
 
-        <!-- =================================================
-             GAMES
-             ================================================= -->
 
-        <section
-            class="games-section"
-            id="games-section"
-        >
+<input
+id="loginPassword"
+type="password"
+placeholder="Пароль"
+>
 
-            <div class="section-title">
 
-                <div>
 
-                    <h2>
-                        Игры
-                    </h2>
+<button onclick="login()">
+Войти
+</button>
 
-                    <p>
-                        Игры, доступные на платформе
-                    </p>
 
-                </div>
 
-            </div>
 
 
-            <div id="games-list">
+<hr>
 
-                <div class="loading-state">
 
-                    <div class="loading-spinner"></div>
 
-                    <div>
-                        Загрузка игр...
-                    </div>
 
-                </div>
+<h3>
+Регистрация
+</h3>
 
-            </div>
 
-        </section>
 
+<input
+id="regEmail"
+placeholder="Email"
+>
 
-        <!-- =================================================
-             CREATE GAME
-             ================================================= -->
 
-        <section
-            class="create-section"
-            id="create-section"
-            data-auth="logged-in"
-            style="display:none;"
-        >
 
-            <h2>
-                Добавить игру
-            </h2>
+<input
+id="regPassword"
+type="password"
+placeholder="Пароль"
+>
 
-            <p class="create-section-description">
-                Создай страницу новой игры.
-                После публикации игроки смогут находить
-                игру, создавать гильдии и пользоваться
-                разделами сообщества.
-            </p>
 
 
-            <form
-                id="create-game-form"
-            >
+<input
+id="regName"
+placeholder="Никнейм"
+>
 
-                <div class="form-grid">
 
-                    <div class="form-group">
 
-                        <label for="game-name">
-                            Название игры
-                        </label>
+<button onclick="register()">
+Создать аккаунт
+</button>
 
-                        <input
-                            id="game-name"
-                            name="name"
-                            type="text"
-                            placeholder="World of Sea Battle"
-                            required
-                        >
 
-                    </div>
 
+<button onclick="closeLogin()">
+Закрыть
+</button>
 
-                    <div class="form-group">
 
-                        <label for="game-slug">
-                            URL игры
-                        </label>
+</div>
 
-                        <input
-                            id="game-slug"
-                            name="slug"
-                            type="text"
-                            placeholder="world-of-sea-battle"
-                        >
 
-                    </div>
+</section>
 
 
-                    <div class="form-group full">
 
-                        <label for="game-description">
-                            Описание
-                        </label>
 
-                        <textarea
-                            id="game-description"
-                            name="description"
-                            placeholder="Краткое описание игры"
-                        ></textarea>
 
-                    </div>
 
 
-                    <div class="form-group full">
 
-                        <label for="game-logo">
-                            URL логотипа
-                        </label>
 
-                        <input
-                            id="game-logo"
-                            name="logo_url"
-                            type="url"
-                            placeholder="https://..."
-                        >
+<!-- ==========================
+ MAIN
+========================== -->
 
-                    </div>
 
-                </div>
+<main>
 
 
-                <div class="create-form-actions">
 
-                    <button
-                        class="button button-primary"
-                        type="submit"
-                    >
-                        Добавить игру
-                    </button>
 
-                </div>
+<section class="hero">
 
-            </form>
 
-        </section>
+<h2>
+Игровая платформа гильдий
+</h2>
 
 
-        <!-- =================================================
-             AUTH
-             ================================================= -->
+<p>
 
-        <section
-            class="auth-section"
-            id="auth-section"
-            data-auth="logged-out"
-        >
+Создавайте гильдии, объединяйте игроков,
+стройте союзы и развивайте свои игровые сообщества.
 
-            <!-- LOGIN -->
+</p>
 
-            <div class="auth-card">
 
-                <h2>
-                    Вход
-                </h2>
+</section>
 
-                <p>
-                    Войдите в свой аккаунт GameHub.
-                </p>
 
 
-                <form
-                    id="login-form"
-                    class="auth-form"
-                >
 
-                    <input
-                        id="login-email"
-                        name="email"
-                        type="email"
-                        placeholder="Email"
-                        autocomplete="email"
-                        required
-                    >
 
 
-                    <input
-                        id="login-password"
-                        name="password"
-                        type="password"
-                        placeholder="Пароль"
-                        autocomplete="current-password"
-                        required
-                    >
 
 
-                    <button
-                        class="button button-primary"
-                        type="submit"
-                    >
-                        Войти
-                    </button>
+<section class="game-search">
 
-                </form>
 
-            </div>
+<h2>
+Игры
+</h2>
 
 
-            <!-- REGISTER -->
 
-            <div class="auth-card">
 
-                <h2>
-                    Регистрация
-                </h2>
+<div class="search-line">
 
-                <p>
-                    Создайте новый аккаунт.
-                </p>
 
+<input
+id="gameSearch"
+placeholder="Поиск игры..."
+oninput="searchGames()"
+>
 
-                <form
-                    id="register-form"
-                    class="auth-form"
-                >
 
-                    <input
-                        name="display_name"
-                        type="text"
-                        placeholder="Ваше имя"
-                        autocomplete="name"
-                    >
 
 
-                    <input
-                        name="email"
-                        type="email"
-                        placeholder="Email"
-                        autocomplete="email"
-                        required
-                    >
+<button onclick="openCreateGame()">
 
+Создать игру
 
-                    <input
-                        name="password"
-                        type="password"
-                        placeholder="Пароль"
-                        autocomplete="new-password"
-                        required
-                    >
+</button>
 
 
-                    <button
-                        class="button button-primary"
-                        type="submit"
-                    >
-                        Зарегистрироваться
-                    </button>
 
-                </form>
+</div>
 
-            </div>
 
-        </section>
 
-    </main>
 
 
-    <!-- =====================================================
-         FOOTER
-         ===================================================== -->
+<div id="gamesList">
 
-    <footer>
 
-        <div class="footer-inner">
+</div>
 
-            <div>
-                © 2026 GameHub
-            </div>
 
-            <div>
-                Игровая платформа сообщества
-            </div>
 
-        </div>
 
-    </footer>
+</section>
 
 
-    <!-- =====================================================
-         SUPABASE
-         ===================================================== -->
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <script src="supabase-config.js"></script>
 
-    <script src="app.js"></script>
+
+
+
+
+<!-- ==========================
+ CREATE GAME
+========================== -->
+
+
+<section
+id="createGame"
+class="card"
+hidden
+>
+
+
+
+<h2>
+Создать игру
+</h2>
+
+
+
+<input
+id="gameName"
+placeholder="Название игры"
+>
+
+
+
+<textarea
+id="gameDescription"
+placeholder="Описание игры">
+</textarea>
+
+
+
+
+<input
+id="gameLogo"
+placeholder="Ссылка на логотип"
+>
+
+
+
+
+<button onclick="createGame()">
+
+Создать
+
+</button>
+
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<!-- ==========================
+ USER PROFILE
+========================== -->
+
+
+<section
+id="profile"
+class="card"
+hidden
+>
+
+
+<h2>
+Профиль
+</h2>
+
+
+<p id="profileName">
+
+</p>
+
+
+<button onclick="logout()">
+
+Выйти
+
+</button>
+
+
+</section>
+
+
+
+
+
+
+</main>
+
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<!-- VERSION -->
+
+
+<div id="siteVersion">
+
+</div>
+
+
+
+
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+
+<script src="supabase-config.js"></script>
+
+
+<script src="version.js"></script>
+
+
+<script src="app.js"></script>
+
+
 
 </body>
+
+
 </html>
