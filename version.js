@@ -1,13 +1,12 @@
 /*
 =================================================
-GLOBAL VERSION
+GAME GUILD PLATFORM
+VERSION
 =================================================
 */
 
 
-window.SITE_VERSION = "2.0.0";
-
-
+const SITE_VERSION = "2.0.0";
 
 
 
@@ -16,22 +15,27 @@ document.addEventListener(
 ()=>{
 
 
-const el =
+const box =
 document.getElementById(
 "siteVersion"
 );
 
 
 
-if(el){
+if(box){
 
 
-el.innerHTML =
-"v" + window.SITE_VERSION;
+box.innerHTML =
+
+"Game Guild Platform v" 
++
+SITE_VERSION;
+
 
 
 }
 
 
 
-});
+}
+);
