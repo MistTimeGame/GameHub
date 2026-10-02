@@ -24,23 +24,17 @@
 <div id="guildPage">
 
 
-
-<!-- =========================
- HEADER
-========================= -->
-
-
 <header class="guild-header">
 
 
 <div class="guild-images">
 
 
-<img 
+<img
 id="guildLogo"
 class="guild-logo"
 src=""
-alt="logo"
+alt="Логотип"
 >
 
 
@@ -48,12 +42,11 @@ alt="logo"
 id="factionFlag"
 class="faction-flag"
 src=""
-alt="flag"
+alt="Флаг"
 >
 
 
 </div>
-
 
 
 
@@ -72,34 +65,21 @@ alt="flag"
 </div>
 
 
+
 </header>
 
 
 
 
 
-
-<!-- =========================
- BANNER
-========================= -->
-
-
-<div 
+<div
 id="guildBanner"
-class="guild-banner"
->
-
+class="guild-banner">
 </div>
 
 
 
 
-
-
-
-<!-- =========================
- NAVIGATION
-========================= -->
 
 
 <nav class="guild-nav">
@@ -140,7 +120,8 @@ class="guild-banner"
 </button>
 
 
-<button 
+
+<button
 id="leaderPanelButton"
 onclick="openTab('settings')"
 hidden
@@ -163,13 +144,7 @@ hidden
 
 
 
-
-<!-- =========================
- ABOUT
-========================= -->
-
-
-<section 
+<section
 id="about"
 class="tab"
 >
@@ -180,10 +155,8 @@ class="tab"
 </h2>
 
 
-
 <p id="guildDescription">
 </p>
-
 
 
 
@@ -197,12 +170,11 @@ placeholder="Описание гильдии">
 
 
 <button onclick="saveDescription()">
-Сохранить
+Сохранить описание
 </button>
 
 
 </div>
-
 
 
 </section>
@@ -213,11 +185,6 @@ placeholder="Описание гильдии">
 
 
 
-
-
-<!-- =========================
- NEWS
-========================= -->
 
 
 <section
@@ -243,7 +210,7 @@ hidden
 
 <input
 id="newsTitle"
-placeholder="Заголовок"
+placeholder="Заголовок новости"
 >
 
 
@@ -271,11 +238,6 @@ placeholder="Текст новости">
 
 
 
-<!-- =========================
- MEMBERS
-========================= -->
-
-
 <section
 id="members"
 class="tab"
@@ -294,7 +256,6 @@ hidden
 
 
 
-
 <div id="memberCreate" hidden>
 
 
@@ -302,6 +263,7 @@ hidden
 id="memberNickname"
 placeholder="Никнейм игрока"
 >
+
 
 
 <select id="memberRole">
@@ -334,7 +296,6 @@ placeholder="Никнейм игрока"
 </div>
 
 
-
 </section>
 
 
@@ -343,11 +304,6 @@ placeholder="Никнейм игрока"
 
 
 
-
-
-<!-- =========================
- GALLERY
-========================= -->
 
 
 <section
@@ -368,7 +324,6 @@ hidden
 
 
 
-
 <div id="galleryCreate" hidden>
 
 
@@ -379,12 +334,11 @@ id="galleryFile"
 
 
 <button onclick="uploadGallery()">
-Загрузить изображение
+Загрузить
 </button>
 
 
 </div>
-
 
 
 </section>
@@ -395,11 +349,6 @@ id="galleryFile"
 
 
 
-
-
-<!-- =========================
- DOCUMENTS
-========================= -->
 
 
 <section
@@ -420,7 +369,6 @@ hidden
 
 
 
-
 <div id="documentCreate" hidden>
 
 
@@ -438,7 +386,6 @@ id="documentFile"
 </div>
 
 
-
 </section>
 
 
@@ -447,11 +394,6 @@ id="documentFile"
 
 
 
-
-
-<!-- =========================
- DIPLOMACY
-========================= -->
 
 
 <section
@@ -494,11 +436,6 @@ onclick="createAlliance()"
 
 
 
-<!-- =========================
- APPLICATIONS
-========================= -->
-
-
 <section
 id="applications"
 class="tab"
@@ -516,7 +453,6 @@ hidden
 </div>
 
 
-
 </section>
 
 
@@ -525,11 +461,6 @@ hidden
 
 
 
-
-
-<!-- =========================
- SETTINGS
-========================= -->
 
 
 <section
@@ -545,24 +476,26 @@ hidden
 
 
 
-
 <h3>
-Основная информация
+Основные данные
 </h3>
-
 
 
 <input
 id="editGuildName"
-placeholder="Название"
+placeholder="Название гильдии"
 >
 
 
 <textarea
-id="editGuildDescription"
+id="descriptionInputAdmin"
 placeholder="Описание">
 </textarea>
 
+
+<button onclick="saveGuildInfo()">
+Сохранить
+</button>
 
 
 
@@ -573,7 +506,6 @@ placeholder="Описание">
 <h3>
 Оформление
 </h3>
-
 
 
 <label>
@@ -588,8 +520,6 @@ id="themeColor"
 
 
 
-
-
 <label>
 Цвет кнопок
 </label>
@@ -599,9 +529,6 @@ id="themeColor"
 type="color"
 id="buttonColor"
 >
-
-
-
 
 
 
@@ -633,6 +560,13 @@ id="buttonColor"
 
 
 
+<button onclick="saveTheme()">
+Сохранить оформление
+</button>
+
+
+
+
 
 
 
@@ -658,8 +592,9 @@ id="logoFile"
 
 
 
+
 <h3>
-Баннер страницы
+Баннер
 </h3>
 
 
@@ -706,28 +641,8 @@ id="factionFile"
 
 
 
-
-
-
-<h3>
-Фон страницы
-</h3>
-
-
-<input
-type="file"
-id="backgroundFile"
->
-
-
-<button onclick="saveTheme()">
-Сохранить оформление
-</button>
-
-
-
-
 </section>
+
 
 
 
@@ -736,18 +651,12 @@ id="backgroundFile"
 </main>
 
 
-
-
 </div>
 
 
 
 
 
-
-<!-- =========================
- VERSION
-========================= -->
 
 
 <div id="siteVersion">
@@ -760,18 +669,13 @@ id="backgroundFile"
 
 
 
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 
 <script src="supabase-config.js"></script>
 
-
 <script src="version.js"></script>
 
-
 <script src="guild.js"></script>
-
 
 
 </body>
