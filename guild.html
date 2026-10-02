@@ -5,12 +5,16 @@
 
 <meta charset="UTF-8">
 
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 
 <title>Гильдия</title>
 
 
 <link rel="stylesheet" href="style.css">
+
+<link rel="stylesheet" href="guild.css">
+
 
 </head>
 
@@ -18,53 +22,101 @@
 <body>
 
 
-<header>
+<div id="guildPage">
+
+
+<!-- ШАПКА -->
+
+<header class="guild-header">
+
+
+<img 
+id="guildLogo"
+class="guild-logo"
+src=""
+>
+
+
+<div class="guild-title">
+
 
 <h1 id="guildName">
 Загрузка...
 </h1>
 
-<p id="guildDescription"></p>
+
+<p id="guildFaction">
+</p>
+
+
+</div>
+
 
 </header>
 
 
 
-<nav class="guild-menu">
+<!-- БАННЕР -->
+
+<div 
+id="guildBanner"
+class="guild-banner"
+>
 
 
-<button onclick="showSection('about')">
+</div>
+
+
+
+
+
+<!-- МЕНЮ -->
+
+<nav class="guild-nav">
+
+
+<button onclick="openTab('about')">
 О нас
 </button>
 
 
-<button onclick="showSection('news')">
+<button onclick="openTab('news')">
 Новости
 </button>
 
 
-<button onclick="showSection('members')">
+<button onclick="openTab('members')">
 Участники
 </button>
 
 
-<button onclick="showSection('gallery')">
+<button onclick="openTab('gallery')">
 Галерея
 </button>
 
 
-<button onclick="showSection('documents')">
+<button onclick="openTab('documents')">
 Документы
 </button>
 
 
-<button onclick="showSection('diplomacy')">
+<button onclick="openTab('diplomacy')">
 Дипломатия
 </button>
 
 
-<button onclick="showSection('applications')">
+<button onclick="openTab('applications')">
 Заявки
+</button>
+
+
+
+<button 
+id="settingsButton"
+onclick="openTab('settings')"
+hidden
+>
+⚙ Управление
 </button>
 
 
@@ -73,108 +125,457 @@
 
 
 
+
 <main>
 
 
 
-<section id="about">
+<!-- О НАС -->
+
+<section id="about"
+class="tab">
+
 
 <h2>
 О нас
 </h2>
 
-<p id="aboutText">
+
+<p id="guildDescription">
+
 </p>
+
+
+
+<div id="aboutEdit"
+hidden>
+
+
+<textarea 
+id="descriptionInput"
+placeholder="Описание гильдии">
+</textarea>
+
+
+<button onclick="saveDescription()">
+Сохранить
+</button>
+
+
+</div>
+
 
 </section>
 
 
 
-<section id="news" hidden>
+
+
+<!-- НОВОСТИ -->
+
+<section id="news"
+class="tab"
+hidden>
+
 
 <h2>
 Новости
 </h2>
 
+
 <div id="newsList">
 
 </div>
+
+
+
+<div id="newsAdd"
+hidden>
+
+
+<input
+id="newsTitle"
+placeholder="Заголовок"
+>
+
+
+<textarea
+id="newsText"
+placeholder="Текст новости">
+</textarea>
+
+
+<button onclick="addNews()">
+Добавить
+</button>
+
+
+</div>
+
 
 </section>
 
 
 
-<section id="members" hidden>
+
+
+
+
+<!-- УЧАСТНИКИ -->
+
+<section id="members"
+class="tab"
+hidden>
+
 
 <h2>
 Участники
 </h2>
 
+
 <div id="membersList">
 
 </div>
+
+
+<div id="memberAdd"
+hidden>
+
+
+<input
+id="memberNickname"
+placeholder="Никнейм игрока"
+>
+
+
+<button onclick="addMember()">
+Добавить
+</button>
+
+
+</div>
+
 
 </section>
 
 
 
-<section id="gallery" hidden>
+
+
+
+
+<!-- ГАЛЕРЕЯ -->
+
+
+<section id="gallery"
+class="tab"
+hidden>
+
 
 <h2>
 Галерея
 </h2>
 
+
 <div id="galleryList">
 
 </div>
+
+
+
+<div id="galleryAdd"
+hidden>
+
+
+<input
+type="file"
+id="galleryFile"
+>
+
+
+<button onclick="uploadGallery()">
+Загрузить
+</button>
+
+
+</div>
+
 
 </section>
 
 
 
-<section id="documents" hidden>
+
+
+
+
+<!-- ДОКУМЕНТЫ -->
+
+<section id="documents"
+class="tab"
+hidden>
+
 
 <h2>
 Документы
 </h2>
 
+
 <div id="documentsList">
 
 </div>
+
+
+<div id="documentAdd"
+hidden>
+
+
+<input
+type="file"
+id="documentFile"
+>
+
+
+<button onclick="uploadDocument()">
+Загрузить
+</button>
+
+
+</div>
+
 
 </section>
 
 
 
-<section id="diplomacy" hidden>
+
+
+
+
+<!-- ДИПЛОМАТИЯ -->
+
+<section id="diplomacy"
+class="tab"
+hidden>
+
 
 <h2>
 Дипломатия
 </h2>
 
+
 <div id="relationsList">
 
 </div>
+
+
+<button
+id="createAlliance"
+hidden
+onclick="createAlliance()"
+>
+Создать союз
+</button>
+
 
 </section>
 
 
 
-<section id="applications" hidden>
+
+
+
+
+<!-- ЗАЯВКИ -->
+
+<section id="applications"
+class="tab"
+hidden>
+
 
 <h2>
 Заявки
 </h2>
 
+
 <div id="applicationsList">
 
 </div>
+
+
+</section>
+
+
+
+
+
+
+
+
+<!-- НАСТРОЙКИ -->
+
+<section id="settings"
+class="tab"
+hidden>
+
+
+<h2>
+Настройки гильдии
+</h2>
+
+
+
+
+<h3>
+Основное
+</h3>
+
+
+
+<label>
+Название
+</label>
+
+
+<input
+id="editName"
+>
+
+
+
+<label>
+Описание
+</label>
+
+
+<textarea
+id="editDescription">
+</textarea>
+
+
+
+
+
+
+<h3>
+Оформление
+</h3>
+
+
+
+
+<label>
+Цвет темы
+</label>
+
+
+<input
+type="color"
+id="themeColor"
+>
+
+
+
+
+<label>
+Цвет кнопок
+</label>
+
+
+<input
+type="color"
+id="buttonColor"
+>
+
+
+
+
+
+<label>
+Форма кнопок
+</label>
+
+
+<select id="buttonStyle">
+
+
+<option value="rounded">
+Скругленные
+</option>
+
+
+<option value="circle">
+Круглые
+</option>
+
+
+<option value="square">
+Квадратные
+</option>
+
+
+</select>
+
+
+
+
+
+<label>
+Фон страницы
+</label>
+
+
+<input
+type="file"
+id="backgroundFile"
+>
+
+
+
+
+
+<h3>
+Фракция
+</h3>
+
+
+
+<input
+id="factionName"
+placeholder="Название фракции"
+>
+
+
+
+<label>
+Флаг фракции
+</label>
+
+
+<input
+type="file"
+id="factionFile"
+>
+
+
+
+
+<button onclick="saveTheme()">
+Сохранить оформление
+</button>
+
 
 </section>
 
 
 
 </main>
+
+
+
+</div>
+
+
 
 
 
