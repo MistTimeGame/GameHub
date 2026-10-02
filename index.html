@@ -5,22 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>World of Sea Battle — Гильдии</title>
     <link rel="stylesheet" href="style.css">
-
-    <!-- 🎮 Ruffle — эмулятор Flash Player (SWF в современных браузерах) -->
-    <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
-    <script>
-        window.RufflePlayer = window.RufflePlayer || {};
-        window.RufflePlayer.config = {
-            autoplay: 'on',
-            unmuteOverlay: 'hidden',
-            splashScreen: false,
-            letterbox: 'on',
-            quality: 'high',
-            scale: 'showAll',
-            menu: 'off',
-            backgroundColor: '#0a0d12'
-        };
-    </script>
 </head>
 <body>
 
@@ -31,7 +15,6 @@
             <button id="openVkNewsBtn" class="icon-btn" title="Новости">📰</button>
             <button id="openGeneralChatBtn" class="icon-btn" title="Общий чат">🌍</button>
             <button id="openVoiceChatBtn" class="icon-btn" title="Голосовой чат">🎙</button>
-            <button id="openFlashArchiveBtn" class="icon-btn" title="Flash-игры">🎮</button>
             <button id="themeToggle" class="icon-btn" title="Сменить тему">🌓</button>
             <button id="notifBell" class="icon-btn" title="Уведомления">🔔<span id="notifBadge" class="notif-badge" hidden>0</span></button>
             <button id="leaderPanelBtn" class="icon-btn" hidden title="Панель главы гильдии">🎖</button>
@@ -281,33 +264,6 @@
                 </div>
             </section>
 
-            <!-- 🌐 ОБЩИЙ РЫНОК (домашняя) -->
-            <section id="commonMarketSection" class="home-trade-section">
-                <h2 class="section-title">🌐 Общий рынок — все гильдии</h2>
-                <div class="mk-filters">
-                    <input type="search" id="mk-search" class="search-input" placeholder="🔍 Поиск по названию, нику, порту...">
-                    <select id="mk-sort" class="search-input">
-                        <option value="new">🆕 Сначала новые</option>
-                        <option value="price-asc">💲 Цена ↑</option>
-                        <option value="price-desc">💲 Цена ↓</option>
-                        <option value="qty-desc">📦 Кол-во ↓</option>
-                    </select>
-                    <div class="mk-chips" id="mk-type-filters">
-                        <span class="mk-chip active" data-type="all">Все</span>
-                        <span class="mk-chip buy" data-type="buy">🛒 Покупка</span>
-                        <span class="mk-chip sell" data-type="sell">💰 Продажа</span>
-                    </div>
-                </div>
-                <div id="mk-listings" class="mk-listings"></div>
-            </section>
-
-            <!-- 🎮 FLASH-АРХИВ -->
-            <section id="flashArchiveSection" class="home-trade-section">
-                <h2 class="section-title">🎮 Flash-игры — играть онлайн</h2>
-                <p class="hint" style="text-align:center;">Играй прямо в браузере. Работает через Ruffle.</p>
-                <div id="flashArchiveGrid" class="flash-grid"></div>
-            </section>
-
             <section id="applySection" class="apply-section">
                 <h2 class="section-title">📝 Подать заявку в гильдию</h2>
                 <div class="apply-card">
@@ -416,10 +372,6 @@
                 <button class="side-item" data-section="pb"><span class="side-ico">🛡</span><span>Билды ПБ</span></button>
                 <button class="side-item" data-section="ships"><span class="side-ico">🚢</span><span>Корабли</span></button>
                 <button class="side-item" data-section="builder"><span class="side-ico">🔧</span><span>Сборка корабля</span></button>
-                <button class="side-item" data-section="market"><span class="side-ico">🌐</span><span>Общий рынок</span></button>
-                <button class="side-item" data-section="fitting"><span class="side-ico">🔩</span><span>Фитинг корабля</span></button>
-                <button class="side-item" data-section="profit"><span class="side-ico">📈</span><span>Расчёт прибыли</span></button>
-                <button class="side-item" data-section="flash"><span class="side-ico">🎮</span><span>Flash-игры</span></button>
                 <button class="side-item" data-section="contacts"><span class="side-ico">💬</span><span>Контакты</span></button>
                 <button class="side-item" data-section="members"><span class="side-ico">👥</span><span>Участники</span></button>
                 <button class="side-item" id="openTacticsBtn"><span class="side-ico">📖</span><span>Тактика боя</span></button>
@@ -618,147 +570,6 @@
                     </div>
                 </div>
 
-                <!-- 🌐 ОБЩИЙ РЫНОК (в гильдии) -->
-                <div id="section-market" class="clan-section">
-                    <h2>🌐 Общий рынок</h2>
-                    <p class="hint">Заявки со всех гильдий. Видны всем участникам.</p>
-
-                    <div class="mk-filters">
-                        <input type="search" id="mk-search2" class="search-input" placeholder="🔍 Поиск по названию, нику, порту...">
-                        <select id="mk-sort2" class="search-input">
-                            <option value="new">🆕 Сначала новые</option>
-                            <option value="price-asc">💲 Цена ↑</option>
-                            <option value="price-desc">💲 Цена ↓</option>
-                            <option value="qty-desc">📦 Кол-во ↓</option>
-                        </select>
-                        <div class="mk-chips" id="mk-type-filters2">
-                            <span class="mk-chip active" data-type="all">Все</span>
-                            <span class="mk-chip buy" data-type="buy">🛒 Покупка</span>
-                            <span class="mk-chip sell" data-type="sell">💰 Продажа</span>
-                        </div>
-                    </div>
-
-                    <div id="mk-listings2" class="mk-listings"></div>
-
-                    <section class="add-form clan-admin-only" hidden id="mk-publish-form">
-                        <h3 style="flex:1 1 100%;font-size:14px;color:var(--gold);margin-bottom:6px;">📢 Опубликовать в общий рынок</h3>
-                        <select id="mk-pub-type">
-                            <option value="sell">💰 Продаю</option>
-                            <option value="buy">🛒 Покупаю</option>
-                        </select>
-                        <input type="text" id="mk-pub-name" placeholder="Название (ресурс/корабль/модуль) *" maxlength="80">
-                        <input type="number" id="mk-pub-price" placeholder="Цена за 1 *" min="1">
-                        <input type="number" id="mk-pub-qty" placeholder="Кол-во *" min="1" value="1">
-                        <input type="text" id="mk-pub-port" placeholder="Порт (необязательно)" maxlength="60">
-                        <textarea id="mk-pub-note" placeholder="Примечание" rows="2" maxlength="140"></textarea>
-                        <button id="mk-pub-btn">📢 Опубликовать</button>
-                        <span id="mk-pub-status"></span>
-                    </section>
-                </div>
-
-                <!-- 🔩 ФИТИНГ -->
-                <div id="section-fitting" class="clan-section">
-                    <h2>🔩 Фитинг корабля</h2>
-                    <p class="hint">Собери конфигурацию: корабль + модули/оружие. Итоговая стоимость берётся из каталога билдов.</p>
-
-                    <div class="fit-topbar">
-                        <div class="fit-pick">
-                            <label>🚢 Корабль:</label>
-                            <select id="fit-ship"><option value="">— Выберите корабль —</option></select>
-                            <img id="fit-ship-img" class="fit-ship-img" src="" alt="" hidden>
-                        </div>
-                        <input type="text" id="fit-name" placeholder="Название фита (например: ПБ-фрегат)" maxlength="60">
-                    </div>
-
-                    <section class="add-form clan-admin-only" hidden id="fit-add-form">
-                        <select id="fit-module-type">
-                            <option value="weapon_small">🟢 Малое орудие</option>
-                            <option value="weapon_medium">🟡 Среднее орудие</option>
-                            <option value="weapon_large">🔴 Большое орудие</option>
-                            <option value="module">⚙️ Модуль</option>
-                            <option value="ammo">💣 Боеприпас</option>
-                            <option value="consumable">🧪 Расходник</option>
-                            <option value="cargo">📦 Трюм</option>
-                            <option value="upgrade">🔧 Апгрейд</option>
-                        </select>
-                        <input type="text" id="fit-module-name" list="fit-module-list" placeholder="Название модуля" maxlength="120">
-                        <datalist id="fit-module-list"></datalist>
-                        <input type="number" id="fit-module-qty" min="1" value="1" placeholder="Кол-во">
-                        <button id="fit-add-btn">➕ Добавить</button>
-                        <span id="fit-status"></span>
-                    </section>
-
-                    <div class="fit-table-wrap">
-                        <table class="fit-table">
-                            <thead>
-                                <tr>
-                                    <th>Модуль</th>
-                                    <th>Тип</th>
-                                    <th>Кол-во</th>
-                                    <th>Цена</th>
-                                    <th>Сумма</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody id="fit-tbody"></tbody>
-                        </table>
-                    </div>
-
-                    <footer class="fit-footer">
-                        <div class="fit-total">
-                            <span class="fit-label">💰 Стоимость фита:</span>
-                            <span id="fit-total-value" class="fit-value">0 🪙</span>
-                        </div>
-                        <div class="fit-actions">
-                            <button id="fit-clear" class="builder-btn secondary">🗑 Очистить</button>
-                            <button id="fit-save" class="builder-btn primary">💾 Сохранить фит</button>
-                        </div>
-                    </footer>
-
-                    <h3 style="margin-top:24px;font-size:16px;color:var(--gold);">📚 Сохранённые фиты</h3>
-                    <div id="fit-list" class="fit-saved-list"></div>
-                </div>
-
-                <!-- 📈 РАСЧЁТ ПРИБЫЛИ -->
-                <div id="section-profit" class="clan-section">
-                    <h2>📈 Расчёт прибыли</h2>
-                    <p class="hint">Покупка → продажа, крафт → продажа. Учёт налога и портов.</p>
-
-                    <div class="pf-grid">
-                        <div class="pf-card">
-                            <h3>💱 Покупка → продажа</h3>
-                            <div class="pf-row"><label>Название</label><input type="text" id="pf-name" placeholder="Например: Дубовые доски" maxlength="80"></div>
-                            <div class="pf-row"><label>Цена покупки за 1</label><input type="number" id="pf-buy" min="0" step="1" value="0"></div>
-                            <div class="pf-row"><label>Цена продажи за 1</label><input type="number" id="pf-sell" min="0" step="1" value="0"></div>
-                            <div class="pf-row"><label>Количество</label><input type="number" id="pf-qty" min="1" step="1" value="1"></div>
-                            <div class="pf-row"><label>Налог, %</label><input type="number" id="pf-tax" min="0" max="100" step="0.5" value="0"></div>
-                            <button class="big-btn primary" id="pf-calc-buy" style="margin-top:8px;">📊 Рассчитать</button>
-                            <div id="pf-result-buy" class="pf-result"></div>
-                        </div>
-
-                        <div class="pf-card">
-                            <h3>🔨 Крафт → продажа</h3>
-                            <div class="pf-row"><label>Корабль</label>
-                                <select id="pf-craft-ship"><option value="">— Выберите —</option></select>
-                            </div>
-                            <div class="pf-row"><label>Цена продажи корабля</label><input type="number" id="pf-craft-sell" min="0" step="1" value="0"></div>
-                            <div class="pf-row"><label>Налог, %</label><input type="number" id="pf-craft-tax" min="0" max="100" step="0.5" value="0"></div>
-                            <button class="big-btn primary" id="pf-calc-craft" style="margin-top:8px;">📊 Рассчитать</button>
-                            <div id="pf-result-craft" class="pf-result"></div>
-                        </div>
-                    </div>
-
-                    <h3 style="margin-top:24px;font-size:16px;color:var(--gold);">📊 Активные заявки — средние цены</h3>
-                    <div id="pf-market-avg" class="pf-market-avg"></div>
-                </div>
-
-                <!-- 🎮 FLASH-ИГРЫ -->
-                <div id="section-flash" class="clan-section">
-                    <h2>🎮 Flash-игры</h2>
-                    <p class="hint">Играй прямо в браузере. Работает через Ruffle.</p>
-                    <div id="flashGuildGrid" class="flash-grid"></div>
-                </div>
-
                 <div id="section-contacts" class="clan-section">
                     <h2>💬 Контакты гильдий</h2>
                     <div id="contactsList" class="contacts-list"></div>
@@ -869,7 +680,6 @@
                 <button class="admin-nav-item" data-apanel="partners"><span class="admin-nav-ico">🤝</span><span>Партнёры</span></button>
                 <button class="admin-nav-item" data-apanel="faq"><span class="admin-nav-ico">❓</span><span>FAQ</span></button>
                 <button class="admin-nav-item" data-apanel="tactics"><span class="admin-nav-ico">📖</span><span>Тактика</span></button>
-                <button class="admin-nav-item" data-apanel="flashapps"><span class="admin-nav-ico">🎮</span><span>Flash-игры</span></button>
                 <button class="admin-nav-item" data-apanel="online"><span class="admin-nav-ico">👥</span><span>Онлайн</span></button>
                 <button class="admin-nav-item" data-apanel="admins"><span class="admin-nav-ico">👑</span><span>Админы</span></button>
                 <button class="admin-nav-item owner-only" data-apanel="clanRequests" hidden><span class="admin-nav-ico">📨</span><span>Заявки гильдий</span></button>
@@ -962,35 +772,6 @@
 
             <section class="admin-section" data-apanel="ships">
                 <h2 class="admin-section-title">🚢 Справочник кораблей</h2>
-                <div class="admin-card">
-                    <h3 style="font-size:15px;color:#ffd479;margin-bottom:6px;">➕ Добавить / изменить корабль</h3>
-                    <input type="hidden" id="ship-edit-id" value="">
-                    <div class="admin-field"><label>Название *</label><input type="text" id="ship-name" maxlength="80"></div>
-                    <div class="admin-field"><label>Уровень (1–7) *</label><input type="number" id="ship-level" min="1" max="7" step="1" value="1"></div>
-                    <div class="admin-field"><label>Тип *</label>
-                        <select id="ship-type">
-                            <option value="Быстроходные">⚡ Быстроходные</option>
-                            <option value="Боевые">⚔️ Боевые</option>
-                            <option value="Транспортные">📦 Транспортные</option>
-                            <option value="Тяжёлые">🛡 Тяжёлые</option>
-                            <option value="Осадные">🏰 Осадные</option>
-                            <option value="Имперские">👑 Имперские</option>
-                        </select>
-                    </div>
-                    <div class="admin-field"><label>Картинка (URL или путь)</label><input type="text" id="ship-image" placeholder="images/ships/frigate.png" maxlength="500"></div>
-                    <div class="admin-field"><label>💪 Прочность</label><input type="number" id="ship-durability" min="0" step="1"></div>
-                    <div class="admin-field"><label>⚡ Скорость</label><input type="number" id="ship-speed" min="0" step="1"></div>
-                    <div class="admin-field"><label>🔄 Маневренность</label><input type="number" id="ship-maneuverability" min="0" step="1"></div>
-                    <div class="admin-field"><label>🛡 Броня</label><input type="number" id="ship-armor" min="0" step="1"></div>
-                    <div class="admin-field"><label>🔫 Орудия</label><input type="number" id="ship-guns" min="0" step="1"></div>
-                    <div class="admin-field"><label>📦 Трюм</label><input type="number" id="ship-cargo" min="0" step="1"></div>
-                    <div class="admin-field"><label>👥 Экипаж</label><input type="number" id="ship-crew" min="0" step="1"></div>
-                    <p id="ship-admin-msg" class="error"></p>
-                    <div class="modal-actions">
-                        <button id="ship-save">💾 Сохранить</button>
-                        <button id="ship-reset" class="secondary">↺ Очистить форму</button>
-                    </div>
-                </div>
                 <div class="modal-actions" style="margin-bottom:14px;"><button id="reloadShipsBtn" class="secondary">🔄 Обновить список</button></div>
                 <div id="adminShipsList" class="partners-admin-list"></div>
             </section>
@@ -1219,48 +1000,6 @@
                 <div id="tacticsAdminList" class="partners-admin-list"></div>
             </section>
 
-            <!-- 🎮 FLASH-ИГРЫ (АДМИНКА) -->
-            <section class="admin-section" data-apanel="flashapps">
-                <h2 class="admin-section-title">🎮 Flash-игры</h2>
-                <p class="hint">Загрузи SWF-файл или укажи ссылку. Игры будут доступны в разделе «Flash-игры» на главной и в гильдиях.</p>
-                <div class="admin-card">
-                    <h3 style="font-size:15px;color:#ffd479;margin-bottom:6px;">➕ Добавить Flash-игру</h3>
-                    <input type="hidden" id="flash-edit-id" value="">
-                    <div class="admin-field"><label>Название *</label><input type="text" id="flash-title" maxlength="120"></div>
-                    <div class="admin-field"><label>Иконка (эмодзи)</label><input type="text" id="flash-icon" maxlength="4" value="🎮"></div>
-                    <div class="admin-field"><label>Категория</label>
-                        <select id="flash-category">
-                            <option value="action">⚔️ Экшен</option>
-                            <option value="strategy">🧠 Стратегия</option>
-                            <option value="arcade">👾 Аркада</option>
-                            <option value="puzzle">🧩 Головоломка</option>
-                            <option value="sports">⚽ Спорт</option>
-                            <option value="other">📦 Прочее</option>
-                        </select>
-                    </div>
-                    <div class="admin-field"><label>Описание</label><textarea id="flash-description" rows="2" maxlength="300"></textarea></div>
-                    <div class="admin-field">
-                        <label>SWF-файл</label>
-                        <div class="logo-upload">
-                            <input type="file" id="flash-file" accept=".swf,application/x-shockwave-flash" hidden>
-                            <button type="button" id="flash-file-pick" class="logo-pick-btn">📁 Загрузить SWF</button>
-                            <span id="flash-file-name" class="logo-name"></span>
-                        </div>
-                        <div class="hint" style="margin-top:4px;">Файл до 20 МБ. Загружается в Supabase Storage (bucket <b>flash-apps</b>).</div>
-                    </div>
-                    <div class="admin-field"><label>Или ссылка на SWF</label><input type="text" id="flash-url" placeholder="https://.../game.swf" maxlength="500"></div>
-                    <div class="admin-field"><label>Ширина (px)</label><input type="number" id="flash-width" min="320" max="1920" value="800" step="10"></div>
-                    <div class="admin-field"><label>Высота (px)</label><input type="number" id="flash-height" min="240" max="1080" value="600" step="10"></div>
-                    <div class="admin-field"><label class="disc-check"><input type="checkbox" id="flash-public" checked> Публичная</label></div>
-                    <p id="flash-admin-msg" class="error"></p>
-                    <div class="modal-actions">
-                        <button id="flash-save">💾 Сохранить</button>
-                        <button id="flash-reset" class="secondary">↺ Очистить форму</button>
-                    </div>
-                </div>
-                <div id="flashAdminList" class="partners-admin-list"></div>
-            </section>
-
             <section class="admin-section" data-apanel="online">
                 <h2 class="admin-section-title">👥 Кто сейчас на сайте</h2>
                 <div class="modal-actions" style="margin-bottom:12px"><button id="refreshOnlineList" class="secondary">🔄 Обновить</button></div>
@@ -1314,21 +1053,6 @@
                 <div class="modal-actions"><button id="saveSiteSettings">💾 Сохранить</button></div>
             </section>
         </main>
-    </div>
-
-    <!-- 🎮 МОДАЛКА FLASH-ПЛЕЕРА -->
-    <div id="flashPlayerModal" class="flash-modal" hidden>
-        <div class="flash-modal-content">
-            <header class="flash-modal-header">
-                <h2 id="flashPlayerTitle">🎮 Flash-игра</h2>
-                <button id="flashPlayerClose" class="flash-modal-close">✕</button>
-            </header>
-            <div id="flashPlayerStage" class="flash-modal-stage"></div>
-            <footer class="flash-modal-footer">
-                <span id="flashPlayerMeta"></span>
-                <span>💡 Esc — закрыть</span>
-            </footer>
-        </div>
     </div>
 
     <!-- МОДАЛКИ -->
@@ -1789,7 +1513,7 @@
 
     <footer class="site-footer">
         <span class="footer-left">Mist Time — Сергеев С.В</span>
-        <span class="footer-right">v2.4.0</span>
+        <span class="footer-right">v2.2.0</span>
     </footer>
 
     <script type="module" src="app.js"></script>
