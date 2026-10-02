@@ -27,11 +27,6 @@ Game Guild Platform
 
 
 
-<!-- ==========================
- HEADER
-========================== -->
-
-
 <header class="main-header">
 
 
@@ -42,6 +37,7 @@ GG
 </div>
 
 
+
 <h1>
 Game Guild Platform
 </h1>
@@ -50,11 +46,9 @@ Game Guild Platform
 
 <div id="profileBlock">
 
-
 <button onclick="openLogin()">
 Войти
 </button>
-
 
 </div>
 
@@ -67,19 +61,28 @@ Game Guild Platform
 
 
 
-<!-- ==========================
- AUTH WINDOW
-========================== -->
 
+
+<!-- AUTH -->
 
 <section
 id="authWindow"
 class="modal"
-hidden
+style="display:none;"
 >
 
 
 <div class="modal-box">
+
+
+<button
+class="modal-close"
+onclick="closeLogin()">
+
+✖
+
+</button>
+
 
 
 <h2>
@@ -88,8 +91,10 @@ hidden
 
 
 
+
 <input
 id="loginEmail"
+type="email"
 placeholder="Email"
 >
 
@@ -103,8 +108,11 @@ placeholder="Пароль"
 
 
 
+
 <button onclick="login()">
+
 Войти
+
 </button>
 
 
@@ -116,16 +124,20 @@ placeholder="Пароль"
 
 
 
+
 <h3>
 Регистрация
 </h3>
 
 
 
+
 <input
 id="regEmail"
+type="email"
 placeholder="Email"
 >
+
 
 
 
@@ -137,6 +149,7 @@ placeholder="Пароль"
 
 
 
+
 <input
 id="regName"
 placeholder="Никнейм"
@@ -144,15 +157,13 @@ placeholder="Никнейм"
 
 
 
+
 <button onclick="register()">
+
 Создать аккаунт
+
 </button>
 
-
-
-<button onclick="closeLogin()">
-Закрыть
-</button>
 
 
 </div>
@@ -168,13 +179,7 @@ placeholder="Никнейм"
 
 
 
-<!-- ==========================
- MAIN
-========================== -->
-
-
 <main>
-
 
 
 
@@ -189,12 +194,13 @@ placeholder="Никнейм"
 <p>
 
 Создавайте гильдии, объединяйте игроков,
-стройте союзы и развивайте свои игровые сообщества.
+стройте союзы и развивайте игровые сообщества.
 
 </p>
 
 
 </section>
+
 
 
 
@@ -214,6 +220,7 @@ placeholder="Никнейм"
 
 
 <div class="search-line">
+
 
 
 <input
@@ -239,11 +246,10 @@ oninput="searchGames()"
 
 
 
+
 <div id="gamesList">
 
-
 </div>
-
 
 
 
@@ -257,17 +263,11 @@ oninput="searchGames()"
 
 
 
-<!-- ==========================
- CREATE GAME
-========================== -->
-
-
 <section
 id="createGame"
 class="card"
 hidden
 >
-
 
 
 <h2>
@@ -317,11 +317,6 @@ placeholder="Ссылка на логотип"
 
 
 
-<!-- ==========================
- USER PROFILE
-========================== -->
-
-
 <section
 id="profile"
 class="card"
@@ -334,9 +329,11 @@ hidden
 </h2>
 
 
+
 <p id="profileName">
 
 </p>
+
 
 
 <button onclick="logout()">
@@ -346,8 +343,8 @@ hidden
 </button>
 
 
-</section>
 
+</section>
 
 
 
@@ -361,16 +358,11 @@ hidden
 
 
 
-
 </div>
 
 
 
 
-
-
-
-<!-- VERSION -->
 
 
 <div id="siteVersion">
@@ -383,20 +375,17 @@ hidden
 
 
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script src="supabase-config.js"></script>
 
-
 <script src="version.js"></script>
-
 
 <script src="app.js"></script>
 
 
 
 </body>
-
 
 </html>
