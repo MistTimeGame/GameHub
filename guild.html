@@ -7,7 +7,6 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-
 <title>Гильдия</title>
 
 
@@ -25,16 +24,37 @@
 <div id="guildPage">
 
 
-<!-- ШАПКА -->
+
+<!-- =========================
+ HEADER
+========================= -->
+
 
 <header class="guild-header">
+
+
+<div class="guild-images">
 
 
 <img 
 id="guildLogo"
 class="guild-logo"
 src=""
+alt="logo"
 >
+
+
+<img
+id="factionFlag"
+class="faction-flag"
+src=""
+alt="flag"
+>
+
+
+</div>
+
+
 
 
 <div class="guild-title">
@@ -56,13 +76,18 @@ src=""
 
 
 
-<!-- БАННЕР -->
+
+
+
+<!-- =========================
+ BANNER
+========================= -->
+
 
 <div 
 id="guildBanner"
 class="guild-banner"
 >
-
 
 </div>
 
@@ -70,7 +95,12 @@ class="guild-banner"
 
 
 
-<!-- МЕНЮ -->
+
+
+<!-- =========================
+ NAVIGATION
+========================= -->
+
 
 <nav class="guild-nav">
 
@@ -110,9 +140,8 @@ class="guild-banner"
 </button>
 
 
-
 <button 
-id="settingsButton"
+id="leaderPanelButton"
 onclick="openTab('settings')"
 hidden
 >
@@ -126,14 +155,24 @@ hidden
 
 
 
+
+
 <main>
 
 
 
-<!-- О НАС -->
 
-<section id="about"
-class="tab">
+
+
+<!-- =========================
+ ABOUT
+========================= -->
+
+
+<section 
+id="about"
+class="tab"
+>
 
 
 <h2>
@@ -141,17 +180,17 @@ class="tab">
 </h2>
 
 
-<p id="guildDescription">
 
+<p id="guildDescription">
 </p>
 
 
 
-<div id="aboutEdit"
-hidden>
+
+<div id="descriptionEdit" hidden>
 
 
-<textarea 
+<textarea
 id="descriptionInput"
 placeholder="Описание гильдии">
 </textarea>
@@ -165,17 +204,27 @@ placeholder="Описание гильдии">
 </div>
 
 
+
 </section>
 
 
 
 
 
-<!-- НОВОСТИ -->
 
-<section id="news"
+
+
+
+<!-- =========================
+ NEWS
+========================= -->
+
+
+<section
+id="news"
 class="tab"
-hidden>
+hidden
+>
 
 
 <h2>
@@ -189,8 +238,7 @@ hidden>
 
 
 
-<div id="newsAdd"
-hidden>
+<div id="newsCreate" hidden>
 
 
 <input
@@ -205,8 +253,8 @@ placeholder="Текст новости">
 </textarea>
 
 
-<button onclick="addNews()">
-Добавить
+<button onclick="createNews()">
+Добавить новость
 </button>
 
 
@@ -221,11 +269,18 @@ placeholder="Текст новости">
 
 
 
-<!-- УЧАСТНИКИ -->
 
-<section id="members"
+
+<!-- =========================
+ MEMBERS
+========================= -->
+
+
+<section
+id="members"
 class="tab"
-hidden>
+hidden
+>
 
 
 <h2>
@@ -238,14 +293,37 @@ hidden>
 </div>
 
 
-<div id="memberAdd"
-hidden>
+
+
+<div id="memberCreate" hidden>
 
 
 <input
 id="memberNickname"
 placeholder="Никнейм игрока"
 >
+
+
+<select id="memberRole">
+
+
+<option value="member">
+Участник
+</option>
+
+
+<option value="officer">
+Офицер
+</option>
+
+
+<option value="diplomat">
+Дипломат
+</option>
+
+
+</select>
+
 
 
 <button onclick="addMember()">
@@ -256,6 +334,7 @@ placeholder="Никнейм игрока"
 </div>
 
 
+
 </section>
 
 
@@ -264,12 +343,18 @@ placeholder="Никнейм игрока"
 
 
 
-<!-- ГАЛЕРЕЯ -->
 
 
-<section id="gallery"
+<!-- =========================
+ GALLERY
+========================= -->
+
+
+<section
+id="gallery"
 class="tab"
-hidden>
+hidden
+>
 
 
 <h2>
@@ -283,8 +368,8 @@ hidden>
 
 
 
-<div id="galleryAdd"
-hidden>
+
+<div id="galleryCreate" hidden>
 
 
 <input
@@ -294,11 +379,12 @@ id="galleryFile"
 
 
 <button onclick="uploadGallery()">
-Загрузить
+Загрузить изображение
 </button>
 
 
 </div>
+
 
 
 </section>
@@ -309,11 +395,18 @@ id="galleryFile"
 
 
 
-<!-- ДОКУМЕНТЫ -->
 
-<section id="documents"
+
+<!-- =========================
+ DOCUMENTS
+========================= -->
+
+
+<section
+id="documents"
 class="tab"
-hidden>
+hidden
+>
 
 
 <h2>
@@ -326,8 +419,9 @@ hidden>
 </div>
 
 
-<div id="documentAdd"
-hidden>
+
+
+<div id="documentCreate" hidden>
 
 
 <input
@@ -337,11 +431,12 @@ id="documentFile"
 
 
 <button onclick="uploadDocument()">
-Загрузить
+Загрузить документ
 </button>
 
 
 </div>
+
 
 
 </section>
@@ -352,11 +447,18 @@ id="documentFile"
 
 
 
-<!-- ДИПЛОМАТИЯ -->
 
-<section id="diplomacy"
+
+<!-- =========================
+ DIPLOMACY
+========================= -->
+
+
+<section
+id="diplomacy"
 class="tab"
-hidden>
+hidden
+>
 
 
 <h2>
@@ -369,13 +471,17 @@ hidden>
 </div>
 
 
+
 <button
-id="createAlliance"
+id="allianceCreate"
 hidden
 onclick="createAlliance()"
 >
+
 Создать союз
+
 </button>
+
 
 
 </section>
@@ -386,11 +492,18 @@ onclick="createAlliance()"
 
 
 
-<!-- ЗАЯВКИ -->
 
-<section id="applications"
+
+<!-- =========================
+ APPLICATIONS
+========================= -->
+
+
+<section
+id="applications"
 class="tab"
-hidden>
+hidden
+>
 
 
 <h2>
@@ -403,6 +516,7 @@ hidden>
 </div>
 
 
+
 </section>
 
 
@@ -412,45 +526,44 @@ hidden>
 
 
 
-<!-- НАСТРОЙКИ -->
 
-<section id="settings"
+<!-- =========================
+ SETTINGS
+========================= -->
+
+
+<section
+id="settings"
 class="tab"
-hidden>
+hidden
+>
 
 
 <h2>
-Настройки гильдии
+Управление гильдией
 </h2>
 
 
 
 
 <h3>
-Основное
+Основная информация
 </h3>
 
 
 
-<label>
-Название
-</label>
-
-
 <input
-id="editName"
+id="editGuildName"
+placeholder="Название"
 >
 
 
-
-<label>
-Описание
-</label>
-
-
 <textarea
-id="editDescription">
+id="editGuildDescription"
+placeholder="Описание">
 </textarea>
+
+
 
 
 
@@ -460,7 +573,6 @@ id="editDescription">
 <h3>
 Оформление
 </h3>
-
 
 
 
@@ -477,6 +589,7 @@ id="themeColor"
 
 
 
+
 <label>
 Цвет кнопок
 </label>
@@ -486,6 +599,7 @@ id="themeColor"
 type="color"
 id="buttonColor"
 >
+
 
 
 
@@ -520,15 +634,47 @@ id="buttonColor"
 
 
 
-<label>
-Фон страницы
-</label>
+
+
+
+<h3>
+Логотип
+</h3>
 
 
 <input
 type="file"
-id="backgroundFile"
+id="logoFile"
 >
+
+
+<button onclick="uploadLogo()">
+Загрузить логотип
+</button>
+
+
+
+
+
+
+
+<h3>
+Баннер страницы
+</h3>
+
+
+<input
+type="file"
+id="bannerFile"
+>
+
+
+<button onclick="uploadBanner()">
+Загрузить баннер
+</button>
+
+
+
 
 
 
@@ -539,17 +685,11 @@ id="backgroundFile"
 </h3>
 
 
-
 <input
 id="factionName"
 placeholder="Название фракции"
 >
 
-
-
-<label>
-Флаг фракции
-</label>
 
 
 <input
@@ -559,13 +699,37 @@ id="factionFile"
 
 
 
+<button onclick="uploadFactionFlag()">
+Установить флаг
+</button>
+
+
+
+
+
+
+
+<h3>
+Фон страницы
+</h3>
+
+
+<input
+type="file"
+id="backgroundFile"
+>
+
 
 <button onclick="saveTheme()">
 Сохранить оформление
 </button>
 
 
+
+
 </section>
+
+
 
 
 
@@ -573,7 +737,25 @@ id="factionFile"
 
 
 
+
 </div>
+
+
+
+
+
+
+<!-- =========================
+ VERSION
+========================= -->
+
+
+<div id="siteVersion">
+
+</div>
+
+
+
 
 
 
@@ -585,7 +767,11 @@ id="factionFile"
 <script src="supabase-config.js"></script>
 
 
+<script src="version.js"></script>
+
+
 <script src="guild.js"></script>
+
 
 
 </body>
