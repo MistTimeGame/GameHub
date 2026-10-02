@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+<title>
+Админ-панель
+</title>
+
+
+<link rel="stylesheet" href="style.css">
+
+<link rel="stylesheet" href="admin.css">
+
+
+</head>
+
+
+<body>
+
+
+
+<header class="admin-header">
+
+
+<h1>
+⚙ Админ-панель Game Guild Platform
+</h1>
+
+
+
+<a href="index.html">
+
+На главную
+
+</a>
+
+
+</header>
+
+
+
+
+
+
+
+<main class="admin-page">
+
+
+
+
+
+<section class="admin-card">
+
+
+<h2>
+Игры
+</h2>
+
+
+<div id="gamesAdminList">
+
+</div>
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<section class="admin-card">
+
+
+<h2>
+Пользователи
+</h2>
+
+
+<div id="usersAdminList">
+
+</div>
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<section class="admin-card">
+
+
+<h2>
+Гильдии
+</h2>
+
+
+<div id="guildsAdminList">
+
+</div>
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<section class="admin-card">
+
+
+<h2>
+Добавить игровой модуль
+</h2>
+
+
+
+
+<select id="moduleGame">
+
+
+</select>
+
+
+
+
+
+<input
+id="moduleName"
+placeholder="Название модуля"
+>
+
+
+
+<textarea
+id="moduleDescription"
+placeholder="Описание"
+></textarea>
+
+
+
+
+
+<input
+id="moduleJson"
+placeholder="JSON файл или ссылка"
+>
+
+
+
+
+
+<button onclick="addModule()">
+
+Добавить модуль
+
+</button>
+
+
+
+</section>
+
+
+
+
+
+
+
+</main>
+
+
+
+
+
+
+
+<div id="siteVersion">
+
+</div>
+
+
+
+
+
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+
+<script src="supabase-config.js"></script>
+
+
+<script src="version.js"></script>
+
+
+<script src="admin.js"></script>
+
+
+
+</body>
+
+
+</html>
