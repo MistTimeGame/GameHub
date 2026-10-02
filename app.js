@@ -2,7 +2,6 @@
 =================================================
 GAME GUILD PLATFORM
 APP CORE v2.2.0
-AUTH + GAMES FIX
 =================================================
 */
 
@@ -10,6 +9,10 @@ AUTH + GAMES FIX
 let currentUser = null;
 
 let gamesCache = [];
+
+
+
+
 
 
 
@@ -36,6 +39,7 @@ console.log(
 await restoreSession();
 
 
+
 await loadGames();
 
 
@@ -60,8 +64,6 @@ SESSION
 async function restoreSession(){
 
 
-try{
-
 
 const {
 
@@ -70,7 +72,6 @@ data,
 error
 
 }=await supabaseClient.auth.getSession();
-
 
 
 
@@ -113,20 +114,6 @@ showLoginButton();
 
 }
 
-catch(e){
-
-
-console.error(
-e
-);
-
-
-}
-
-
-
-}
-
 
 
 
@@ -155,27 +142,21 @@ document.getElementById(
 
 
 
-if(!win){
 
-
-console.error(
-"authWindow not found"
-);
-
-
-return;
-
-
-}
-
+if(win){
 
 
 win.style.display =
 "flex";
 
 
+}
+
+
 
 }
+
+
 
 
 
@@ -195,19 +176,15 @@ document.getElementById(
 
 
 
-if(!win){
 
-
-return;
-
-
-}
-
-
+if(win){
 
 
 win.style.display =
 "none";
+
+
+}
 
 
 
@@ -244,7 +221,6 @@ document
 
 
 
-
 const password =
 
 document
@@ -256,8 +232,7 @@ document
 
 
 
-
-const nickname =
+const username =
 
 document
 .getElementById(
@@ -265,7 +240,6 @@ document
 )
 .value
 .trim();
-
 
 
 
@@ -290,6 +264,7 @@ return;
 
 
 
+
 const {
 
 data,
@@ -298,9 +273,12 @@ error
 
 }=await supabaseClient.auth.signUp({
 
+
 email,
 
+
 password,
+
 
 
 options:{
@@ -309,26 +287,19 @@ options:{
 data:{
 
 
-username:nickname
+username:username
 
 
 }
 
 
+
 }
+
 
 
 });
 
-
-
-
-
-console.log(
-"REGISTER",
-data,
-error
-);
 
 
 
@@ -352,8 +323,9 @@ return;
 
 
 
+
 alert(
-"Регистрация выполнена"
+"Аккаунт создан"
 );
 
 
@@ -376,14 +348,6 @@ LOGIN
 
 
 async function login(){
-
-
-
-console.log(
-"LOGIN START"
-);
-
-
 
 
 
@@ -417,7 +381,7 @@ if(!email || !password){
 
 
 alert(
-"Введите email и пароль"
+"Введите данные"
 );
 
 
@@ -431,11 +395,6 @@ return;
 
 
 
-
-try{
-
-
-
 const {
 
 data,
@@ -444,9 +403,12 @@ error
 
 }=await supabaseClient.auth.signInWithPassword({
 
+
 email,
 
+
 password
+
 
 });
 
@@ -455,11 +417,13 @@ password
 
 
 
+
 console.log(
-"LOGIN RESULT",
+"LOGIN",
 data,
 error
 );
+
 
 
 
@@ -492,11 +456,7 @@ data.user;
 
 
 
-
 closeLogin();
-
-
-
 
 
 
@@ -504,42 +464,9 @@ showProfile();
 
 
 
-
-
 await loadGames();
 
 
-
-
-
-
-alert(
-"Вход выполнен"
-);
-
-
-
-
-
-}
-
-catch(e){
-
-
-
-console.error(e);
-
-
-
-alert(
-"Ошибка входа: "
-+
-e.message
-);
-
-
-
-}
 
 
 
@@ -597,10 +524,9 @@ function showProfile(){
 
 
 
-const block =
+const box =
 
-document
-.getElementById(
+document.getElementById(
 "profileBlock"
 );
 
@@ -608,11 +534,10 @@ document
 
 
 
-if(block){
+if(box){
 
 
-
-block.innerHTML=`
+box.innerHTML = `
 
 <button onclick="logout()">
 
@@ -636,8 +561,7 @@ ${currentUser.email}
 
 const profile =
 
-document
-.getElementById(
+document.getElementById(
 "profile"
 );
 
@@ -651,6 +575,7 @@ if(profile){
 profile.hidden=false;
 
 
+
 }
 
 
@@ -659,8 +584,7 @@ profile.hidden=false;
 
 const name =
 
-document
-.getElementById(
+document.getElementById(
 "profileName"
 );
 
@@ -675,12 +599,12 @@ name.innerText =
 currentUser.email;
 
 
-}
-
-
 
 }
 
+
+
+}
 
 
 
@@ -693,21 +617,20 @@ function showLoginButton(){
 
 
 
-const block =
+const box =
 
-document
-.getElementById(
+document.getElementById(
 "profileBlock"
 );
 
 
 
 
-if(block){
+
+if(box){
 
 
-
-block.innerHTML=`
+box.innerHTML = `
 
 <button onclick="openLogin()">
 
@@ -756,16 +679,16 @@ error
 
 .select("*")
 
+.eq(
+"status",
+"published"
+)
+
 .order(
-
 "created_at",
-
 {
-
 ascending:false
-
 }
-
 );
 
 
@@ -788,15 +711,15 @@ error
 if(error){
 
 
-console.error(
-error.message
-);
+console.error(error);
 
 
 return;
 
 
 }
+
+
 
 
 
@@ -836,15 +759,16 @@ function searchGames(){
 
 
 
-const value =
+const text =
 
 document
 .getElementById(
 "gameSearch"
 )
 .value
-
 .toLowerCase();
+
+
 
 
 
@@ -860,9 +784,11 @@ game.name
 
 .toLowerCase()
 
-.includes(value)
+.includes(text)
 
 );
+
+
 
 
 
@@ -884,7 +810,7 @@ renderGames(result);
 
 /*
 =================================================
-RENDER GAMES
+RENDER
 =================================================
 */
 
@@ -924,16 +850,12 @@ list.forEach(game=>{
 
 
 
-box.innerHTML +=`
+box.innerHTML += `
 
-<div
 
-class="game-card"
+<div class="game-card"
 
-onclick="openGame('${game.id}')"
-
->
-
+onclick="openGame('${game.id}')">
 
 
 ${
@@ -957,11 +879,13 @@ game.logo_url
 
 
 
+
 <h3>
 
 ${game.name}
 
 </h3>
+
 
 
 
@@ -976,6 +900,7 @@ ${game.description || ""}
 
 
 </div>
+
 
 `;
 
@@ -999,9 +924,11 @@ function openGame(id){
 
 
 
-location.href =
+window.location.href =
 
-"game.html?id="+id;
+"game.html?id="
++
+id;
 
 
 
@@ -1029,10 +956,13 @@ function openCreateGame(){
 if(!currentUser){
 
 
+
 openLogin();
 
 
+
 return;
+
 
 
 }
@@ -1041,10 +971,11 @@ return;
 
 
 
+
+
 const box =
 
-document
-.getElementById(
+document.getElementById(
 "createGame"
 );
 
@@ -1052,9 +983,14 @@ document
 
 
 
-if(box)
+if(box){
+
 
 box.hidden=false;
+
+
+
+}
 
 
 
@@ -1089,6 +1025,7 @@ return;
 
 
 
+
 const name =
 
 document
@@ -1102,6 +1039,7 @@ document
 
 
 
+
 const description =
 
 document
@@ -1109,6 +1047,8 @@ document
 "gameDescription"
 )
 .value;
+
+
 
 
 
@@ -1128,11 +1068,12 @@ document
 
 
 
+
 if(!name){
 
 
 alert(
-"Введите название игры"
+"Введите название"
 );
 
 
@@ -1140,7 +1081,6 @@ return;
 
 
 }
-
 
 
 
@@ -1176,8 +1116,8 @@ status:
 "published"
 
 
-
 });
+
 
 
 
@@ -1207,6 +1147,8 @@ return;
 alert(
 "Игра создана"
 );
+
+
 
 
 
