@@ -7,7 +7,10 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Гильдия</title>
+
+<title>
+Гильдия
+</title>
 
 
 <link rel="stylesheet" href="style.css">
@@ -21,10 +24,13 @@
 <body>
 
 
+
 <div id="guildPage">
 
 
+
 <header class="guild-header">
+
 
 
 <div class="guild-images">
@@ -38,15 +44,19 @@ alt="Логотип"
 >
 
 
+
 <img
 id="factionFlag"
 class="faction-flag"
 src=""
-alt="Флаг"
+alt="Фракция"
 >
 
 
+
 </div>
+
+
 
 
 
@@ -58,8 +68,17 @@ alt="Флаг"
 </h1>
 
 
-<p id="guildFaction">
+
+<p id="guildTag">
+
 </p>
+
+
+
+<p id="guildFaction">
+
+</p>
+
 
 
 </div>
@@ -72,10 +91,14 @@ alt="Флаг"
 
 
 
+
 <div
 id="guildBanner"
 class="guild-banner">
+
 </div>
+
+
 
 
 
@@ -85,52 +108,67 @@ class="guild-banner">
 <nav class="guild-nav">
 
 
-<button onclick="openTab('about')">
-О нас
+<button onclick="openGuildTab('about')">
+
+О гильдии
+
 </button>
 
 
-<button onclick="openTab('news')">
-Новости
-</button>
+<button onclick="openGuildTab('members')">
 
-
-<button onclick="openTab('members')">
 Участники
+
 </button>
 
 
-<button onclick="openTab('gallery')">
+
+<button onclick="openGuildTab('news')">
+
+Новости
+
+</button>
+
+
+
+<button onclick="openGuildTab('gallery')">
+
 Галерея
+
 </button>
 
 
-<button onclick="openTab('documents')">
+
+<button onclick="openGuildTab('documents')">
+
 Документы
+
 </button>
 
 
-<button onclick="openTab('diplomacy')">
+
+<button onclick="openGuildTab('diplomacy')">
+
 Дипломатия
-</button>
 
-
-<button onclick="openTab('applications')">
-Заявки
 </button>
 
 
 
-<button
-id="leaderPanelButton"
-onclick="openTab('settings')"
+<button onclick="openGuildTab('settings')"
+id="settingsButton"
 hidden
 >
+
 ⚙ Управление
+
 </button>
 
 
 </nav>
+
+
+
 
 
 
@@ -146,35 +184,106 @@ hidden
 
 <section
 id="about"
-class="tab"
+class="guild-tab"
 >
 
 
+
 <h2>
-О нас
+О гильдии
 </h2>
 
 
+
 <p id="guildDescription">
+
 </p>
 
 
 
-<div id="descriptionEdit" hidden>
+</section>
 
 
-<textarea
-id="descriptionInput"
-placeholder="Описание гильдии">
-</textarea>
 
 
-<button onclick="saveDescription()">
-Сохранить описание
+
+
+
+
+
+<section
+id="members"
+class="guild-tab"
+hidden
+>
+
+
+<h2>
+Участники
+</h2>
+
+
+
+<div id="membersList">
+
+</div>
+
+
+
+<div id="memberControl" hidden>
+
+
+<input
+id="memberUser"
+placeholder="ID игрока"
+>
+
+
+
+<input
+id="memberNickname"
+placeholder="Никнейм"
+>
+
+
+
+<select id="memberRole">
+
+
+<option value="member">
+
+Участник
+
+</option>
+
+
+<option value="officer">
+
+Офицер
+
+</option>
+
+
+<option value="diplomat">
+
+Дипломат
+
+</option>
+
+
+</select>
+
+
+
+<button onclick="addMember()">
+
+Добавить
+
 </button>
 
 
 </div>
+
 
 
 </section>
@@ -189,7 +298,7 @@ placeholder="Описание гильдии">
 
 <section
 id="news"
-class="tab"
+class="guild-tab"
 hidden
 >
 
@@ -205,13 +314,15 @@ hidden
 
 
 
-<div id="newsCreate" hidden>
+
+<div id="newsControl" hidden>
 
 
 <input
 id="newsTitle"
-placeholder="Заголовок новости"
+placeholder="Заголовок"
 >
+
 
 
 <textarea
@@ -220,80 +331,16 @@ placeholder="Текст новости">
 </textarea>
 
 
+
 <button onclick="createNews()">
-Добавить новость
-</button>
 
-
-</div>
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<section
-id="members"
-class="tab"
-hidden
->
-
-
-<h2>
-Участники
-</h2>
-
-
-<div id="membersList">
-
-</div>
-
-
-
-<div id="memberCreate" hidden>
-
-
-<input
-id="memberNickname"
-placeholder="Никнейм игрока"
->
-
-
-
-<select id="memberRole">
-
-
-<option value="member">
-Участник
-</option>
-
-
-<option value="officer">
-Офицер
-</option>
-
-
-<option value="diplomat">
-Дипломат
-</option>
-
-
-</select>
-
-
-
-<button onclick="addMember()">
 Добавить
+
 </button>
 
 
 </div>
+
 
 
 </section>
@@ -308,7 +355,7 @@ placeholder="Никнейм игрока"
 
 <section
 id="gallery"
-class="tab"
+class="guild-tab"
 hidden
 >
 
@@ -318,13 +365,14 @@ hidden
 </h2>
 
 
+
 <div id="galleryList">
 
 </div>
 
 
 
-<div id="galleryCreate" hidden>
+<div id="galleryControl" hidden>
 
 
 <input
@@ -333,12 +381,17 @@ id="galleryFile"
 >
 
 
+
 <button onclick="uploadGallery()">
+
 Загрузить
+
 </button>
 
 
+
 </div>
+
 
 
 </section>
@@ -353,13 +406,14 @@ id="galleryFile"
 
 <section
 id="documents"
-class="tab"
+class="guild-tab"
 hidden
 >
 
 
 <h2>
 Документы
+
 </h2>
 
 
@@ -369,7 +423,7 @@ hidden
 
 
 
-<div id="documentCreate" hidden>
+<div id="documentControl" hidden>
 
 
 <input
@@ -378,9 +432,13 @@ id="documentFile"
 >
 
 
+
 <button onclick="uploadDocument()">
-Загрузить документ
+
+Загрузить
+
 </button>
+
 
 
 </div>
@@ -398,7 +456,7 @@ id="documentFile"
 
 <section
 id="diplomacy"
-class="tab"
+class="guild-tab"
 hidden
 >
 
@@ -408,49 +466,25 @@ hidden
 </h2>
 
 
+
 <div id="relationsList">
 
 </div>
 
 
 
-<button
-id="allianceCreate"
-hidden
-onclick="createAlliance()"
->
+<div id="diplomacyControl" hidden>
 
-Создать союз
+
+<button onclick="createAlliance()">
+
+Предложить союз
 
 </button>
 
 
-
-</section>
-
-
-
-
-
-
-
-
-
-<section
-id="applications"
-class="tab"
-hidden
->
-
-
-<h2>
-Заявки
-</h2>
-
-
-<div id="applicationsList">
-
 </div>
+
 
 
 </section>
@@ -465,37 +499,51 @@ hidden
 
 <section
 id="settings"
-class="tab"
+class="guild-tab"
 hidden
 >
 
 
 <h2>
-Управление гильдией
+Настройки гильдии
 </h2>
 
 
 
+
+
 <h3>
-Основные данные
+Основная информация
 </h3>
 
 
 <input
-id="editGuildName"
-placeholder="Название гильдии"
+id="editName"
+placeholder="Название"
 >
 
 
+
+<input
+id="editTag"
+placeholder="Тег"
+>
+
+
+
 <textarea
-id="descriptionInputAdmin"
-placeholder="Описание">
+id="editDescription">
 </textarea>
 
 
-<button onclick="saveGuildInfo()">
+
+<button onclick="saveGuild()">
+
 Сохранить
+
 </button>
+
+
 
 
 
@@ -506,6 +554,7 @@ placeholder="Описание">
 <h3>
 Оформление
 </h3>
+
 
 
 <label>
@@ -532,27 +581,38 @@ id="buttonColor"
 
 
 
+
 <label>
 Форма кнопок
 </label>
+
 
 
 <select id="buttonStyle">
 
 
 <option value="rounded">
-Скругленные
+
+Скруглённые
+
 </option>
 
-
-<option value="circle">
-Круглые
-</option>
 
 
 <option value="square">
+
 Квадратные
+
 </option>
+
+
+
+<option value="circle">
+
+Круглые
+
+</option>
+
 
 
 </select>
@@ -561,7 +621,9 @@ id="buttonColor"
 
 
 <button onclick="saveTheme()">
-Сохранить оформление
+
+Сохранить тему
+
 </button>
 
 
@@ -571,9 +633,11 @@ id="buttonColor"
 
 
 
+
 <h3>
-Логотип
+Изображения
 </h3>
+
 
 
 <input
@@ -582,20 +646,15 @@ id="logoFile"
 >
 
 
+
 <button onclick="uploadLogo()">
-Загрузить логотип
+
+Логотип
+
 </button>
 
 
 
-
-
-
-
-
-<h3>
-Баннер
-</h3>
 
 
 <input
@@ -604,12 +663,12 @@ id="bannerFile"
 >
 
 
+
 <button onclick="uploadBanner()">
-Загрузить баннер
+
+Баннер
+
 </button>
-
-
-
 
 
 
@@ -617,6 +676,7 @@ id="bannerFile"
 
 <h3>
 Фракция
+
 </h3>
 
 
@@ -629,15 +689,16 @@ placeholder="Название фракции"
 
 <input
 type="file"
-id="factionFile"
+id="flagFile"
 >
 
 
 
-<button onclick="uploadFactionFlag()">
-Установить флаг
-</button>
+<button onclick="uploadFlag()">
 
+Установить флаг
+
+</button>
 
 
 
@@ -659,9 +720,7 @@ id="factionFile"
 
 
 
-<div id="siteVersion">
-
-</div>
+<div id="siteVersion"></div>
 
 
 
@@ -671,11 +730,15 @@ id="factionFile"
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+
 <script src="supabase-config.js"></script>
+
 
 <script src="version.js"></script>
 
+
 <script src="guild.js"></script>
+
 
 
 </body>
