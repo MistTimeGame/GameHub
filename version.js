@@ -1,9 +1,13 @@
-/* =====================================
-   SITE VERSION
-   ===================================== */
+/*
+=================================================
+GLOBAL VERSION
+=================================================
+*/
 
 
 window.SITE_VERSION = "2.0.0";
+
+
 
 
 
@@ -12,21 +16,22 @@ document.addEventListener(
 ()=>{
 
 
-const versionBlock =
+const el =
 document.getElementById(
 "siteVersion"
 );
 
 
 
-if(versionBlock){
+if(el){
 
 
-versionBlock.innerText =
+el.innerHTML =
 "v" + window.SITE_VERSION;
 
 
 }
+
 
 
 });
