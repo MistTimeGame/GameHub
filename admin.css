@@ -1,37 +1,30 @@
 /*
 =================================================
+GAME GUILD PLATFORM
 ADMIN PANEL STYLE v2.0.0
 =================================================
 */
 
 
-body{
+*{
 
-background:#f2f2f2;
+box-sizing:border-box;
+
+font-family:
+Arial,
+sans-serif;
 
 }
 
 
 
+body{
 
 
-
-.admin-header{
-
-
-display:flex;
+margin:0;
 
 
-justify-content:space-between;
-
-
-align-items:center;
-
-
-padding:25px 35px;
-
-
-background:#222;
+background:#161616;
 
 
 color:white;
@@ -43,7 +36,68 @@ color:white;
 
 
 
-.admin-header a{
+.admin-wrapper{
+
+
+padding:30px;
+
+
+max-width:1400px;
+
+
+margin:auto;
+
+
+}
+
+
+
+
+
+header{
+
+
+background:#222;
+
+
+padding:25px;
+
+
+border-radius:25px;
+
+
+margin-bottom:30px;
+
+
+box-shadow:
+
+0 5px 25px rgba(0,0,0,.4);
+
+
+}
+
+
+
+header h1{
+
+
+margin:0;
+
+
+color:#ffcc00;
+
+
+}
+
+
+
+header a{
+
+
+display:inline-block;
+
+
+margin-top:15px;
 
 
 color:white;
@@ -52,134 +106,10 @@ color:white;
 text-decoration:none;
 
 
-background:#ffcc00;
-
-
-color:black;
+background:#333;
 
 
 padding:10px 20px;
-
-
-border-radius:18px;
-
-
-font-weight:bold;
-
-
-}
-
-
-
-
-
-
-
-
-
-.admin-page{
-
-
-padding:25px;
-
-
-display:flex;
-
-
-flex-direction:column;
-
-
-gap:25px;
-
-
-}
-
-
-
-
-
-
-
-
-
-.admin-card{
-
-
-background:white;
-
-
-padding:25px;
-
-
-border-radius:20px;
-
-
-box-shadow:
-
-0 5px 20px rgba(0,0,0,.12);
-
-
-}
-
-
-
-
-
-
-
-.admin-card h2{
-
-
-margin-top:0;
-
-
-border-bottom:
-
-3px solid #ffcc00;
-
-
-padding-bottom:10px;
-
-
-}
-
-
-
-
-
-
-
-
-
-/*
-====================
-LISTS
-====================
-*/
-
-
-.admin-item{
-
-
-display:flex;
-
-
-justify-content:space-between;
-
-
-align-items:center;
-
-
-gap:15px;
-
-
-padding:15px;
-
-
-margin:10px 0;
-
-
-background:#f7f7f7;
 
 
 border-radius:15px;
@@ -194,10 +124,47 @@ border-radius:15px;
 
 
 
-.admin-item button{
+
+/*
+=========================
+PANELS
+=========================
+*/
 
 
-padding:8px 15px;
+.panel{
+
+
+background:#242424;
+
+
+padding:25px;
+
+
+border-radius:25px;
+
+
+margin-bottom:25px;
+
+
+box-shadow:
+
+0 5px 25px rgba(0,0,0,.3);
+
+
+}
+
+
+
+
+
+.panel h2{
+
+
+margin-top:0;
+
+
+color:#ffcc00;
 
 
 }
@@ -209,28 +176,161 @@ padding:8px 15px;
 
 
 
-.status-published{
+
+button{
 
 
-color:green;
+background:#ffcc00;
+
+
+color:#111;
+
+
+border:none;
+
+
+padding:10px 18px;
+
+
+border-radius:15px;
 
 
 font-weight:bold;
 
 
+cursor:pointer;
+
+
+margin:5px;
+
+
 }
 
 
+
+
+
+button:hover{
+
+
+transform:scale(1.05);
+
+
+}
+
+
+
+
+
+
+
+
+
+/*
+=========================
+ITEMS
+=========================
+*/
+
+
+.admin-item{
+
+
+background:#333;
+
+
+border-radius:20px;
+
+
+padding:20px;
+
+
+margin-top:15px;
+
+
+display:flex;
+
+
+justify-content:space-between;
+
+
+align-items:center;
+
+
+gap:20px;
+
+
+}
+
+
+
+
+
+.admin-item img{
+
+
+width:80px;
+
+
+height:80px;
+
+
+object-fit:cover;
+
+
+border-radius:15px;
+
+
+}
+
+
+
+
+
+.admin-info{
+
+
+flex:1;
+
+
+}
+
+
+
+
+
+.admin-actions{
+
+
+display:flex;
+
+
+flex-wrap:wrap;
+
+
+}
+
+
+
+
+
+
+
+
+.status-public{
+
+
+color:#55ff88;
+
+
+}
 
 
 
 .status-hidden{
 
 
-color:red;
-
-
-font-weight:bold;
+color:#ff5555;
 
 
 }
@@ -242,35 +342,26 @@ font-weight:bold;
 
 
 
-textarea{
-
-
-resize:vertical;
-
-
-}
-
-
-
-
-
-
+/*
+=========================
+TABLE MOBILE
+=========================
+*/
 
 
 @media(max-width:700px){
 
 
 
-.admin-header{
+.admin-wrapper{
 
 
-flex-direction:column;
-
-
-gap:15px;
+padding:15px;
 
 
 }
+
+
 
 
 
@@ -284,6 +375,7 @@ align-items:flex-start;
 
 
 }
+
 
 
 }
