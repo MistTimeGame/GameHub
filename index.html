@@ -7,11 +7,20 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+
 <title>
-Game Guild Platform
+GGP Universe
 </title>
 
+
 <link rel="stylesheet" href="style.css">
+
+
+<link href="
+https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap
+"
+rel="stylesheet">
+
 
 </head>
 
@@ -19,23 +28,54 @@ Game Guild Platform
 <body>
 
 
-<div id="app">
+
+<div id="universe">
 
 
 
-<!-- =========================
- HEADER
-========================= -->
+<!-- 3D BACKGROUND -->
+
+<div id="space"></div>
+
+<div id="particles"></div>
 
 
-<header class="header">
 
 
-<div class="logo">
+
+<!-- HEADER -->
+
+<header class="top-bar">
+
+
+<div class="brand">
+
+
+<div class="brand-symbol">
 
 GGP
 
 </div>
+
+
+<div>
+
+<h1>
+Game Guild Platform
+</h1>
+
+
+<span>
+Gaming Universe
+</span>
+
+
+</div>
+
+
+</div>
+
+
 
 
 
@@ -43,17 +83,20 @@ GGP
 
 
 <button onclick="showPage('home')">
-Игры
+Universe
 </button>
 
 
 <button onclick="showPage('profile')">
-Профиль
+Profile
 </button>
 
 
-<button id="adminButton" hidden onclick="showPage('admin')">
-Админ
+<button 
+id="adminButton"
+hidden
+onclick="showPage('admin')">
+Admin
 </button>
 
 
@@ -61,11 +104,14 @@ GGP
 
 
 
+
 <div id="userPanel">
 
 
 <button onclick="openLogin()">
-Войти
+
+LOGIN
+
 </button>
 
 
@@ -83,32 +129,70 @@ GGP
 
 
 
-<!-- =========================
- HOME
-========================= -->
+<!-- MAIN -->
+
+<main>
+
+
+
+
+
+<!-- HOME -->
 
 
 <section id="homePage" class="page">
 
 
-<div class="hero">
+
+<div class="hero-3d">
+
+
+
+<div class="hero-content">
 
 
 <h1>
-Game Guild Platform
+
+CREATE YOUR
+
+<br>
+
+GAMING EMPIRE
+
 </h1>
 
 
+
 <p>
-Создавай игровые сообщества,
-гильдии и альянсы
+
+Создавай игры.
+Строй гильдии.
+Объединяй игроков.
+
 </p>
 
 
 
+<div class="hero-buttons">
+
+
 <button onclick="openCreateGame()">
-Создать игру
+
+CREATE GAME
+
 </button>
+
+
+<button>
+
+EXPLORE
+
+</button>
+
+
+
+</div>
+
 
 
 </div>
@@ -117,28 +201,64 @@ Game Guild Platform
 
 
 
-<div class="block">
+<div class="planet">
+
+
+<div class="planet-core">
+
+</div>
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<section class="glass-panel">
 
 
 <h2>
-Поиск игр
+
+GAME DATABASE
+
 </h2>
+
+
+
+<div class="search-box">
 
 
 <input
 id="gameSearch"
-placeholder="Введите название игры..."
+placeholder="Search universe..."
 oninput="searchGames()"
 >
 
 
 
+</div>
+
+
+
+
+
 <div id="gamesList">
 
+
 </div>
 
 
-</div>
+
+</section>
 
 
 
@@ -152,20 +272,23 @@ oninput="searchGames()"
 
 
 
-<!-- =========================
- GAME PAGE
-========================= -->
-
-
-<section id="gamePage" class="page" hidden>
 
 
 
-<div class="game-header">
+
+<!-- GAME PAGE -->
+
+<section 
+id="gamePage"
+class="page"
+hidden>
+
+
+
+<div class="game-cover">
 
 
 <img id="gameLogo">
-
 
 
 <div>
@@ -184,24 +307,75 @@ oninput="searchGames()"
 </div>
 
 
+
 </div>
 
 
 
 
 
+
+<div class="stats-panel">
+
+
+<div>
+
+<h2>
+0
+</h2>
+
+<span>
+Guilds
+</span>
+
+</div>
+
+
+<div>
+
+<h2>
+0
+</h2>
+
+<span>
+Players
+</span>
+
+</div>
+
+
+
+<div>
+
+<h2>
+0
+</h2>
+
+<span>
+Online
+</span>
+
+</div>
+
+
+</div>
+
+
+
+
+
+
 <button onclick="openCreateGuild()">
-Создать гильдию
+
+CREATE GUILD
+
 </button>
 
 
 
-<h2>
-Гильдии
-</h2>
-
 
 <div id="guildList">
+
 
 </div>
 
@@ -217,15 +391,20 @@ oninput="searchGames()"
 
 
 
-<!-- =========================
- GUILD PAGE
-========================= -->
 
 
-<section id="guildPage" class="page" hidden>
+
+<!-- GUILD PAGE -->
 
 
-<div class="guild-cover">
+<section
+id="guildPage"
+class="page"
+hidden>
+
+
+<div class="guild-hero">
+
 
 
 <img id="guildLogo">
@@ -236,11 +415,28 @@ oninput="searchGames()"
 </h1>
 
 
+<div class="faction">
+
+<span>
+Faction:
+</span>
+
+<b id="guildFaction">
+
+</b>
+
 </div>
 
 
 
-<div class="block">
+</div>
+
+
+
+
+
+
+<div class="glass-panel">
 
 
 <p id="guildDescription">
@@ -248,15 +444,12 @@ oninput="searchGames()"
 </p>
 
 
-<p>
-Фракция:
-<span id="guildFaction"></span>
-</p>
-
-
 <button onclick="joinGuild()">
-Вступить
+
+JOIN GUILD
+
 </button>
+
 
 
 </div>
@@ -267,12 +460,15 @@ oninput="searchGames()"
 
 
 
-<div class="block">
+<div class="glass-panel">
 
 
 <h2>
-Участники
+
+Members
+
 </h2>
+
 
 
 <div id="membersList">
@@ -288,31 +484,27 @@ oninput="searchGames()"
 
 
 
-<div id="guildControl" hidden>
-
-
-<div class="block">
+<div id="guildControl"
+hidden
+class="glass-panel">
 
 
 <h2>
-Управление гильдией
+
+Guild Control
+
 </h2>
 
 
 <button onclick="openGuildSettings()">
-Настройки
-</button>
 
+Settings
 
-<button onclick="openGuildMembers()">
-Участники
 </button>
 
 
 </div>
 
-
-</div>
 
 
 
@@ -326,29 +518,28 @@ oninput="searchGames()"
 
 
 
-<!-- =========================
- PROFILE
-========================= -->
-
-
-<section id="profilePage" class="page" hidden>
 
 
 
-<div class="block">
+<!-- PROFILE -->
 
 
-<h1>
-Профиль
-</h1>
+<section
+id="profilePage"
+class="page"
+hidden>
+
+
+
+<div class="profile-card">
 
 
 <img id="avatar">
 
 
-<h2 id="profileName">
+<h1 id="profileName">
 
-</h2>
+</h1>
 
 
 <p id="profileEmail">
@@ -357,9 +548,12 @@ oninput="searchGames()"
 
 
 
-<h3>
-Мои игры
-</h3>
+
+<h2>
+
+My Games
+
+</h2>
 
 
 <div id="myGames">
@@ -368,10 +562,11 @@ oninput="searchGames()"
 
 
 
+<h2>
 
-<h3>
-Мои гильдии
-</h3>
+My Guilds
+
+</h2>
 
 
 <div id="myGuilds">
@@ -380,10 +575,12 @@ oninput="searchGames()"
 
 
 
-
 <button onclick="logout()">
-Выйти
+
+LOGOUT
+
 </button>
+
 
 
 </div>
@@ -400,25 +597,28 @@ oninput="searchGames()"
 
 
 
-<!-- =========================
- ADMIN PANEL
-========================= -->
+<!-- ADMIN -->
 
 
-<section id="adminPage" class="page" hidden>
+<section
+id="adminPage"
+class="page"
+hidden>
 
 
-<div class="block">
+<div class="glass-panel">
 
 
 <h1>
-Администрация
+
+CONTROL CENTER
+
 </h1>
 
 
 
 <h2>
-Пользователи
+Users
 </h2>
 
 
@@ -428,10 +628,8 @@ oninput="searchGames()"
 
 
 
-
-
 <h2>
-Игры
+Games
 </h2>
 
 
@@ -441,10 +639,8 @@ oninput="searchGames()"
 
 
 
-
-
 <h2>
-Гильдии
+Guilds
 </h2>
 
 
@@ -457,6 +653,7 @@ oninput="searchGames()"
 </div>
 
 
+
 </section>
 
 
@@ -467,39 +664,49 @@ oninput="searchGames()"
 
 
 
-<!-- =========================
- LOGIN WINDOW
-========================= -->
+</main>
 
 
-<div id="loginModal" class="modal" hidden>
 
 
-<div class="modal-box">
+
+
+
+
+
+<!-- LOGIN -->
+
+<div id="loginModal"
+class="modal"
+hidden>
+
+
+
+<div class="holo-window">
 
 
 <h2>
-Вход
+LOGIN
 </h2>
 
 
-<input
-id="loginEmail"
-placeholder="Email"
->
+
+<input id="loginEmail"
+placeholder="Email">
 
 
-<input
-id="loginPassword"
+
+<input id="loginPassword"
 type="password"
-placeholder="Пароль"
->
+placeholder="Password">
+
 
 
 <button onclick="login()">
-Войти
-</button>
 
+ENTER
+
+</button>
 
 
 
@@ -507,101 +714,97 @@ placeholder="Пароль"
 
 
 
-<h3>
-Регистрация
-</h3>
+<input id="registerName"
+placeholder="Nickname">
 
 
-
-<input
-id="registerName"
-placeholder="Никнейм"
->
+<input id="registerEmail"
+placeholder="Email">
 
 
-
-<input
-id="registerEmail"
-placeholder="Email"
->
-
-
-
-<input
-id="registerPassword"
+<input id="registerPassword"
 type="password"
-placeholder="Пароль"
->
+placeholder="Password">
 
 
 
 <button onclick="register()">
-Создать аккаунт
-</button>
 
+CREATE ACCOUNT
+
+</button>
 
 
 
 <button onclick="closeLogin()">
-Закрыть
+
+CLOSE
+
 </button>
 
 
-
-</div>
-
-
 </div>
 
 
 
+</div>
 
 
 
 
 
 
-<!-- =========================
- CREATE GAME
-========================= -->
 
 
-<div id="createGameModal" class="modal" hidden>
+
+<!-- CREATE GAME -->
 
 
-<div class="modal-box">
+<div id="createGameModal"
+class="modal"
+hidden>
+
+
+
+<div class="holo-window">
 
 
 <h2>
-Новая игра
+NEW GAME
 </h2>
+
 
 
 <input
 id="newGameName"
-placeholder="Название"
->
+placeholder="Game name">
 
 
 <textarea
 id="newGameDescription"
-placeholder="Описание">
+placeholder="Description">
 </textarea>
+
 
 
 <input
 id="newGameLogo"
-placeholder="Логотип">
-</input>
+placeholder="Logo URL">
+
 
 
 <button onclick="createGame()">
-Создать
+
+CREATE
+
 </button>
+
 
 
 <button onclick="closeCreateGame()">
-Закрыть
+
+CLOSE
+
 </button>
 
 
@@ -618,63 +821,58 @@ placeholder="Логотип">
 
 
 
-<!-- =========================
- CREATE GUILD
-========================= -->
+<!-- CREATE GUILD -->
 
 
-<div id="createGuildModal" class="modal" hidden>
+<div id="createGuildModal"
+class="modal"
+hidden>
 
 
-<div class="modal-box">
+<div class="holo-window">
 
 
 <h2>
-Новая гильдия
+NEW GUILD
 </h2>
 
 
 <input
 id="newGuildName"
-placeholder="Название"
->
+placeholder="Guild name">
+
 
 
 <input
 id="newGuildTag"
-placeholder="Тег"
->
+placeholder="TAG">
+
 
 
 <textarea
 id="newGuildDescription"
-placeholder="Описание">
+placeholder="Description">
 </textarea>
 
 
 
 <button onclick="createGuild()">
-Создать
+
+CREATE
+
 </button>
 
 
 <button onclick="closeCreateGuild()">
-Закрыть
+
+CLOSE
+
 </button>
 
 
 
 </div>
 
-</div>
-
-
-
-
-
-
-
-
 
 </div>
 
@@ -682,8 +880,10 @@ placeholder="Описание">
 
 
 
-<div id="version">
-GGP v5.0
+
+
+
+
 </div>
 
 
@@ -691,15 +891,18 @@ GGP v5.0
 
 
 
+<script src="
+https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2
+"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script src="supabase-config.js"></script>
+
 
 <script src="app.js"></script>
 
 
-
 </body>
+
 
 </html>
