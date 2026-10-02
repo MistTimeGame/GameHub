@@ -1,8 +1,8 @@
 /*
 =================================================
 GAME GUILD PLATFORM
-APP CORE v2.1.0
-AUTH + GAMES
+APP CORE v2.2.0
+AUTH + GAMES FIX
 =================================================
 */
 
@@ -17,18 +17,18 @@ let gamesCache = [];
 
 /*
 =================================================
-INIT
+START
 =================================================
 */
 
 
 document.addEventListener(
 "DOMContentLoaded",
-async function(){
+async()=>{
 
 
 console.log(
-"APP INIT"
+"APP START"
 );
 
 
@@ -36,13 +36,11 @@ console.log(
 await restoreSession();
 
 
-
 await loadGames();
 
 
 
-}
-);
+});
 
 
 
@@ -62,7 +60,6 @@ SESSION
 async function restoreSession(){
 
 
-
 try{
 
 
@@ -76,8 +73,10 @@ error
 
 
 
+
+
 console.log(
-"SESSION:",
+"SESSION",
 data,
 error
 );
@@ -87,6 +86,7 @@ error
 
 
 if(data.session){
+
 
 
 currentUser =
@@ -137,7 +137,7 @@ e
 
 /*
 =================================================
-LOGIN WINDOW
+AUTH WINDOW
 =================================================
 */
 
@@ -147,27 +147,31 @@ function openLogin(){
 
 
 const win =
+
 document.getElementById(
 "authWindow"
 );
 
 
 
+
 if(!win){
+
 
 console.error(
 "authWindow not found"
 );
 
+
 return;
+
 
 }
 
 
 
-win.hidden=false;
-
-win.style.display="flex";
+win.style.display =
+"flex";
 
 
 
@@ -183,30 +187,27 @@ function closeLogin(){
 
 
 const win =
+
 document.getElementById(
 "authWindow"
 );
 
 
 
+
 if(!win){
 
+
 return;
+
 
 }
 
 
 
 
-win.hidden=true;
-
-win.style.display="none";
-
-
-
-console.log(
-"LOGIN WINDOW CLOSED"
-);
+win.style.display =
+"none";
 
 
 
@@ -243,6 +244,7 @@ document
 
 
 
+
 const password =
 
 document
@@ -250,6 +252,21 @@ document
 "regPassword"
 )
 .value;
+
+
+
+
+
+const nickname =
+
+document
+.getElementById(
+"regName"
+)
+.value
+.trim();
+
+
 
 
 
@@ -272,6 +289,7 @@ return;
 
 
 
+
 const {
 
 data,
@@ -282,9 +300,36 @@ error
 
 email,
 
-password
+password,
+
+
+options:{
+
+
+data:{
+
+
+username:nickname
+
+
+}
+
+
+}
+
 
 });
+
+
+
+
+
+console.log(
+"REGISTER",
+data,
+error
+);
+
 
 
 
@@ -302,6 +347,8 @@ return;
 
 
 }
+
+
 
 
 
@@ -370,7 +417,7 @@ if(!email || !password){
 
 
 alert(
-"Введите логин и пароль"
+"Введите email и пароль"
 );
 
 
@@ -378,6 +425,7 @@ return;
 
 
 }
+
 
 
 
@@ -396,9 +444,9 @@ error
 
 }=await supabaseClient.auth.signInWithPassword({
 
-email:email,
+email,
 
-password:password
+password
 
 });
 
@@ -418,7 +466,6 @@ error
 
 
 
-
 if(error){
 
 
@@ -431,6 +478,7 @@ return;
 
 
 }
+
 
 
 
@@ -466,9 +514,8 @@ await loadGames();
 
 
 alert(
-"Добро пожаловать!"
+"Вход выполнен"
 );
-
 
 
 
@@ -485,6 +532,8 @@ console.error(e);
 
 
 alert(
+"Ошибка входа: "
++
 e.message
 );
 
@@ -550,7 +599,8 @@ function showProfile(){
 
 const block =
 
-document.getElementById(
+document
+.getElementById(
 "profileBlock"
 );
 
@@ -582,21 +632,55 @@ ${currentUser.email}
 
 
 
-const loginButton =
 
-document.getElementById(
-"loginButton"
+
+const profile =
+
+document
+.getElementById(
+"profile"
 );
 
 
 
-if(loginButton)
 
-loginButton.style.display="none";
+
+if(profile){
+
+
+profile.hidden=false;
+
+
+}
+
+
+
+
+
+const name =
+
+document
+.getElementById(
+"profileName"
+);
+
+
+
+
+
+if(name){
+
+
+name.innerText =
+currentUser.email;
+
+
+}
 
 
 
 }
+
 
 
 
@@ -611,10 +695,10 @@ function showLoginButton(){
 
 const block =
 
-document.getElementById(
+document
+.getElementById(
 "profileBlock"
 );
-
 
 
 
@@ -651,7 +735,7 @@ block.innerHTML=`
 
 /*
 =================================================
-GAMES LOAD
+LOAD GAMES
 =================================================
 */
 
@@ -673,11 +757,28 @@ error
 .select("*")
 
 .order(
+
 "created_at",
+
 {
+
 ascending:false
+
 }
+
 );
+
+
+
+
+
+
+console.log(
+"GAMES",
+data,
+error
+);
+
 
 
 
@@ -735,13 +836,14 @@ function searchGames(){
 
 
 
-const text =
+const value =
 
 document
 .getElementById(
 "gameSearch"
 )
 .value
+
 .toLowerCase();
 
 
@@ -755,10 +857,13 @@ gamesCache.filter(
 game =>
 
 game.name
+
 .toLowerCase()
-.includes(text)
+
+.includes(value)
 
 );
+
 
 
 
@@ -790,9 +895,12 @@ function renderGames(list){
 
 const box =
 
-document.getElementById(
+document
+.getElementById(
 "gamesList"
 );
+
+
 
 
 
@@ -810,14 +918,22 @@ box.innerHTML="";
 
 
 
+
+
 list.forEach(game=>{
 
 
 
-box.innerHTML+=`
+box.innerHTML +=`
 
-<div class="game-card"
-onclick="openGame('${game.id}')">
+<div
+
+class="game-card"
+
+onclick="openGame('${game.id}')"
+
+>
+
 
 
 ${
@@ -840,6 +956,7 @@ game.logo_url
 
 
 
+
 <h3>
 
 ${game.name}
@@ -847,11 +964,15 @@ ${game.name}
 </h3>
 
 
+
+
 <p>
 
 ${game.description || ""}
 
 </p>
+
+
 
 
 </div>
@@ -878,7 +999,7 @@ function openGame(id){
 
 
 
-location.href=
+location.href =
 
 "game.html?id="+id;
 
@@ -922,9 +1043,12 @@ return;
 
 const box =
 
-document.getElementById(
+document
+.getElementById(
 "createGame"
 );
+
+
 
 
 
@@ -948,10 +1072,18 @@ async function createGame(){
 
 
 
-if(!currentUser)
+if(!currentUser){
+
+
+alert(
+"Нужно войти"
+);
+
 
 return;
 
+
+}
 
 
 
@@ -970,7 +1102,6 @@ document
 
 
 
-
 const description =
 
 document
@@ -978,6 +1109,19 @@ document
 "gameDescription"
 )
 .value;
+
+
+
+
+
+const logo =
+
+document
+.getElementById(
+"gameLogo"
+)
+.value;
+
 
 
 
@@ -1001,6 +1145,9 @@ return;
 
 
 
+
+
+
 const {
 
 error
@@ -1018,6 +1165,9 @@ name:name,
 description:description,
 
 
+logo_url:logo,
+
+
 created_by:
 currentUser.id,
 
@@ -1026,7 +1176,9 @@ status:
 "published"
 
 
+
 });
+
 
 
 
@@ -1045,6 +1197,7 @@ return;
 
 
 }
+
 
 
 
