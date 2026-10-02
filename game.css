@@ -1,0 +1,379 @@
+/*
+=================================================
+GAME PAGE STYLE v2.0.0
+=================================================
+*/
+
+
+.game-header{
+
+
+    display:flex;
+
+    align-items:center;
+
+    gap:25px;
+
+    padding:30px;
+
+    background:#222;
+
+    color:white;
+
+
+}
+
+
+
+
+
+.game-logo{
+
+
+    width:120px;
+
+    height:120px;
+
+
+    object-fit:cover;
+
+
+    border-radius:25px;
+
+
+    border:3px solid white;
+
+
+}
+
+
+
+
+
+
+.game-header h1{
+
+
+    margin:0;
+
+    font-size:36px;
+
+
+}
+
+
+
+
+.game-header p{
+
+
+    opacity:.8;
+
+    font-size:18px;
+
+
+}
+
+
+
+
+
+
+
+
+/*
+==============================
+MENU
+==============================
+*/
+
+
+.game-menu{
+
+
+    display:flex;
+
+    flex-wrap:wrap;
+
+    gap:10px;
+
+
+    padding:20px;
+
+
+    background:white;
+
+
+    box-shadow:
+
+    0 3px 15px rgba(0,0,0,.15);
+
+
+}
+
+
+
+
+
+
+
+.game-menu button{
+
+
+    border-radius:18px;
+
+
+}
+
+
+
+
+
+
+
+/*
+==============================
+TABS
+==============================
+*/
+
+
+.game-tab{
+
+
+    margin:25px;
+
+
+    background:white;
+
+
+    padding:25px;
+
+
+    border-radius:20px;
+
+
+    box-shadow:
+
+    0 5px 20px rgba(0,0,0,.12);
+
+
+}
+
+
+
+
+
+
+
+
+
+/*
+==============================
+GUILDS
+==============================
+*/
+
+
+#guildsList{
+
+
+    display:grid;
+
+
+    grid-template-columns:
+
+
+    repeat(
+
+    auto-fill,
+
+    minmax(260px,1fr)
+
+    );
+
+
+    gap:20px;
+
+
+}
+
+
+
+
+
+
+
+.guild-card{
+
+
+    background:#fafafa;
+
+
+    border-radius:20px;
+
+
+    padding:20px;
+
+
+    cursor:pointer;
+
+
+    transition:.2s;
+
+
+    box-shadow:
+
+    0 3px 10px rgba(0,0,0,.1);
+
+
+}
+
+
+
+
+.guild-card:hover{
+
+
+    transform:
+
+    translateY(-5px);
+
+
+}
+
+
+
+
+
+
+
+.guild-card img{
+
+
+    width:100px;
+
+
+    height:100px;
+
+
+    object-fit:cover;
+
+
+    border-radius:50%;
+
+
+}
+
+
+
+
+
+
+
+/*
+==============================
+MODULES
+==============================
+*/
+
+
+.module-card{
+
+
+    padding:20px;
+
+
+    margin:15px 0;
+
+
+    border-radius:15px;
+
+
+    background:#f5f5f5;
+
+
+}
+
+
+
+
+
+
+.module-card h3{
+
+
+    margin-top:0;
+
+
+}
+
+
+
+
+
+
+
+
+
+/*
+==============================
+CREATE
+==============================
+*/
+
+
+#createGuild{
+
+
+    margin-top:25px;
+
+
+}
+
+
+
+
+
+
+
+
+
+@media(max-width:700px){
+
+
+
+.game-header{
+
+
+    flex-direction:column;
+
+
+    text-align:center;
+
+
+}
+
+
+
+.game-menu{
+
+
+    flex-direction:column;
+
+
+}
+
+
+
+.game-menu button{
+
+
+    width:100%;
+
+
+}
+
+
+
+}
