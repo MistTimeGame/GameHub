@@ -4,14 +4,14 @@
    ============================================================ */
 
 /* ---------- SUPABASE INIT ---------- */
-const SUPABASE_URL = window.SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
-
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.error('Supabase credentials missing. Check supabase-config.js');
+// Клиент уже создан в supabase-config.js как window.supabaseClient.
+// Локальная переменная называется sb, чтобы не конфликтовать
+// с глобалью window.supabase из UMD-сборки supabase-js@2.
+if (!window.supabaseClient) {
+  console.error('Supabase client not found. Check supabase-config.js');
 }
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = window.supabaseClient;
 
 /* ---------- STATE ---------- */
 const state = {
@@ -105,7 +105,7 @@ function closeAllModals() {
 
 /* ---------- AUTH ---------- */
 async function initAuth() {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await sb.auth.getSession();
 
   if (session) {
     state.user = session.user;
@@ -113,7 +113,7 @@ async function initAuth() {
     updateAuthUI();
   }
 
-  supabase.auth.onAuthStateChange(async (event, session) => {
+  sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
       state.user = session.user;
       await loadProfile(session.user.id);
@@ -135,7 +135,7 @@ async function initAuth() {
 }
 
 async function loadProfile(userId) {
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('profiles')
     .select('*')
     .eq('id', userId)
@@ -156,7 +156,7 @@ async function loadProfile(userId) {
   } else {
     // Профиль ещё не создан — создадим
     const nickname = state.user.email?.split('@')[0] || 'Игрок';
-    const { data: created, error: createError } = await supabase
+    const { data: created, error: createError } = await sb
       .from('profiles')
       .insert({
         id: userId,
@@ -179,7 +179,8 @@ function updateAuthUI() {
   if (state.user) {
     btnLogin.classList.add('hidden');
     userChip.classList.remove('hidden');
-    userName.textContent = state.profile?.display_name || state.profile?.username || 'Игрок';
+    userName.textContent =
+      state.profile?.display_name || state.profile?.username || 'Игрок';
     userAvatar.src =
       state.profile?.avatar ||
       `https://ui-avatars.com/api/?name=${encodeURIComponent(
@@ -223,7 +224,7 @@ async function handleAuthSubmit(e) {
 
   try {
     if (isRegister) {
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error } = await sb.auth.signUp({
         email,
         password,
         options: {
@@ -234,8 +235,7 @@ async function handleAuthSubmit(e) {
       if (error) throw error;
 
       if (data.user) {
-        // Создаём профиль
-        await supabase.from('profiles').upsert({
+        await sb.from('profiles').upsert({
           id: data.user.id,
           username: nickname,
           display_name: nickname,
@@ -250,7 +250,7 @@ async function handleAuthSubmit(e) {
         toast('Регистрация успешна!', 'success');
       }
     } else {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await sb.auth.signInWithPassword({
         email,
         password,
       });
@@ -259,7 +259,6 @@ async function handleAuthSubmit(e) {
 
       if (data.user) {
         setStatus(statusEl, 'Вход выполнен!', 'success');
-        // onAuthStateChange закроет модалку
       }
     }
   } catch (err) {
@@ -279,7 +278,7 @@ async function handleAuthSubmit(e) {
 }
 
 async function handleLogout() {
-  await supabase.auth.signOut();
+  await sb.auth.signOut();
 }
 
 /* ---------- FILE UPLOAD ---------- */
@@ -291,7 +290,7 @@ async function uploadFile(file, bucket, folder = '') {
     .toString(36)
     .substring(2, 8)}.${ext}`;
 
-  const { error: uploadError } = await supabase.storage
+  const { error: uploadError } = await sb.storage
     .from(bucket)
     .upload(fileName, file, { cacheControl: '3600', upsert: false });
 
@@ -300,16 +299,14 @@ async function uploadFile(file, bucket, folder = '') {
     throw new Error(`Ошибка загрузки: ${uploadError.message}`);
   }
 
-  const { data: urlData } = supabase.storage
-    .from(bucket)
-    .getPublicUrl(fileName);
+  const { data: urlData } = sb.storage.from(bucket).getPublicUrl(fileName);
 
   return urlData.publicUrl;
 }
 
 /* ---------- GAMES ---------- */
 async function loadGames() {
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('games')
     .select('*')
     .order('created_at', { ascending: false });
@@ -319,10 +316,9 @@ async function loadGames() {
     return [];
   }
 
-  // Считаем гильдии для каждой игры
   const gamesWithCounts = await Promise.all(
     (data || []).map(async (game) => {
-      const { count } = await supabase
+      const { count } = await sb
         .from('guilds')
         .select('*', { count: 'exact', head: true })
         .eq('game_id', game.id);
@@ -378,7 +374,7 @@ async function createGame(e) {
       .toString(36)
       .substring(2, 8)}`;
 
-    const { data, error } = await supabase
+    const { data, error } = await sb
       .from('games')
       .insert({
         game_id: gameId,
@@ -416,7 +412,7 @@ async function createGame(e) {
 }
 
 async function loadGame(id) {
-  const { data: game, error } = await supabase
+  const { data: game, error } = await sb
     .from('games')
     .select('*')
     .eq('id', id)
@@ -427,16 +423,15 @@ async function loadGame(id) {
     return null;
   }
 
-  const { data: guilds } = await supabase
+  const { data: guilds } = await sb
     .from('guilds')
     .select('*')
     .eq('game_id', game.id)
     .order('created_at', { ascending: false });
 
-  // Считаем участников для каждой гильдии
   const guildsWithCounts = await Promise.all(
     (guilds || []).map(async (g) => {
-      const { count } = await supabase
+      const { count } = await sb
         .from('guild_members')
         .select('*', { count: 'exact', head: true })
         .eq('guild_id', g.id);
@@ -450,7 +445,7 @@ async function loadGame(id) {
 
 /* ---------- GUILDS ---------- */
 async function loadGuilds() {
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('guilds')
     .select('*, games(name)')
     .order('created_at', { ascending: false });
@@ -462,7 +457,7 @@ async function loadGuilds() {
 
   const guildsWithCounts = await Promise.all(
     (data || []).map(async (g) => {
-      const { count } = await supabase
+      const { count } = await sb
         .from('guild_members')
         .select('*', { count: 'exact', head: true })
         .eq('guild_id', g.id);
@@ -524,7 +519,7 @@ async function createGuild(e) {
       flagFile ? uploadFile(flagFile, 'guild-logos', 'flags/') : null,
     ]);
 
-    const { data, error } = await supabase
+    const { data, error } = await sb
       .from('guilds')
       .insert({
         game_id: gameId,
@@ -550,11 +545,12 @@ async function createGuild(e) {
     if (error) throw error;
 
     // Создатель становится главой гильдии
-    await supabase.from('guild_members').insert({
+    await sb.from('guild_members').insert({
       guild_id: data.id,
       user_id: state.user.id,
       game_id: gameId,
-      nickname: state.profile?.display_name || state.profile?.username || 'Лидер',
+      nickname:
+        state.profile?.display_name || state.profile?.username || 'Лидер',
       role: 'leader',
     });
 
@@ -574,7 +570,7 @@ async function createGuild(e) {
 }
 
 async function loadGuild(id) {
-  const { data: guild, error } = await supabase
+  const { data: guild, error } = await sb
     .from('guilds')
     .select('*, games(name, id)')
     .eq('id', id)
@@ -585,7 +581,7 @@ async function loadGuild(id) {
     return null;
   }
 
-  const { data: members } = await supabase
+  const { data: members } = await sb
     .from('guild_members')
     .select('*')
     .eq('guild_id', guild.id)
@@ -603,7 +599,7 @@ async function joinGuild(guildId) {
     return;
   }
 
-  const { data: existing } = await supabase
+  const { data: existing } = await sb
     .from('guild_members')
     .select('*')
     .eq('guild_id', guildId)
@@ -615,11 +611,12 @@ async function joinGuild(guildId) {
     return;
   }
 
-  const { error } = await supabase.from('guild_members').insert({
+  const { error } = await sb.from('guild_members').insert({
     guild_id: guildId,
     user_id: state.user.id,
     game_id: state.currentGuild?.game_id || null,
-    nickname: state.profile?.display_name || state.profile?.username || 'Игрок',
+    nickname:
+      state.profile?.display_name || state.profile?.username || 'Игрок',
     role: 'member',
   });
 
@@ -637,7 +634,7 @@ async function joinGuild(guildId) {
 async function leaveGuild(guildId) {
   if (!state.user) return;
 
-  const { error } = await supabase
+  const { error } = await sb
     .from('guild_members')
     .delete()
     .eq('guild_id', guildId)
@@ -655,7 +652,7 @@ async function leaveGuild(guildId) {
 }
 
 async function updateMemberRole(memberId, role) {
-  const { error } = await supabase
+  const { error } = await sb
     .from('guild_members')
     .update({ role })
     .eq('id', memberId);
@@ -672,7 +669,7 @@ async function updateMemberRole(memberId, role) {
 }
 
 async function kickMember(memberId) {
-  const { error } = await supabase
+  const { error } = await sb
     .from('guild_members')
     .delete()
     .eq('id', memberId);
@@ -757,14 +754,22 @@ async function saveGuildSettings(e) {
     };
 
     if (logoFile) updates.logo_url = await uploadFile(logoFile, 'guild-logos');
-    if (bannerFile) updates.banner_url = await uploadFile(bannerFile, 'guild-banners');
-    if (bgFile) updates.background_url = await uploadFile(bgFile, 'guild-banners', 'backgrounds/');
-    if (flagFile) updates.faction_flag_url = await uploadFile(flagFile, 'guild-logos', 'flags/');
+    if (bannerFile)
+      updates.banner_url = await uploadFile(bannerFile, 'guild-banners');
+    if (bgFile)
+      updates.background_url = await uploadFile(
+        bgFile,
+        'guild-banners',
+        'backgrounds/'
+      );
+    if (flagFile)
+      updates.faction_flag_url = await uploadFile(
+        flagFile,
+        'guild-logos',
+        'flags/'
+      );
 
-    const { error } = await supabase
-      .from('guilds')
-      .update(updates)
-      .eq('id', id);
+    const { error } = await sb.from('guilds').update(updates).eq('id', id);
 
     if (error) throw error;
 
@@ -899,12 +904,22 @@ function renderGuildCard(guild) {
         }
       </div>
       <div class="card-body">
-        <div class="card-title">${guild.name} ${guild.tag ? `<span class="text-dim">[${guild.tag}]</span>` : ''}</div>
+        <div class="card-title">${guild.name} ${
+    guild.tag ? `<span class="text-dim">[${guild.tag}]</span>` : ''
+  }</div>
         <div class="card-desc">${guild.description || 'Без описания'}</div>
         <div class="card-meta">
           <span class="badge">👥 ${guild.members_count || 0}</span>
-          ${guild.faction_name ? `<span class="badge-gold badge">${guild.faction_name}</span>` : ''}
-          ${guild.games?.name ? `<span class="badge-blue badge">${guild.games.name}</span>` : ''}
+          ${
+            guild.faction_name
+              ? `<span class="badge-gold badge">${guild.faction_name}</span>`
+              : ''
+          }
+          ${
+            guild.games?.name
+              ? `<span class="badge-blue badge">${guild.games.name}</span>`
+              : ''
+          }
         </div>
       </div>
     </article>
@@ -972,7 +987,9 @@ async function renderGamePage(id) {
           <h1>${game.name}</h1>
           <div class="tagline">${game.description || 'Игровое сообщество'}</div>
           <div class="page-actions">
-            <button class="btn btn-primary" data-action="open-create-guild" data-game-id="${game.id}">Создать гильдию</button>
+            <button class="btn btn-primary" data-action="open-create-guild" data-game-id="${
+              game.id
+            }">Создать гильдию</button>
             ${
               game.website_url
                 ? `<a class="btn btn-ghost" href="${game.website_url}" target="_blank" rel="noopener">Сайт</a>`
@@ -1057,10 +1074,20 @@ async function renderGuildPage(id) {
             : ''
         }
         <div class="page-info">
-          <h1>${guild.name} ${guild.tag ? `<span class="text-dim">[${guild.tag}]</span>` : ''}</h1>
+          <h1>${guild.name} ${
+    guild.tag ? `<span class="text-dim">[${guild.tag}]</span>` : ''
+  }</h1>
           <div class="tagline">
-            ${guild.faction_name ? `<span class="badge-gold badge">${guild.faction_name}</span> ` : ''}
-            ${guild.games?.name ? `<span class="badge-blue badge">${guild.games.name}</span>` : ''}
+            ${
+              guild.faction_name
+                ? `<span class="badge-gold badge">${guild.faction_name}</span> `
+                : ''
+            }
+            ${
+              guild.games?.name
+                ? `<span class="badge-blue badge">${guild.games.name}</span>`
+                : ''
+            }
           </div>
           <div class="tagline">${guild.description || 'Описание отсутствует'}</div>
           <div class="page-actions">
@@ -1122,7 +1149,9 @@ function renderMemberRow(member, canManage, isLeader) {
         member.nickname || 'U'
       )}&background=1a2332&color=fff" alt="${member.nickname}" />
       <div class="member-info">
-        <div class="member-name">${member.nickname || 'Игрок'} ${isSelf ? '(вы)' : ''}</div>
+        <div class="member-name">${member.nickname || 'Игрок'} ${
+    isSelf ? '(вы)' : ''
+  }</div>
         <div class="member-role">${roleLabels[role] || role}</div>
       </div>
       ${
@@ -1165,15 +1194,13 @@ async function renderProfile() {
 
   const profile = state.profile;
 
-  // Игры пользователя
-  const { data: myGames } = await supabase
+  const { data: myGames } = await sb
     .from('games')
     .select('*')
     .eq('created_by', state.user.id)
     .order('created_at', { ascending: false });
 
-  // Гильдии пользователя
-  const { data: myMemberships } = await supabase
+  const { data: myMemberships } = await sb
     .from('guild_members')
     .select('guild_id, role')
     .eq('user_id', state.user.id);
@@ -1182,7 +1209,7 @@ async function renderProfile() {
 
   let myGuilds = [];
   if (guildIds.length) {
-    const { data: guildsData } = await supabase
+    const { data: guildsData } = await sb
       .from('guilds')
       .select('*')
       .in('id', guildIds);
@@ -1204,10 +1231,14 @@ async function renderProfile() {
         <h1 style="font-family: var(--font-display); font-size: 32px; font-weight: 700;">${
           profile?.display_name || profile?.username || 'Игрок'
         }</h1>
-        <p class="text-dim" style="margin-top: 4px;">@${profile?.username || 'user'} · ${
-          state.user.email
-        }</p>
-        ${state.isPlatformOwner ? '<span class="badge-gold badge" style="margin-top: 8px;">Владелец платформы</span>' : ''}
+        <p class="text-dim" style="margin-top: 4px;">@${
+          profile?.username || 'user'
+        } · ${state.user.email}</p>
+        ${
+          state.isPlatformOwner
+            ? '<span class="badge-gold badge" style="margin-top: 8px;">Владелец платформы</span>'
+            : ''
+        }
       </div>
     </div>
 
@@ -1250,12 +1281,10 @@ async function router() {
   const route = parts[0] || 'home';
   const param = parts[1] || null;
 
-  // Подсветка навигации
   $$('#main-nav a').forEach((a) => {
     a.classList.toggle('active', a.dataset.nav === route);
   });
 
-  // Сброс кастомных CSS-переменных
   viewEl.style.removeProperty('--accent');
   viewEl.style.removeProperty('--accent-2');
   viewEl.dataset.buttonStyle = '';
@@ -1390,24 +1419,19 @@ $$('[data-auth-tab]').forEach((tab) => {
 async function init() {
   footerYear.textContent = new Date().getFullYear();
 
-  // Устанавливаем режим формы по умолчанию
   $('#auth-form').dataset.mode = 'login';
 
-  // Навешиваем обработчики форм
   $('#auth-form').addEventListener('submit', handleAuthSubmit);
   $('#game-form').addEventListener('submit', createGame);
   $('#guild-form').addEventListener('submit', createGuild);
   $('#guild-settings-form').addEventListener('submit', saveGuildSettings);
 
-  // Инициализация авторизации
   await initAuth();
 
-  // Роутинг
   window.addEventListener('hashchange', router);
   await router();
 }
 
-// Запуск
 init().catch((err) => {
   console.error('init error:', err);
   viewEl.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><p>Ошибка загрузки. Проверьте консоль.</p></div>`;
