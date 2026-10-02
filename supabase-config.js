@@ -1,26 +1,30 @@
 // supabase-config.js
 
-const SUPABASE_URL = "https://istzefagggvkrhwfjbox.supabase.co";
+const SUPABASE_URL = 
+"https://istzefagggvkrhwfjbox.supabase.co";
 
-const SUPABASE_KEY = "sb_publishable_4s5x20f-Odw5CYCLiBbWIg_5tsF2qQL";
+
+const SUPABASE_KEY =
+"sb_publishable_4s5x20f-Odw5CYCLiBbWIg_5tsF2qQL";
+
 
 
 const supabaseClient = supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY,
     {
-        auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: true
+        auth:{
+            persistSession:true,
+            autoRefreshToken:true,
+            detectSessionInUrl:true,
+            storage:window.localStorage
         }
     }
 );
 
 
-// Проверка пользователя
 
-async function getCurrentUser(){
+async function getSession(){
 
     const {
         data,
@@ -29,39 +33,46 @@ async function getCurrentUser(){
 
 
     if(error){
-        console.error(error);
+
+        console.error(
+            "SESSION ERROR",
+            error
+        );
+
         return null;
     }
 
 
-    if(!data.session){
-        return null;
-    }
-
-
-    return data.session.user;
+    return data.session;
 }
 
 
 
-// Требовать авторизацию
-
 async function requireAuth(){
 
-    const user = await getCurrentUser();
+
+    const session =
+        await getSession();
 
 
-    if(!user){
 
-        alert(
-            "Необходимо войти в аккаунт"
+    if(!session){
+
+
+        console.log(
+            "Сессия отсутствует"
         );
 
-        location.href="index.html";
+
+        window.location.href =
+        "index.html";
+
 
         return null;
     }
 
 
-    return user;
+
+    return session.user;
+
 }
