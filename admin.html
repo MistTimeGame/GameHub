@@ -9,11 +9,9 @@
 
 
 <title>
-Админ-панель
+GG Admin Panel
 </title>
 
-
-<link rel="stylesheet" href="style.css">
 
 <link rel="stylesheet" href="admin.css">
 
@@ -24,19 +22,28 @@
 <body>
 
 
+<div class="admin-wrapper">
 
-<header class="admin-header">
+
+
+
+
+<header>
 
 
 <h1>
-⚙ Админ-панель Game Guild Platform
+Game Guild Platform
 </h1>
 
+
+<h2>
+Административная панель
+</h2>
 
 
 <a href="index.html">
 
-На главную
+← На главную
 
 </a>
 
@@ -49,135 +56,145 @@
 
 
 
-<main class="admin-page">
 
 
-
-
-
-<section class="admin-card">
+<section id="accessDenied"
+class="panel"
+hidden>
 
 
 <h2>
+
+Доступ запрещён
+
+</h2>
+
+
+<p>
+
+Панель доступна только владельцу платформы.
+
+</p>
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<main id="adminPanel"
+hidden>
+
+
+
+
+
+<section class="panel">
+
+
+<h2>
+
 Игры
-</h2>
 
-
-<div id="gamesAdminList">
-
-</div>
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<section class="admin-card">
-
-
-<h2>
-Пользователи
-</h2>
-
-
-<div id="usersAdminList">
-
-</div>
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<section class="admin-card">
-
-
-<h2>
-Гильдии
-</h2>
-
-
-<div id="guildsAdminList">
-
-</div>
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<section class="admin-card">
-
-
-<h2>
-Добавить игровой модуль
 </h2>
 
 
 
 
-<select id="moduleGame">
+<button onclick="loadGamesAdmin()">
 
-
-</select>
-
-
-
-
-
-<input
-id="moduleName"
-placeholder="Название модуля"
->
-
-
-
-<textarea
-id="moduleDescription"
-placeholder="Описание"
-></textarea>
-
-
-
-
-
-<input
-id="moduleJson"
-placeholder="JSON файл или ссылка"
->
-
-
-
-
-
-<button onclick="addModule()">
-
-Добавить модуль
+Обновить
 
 </button>
 
 
 
+
+<div id="gamesAdmin">
+
+</div>
+
+
+
 </section>
 
+
+
+
+
+
+
+
+
+<section class="panel">
+
+
+<h2>
+
+Пользователи
+
+</h2>
+
+
+
+<button onclick="loadUsers()">
+
+Загрузить
+
+</button>
+
+
+
+
+<div id="usersAdmin">
+
+</div>
+
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<section class="panel">
+
+
+<h2>
+
+Гильдии
+
+</h2>
+
+
+
+
+<button onclick="loadGuilds()">
+
+Загрузить
+
+</button>
+
+
+
+
+<div id="guildsAdmin">
+
+</div>
+
+
+
+</section>
 
 
 
@@ -185,6 +202,14 @@ placeholder="JSON файл или ссылка"
 
 
 </main>
+
+
+
+
+
+
+</div>
+
 
 
 
@@ -202,21 +227,15 @@ placeholder="JSON файл или ссылка"
 
 
 
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 
 <script src="supabase-config.js"></script>
 
-
 <script src="version.js"></script>
-
 
 <script src="admin.js"></script>
 
 
-
 </body>
-
 
 </html>
