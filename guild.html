@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+```
+<title>Гильдия — GameHub</title>
+
+<link rel="stylesheet" href="guild.css">
+
+<script src="supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+```
+
+</head>
+
+<body>
+
+<div id="app">
+
+```
+<!-- ============================= -->
+<!-- HEADER -->
+<!-- ============================= -->
+
+<header class="guild-header">
+
+    <div class="header-left">
+
+        <button
+            id="back-button"
+            class="icon-button"
+            type="button"
+            title="Вернуться к игре"
+        >
+            ←
+        </button>
+
+        <div class="header-guild-logo">
+            <img
+                id="header-guild-logo"
+                src=""
+                alt="Логотип гильдии"
+            >
+        </div>
+
+        <div class="header-guild-info">
+
+            <div class="header-guild-name-row">
+
+                <h1 id="header-guild-name">
+                    Загрузка...
+                </h1>
+
+                <span
+                    id="header-guild-tag"
+                    class="guild-tag hidden"
+                ></span>
+
+            </div>
+
+            <div
+                id="header-game-name"
+                class="header-game-name"
+            >
+                Загрузка игры...
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="header-right">
+
+        <div
+            id="current-user-block"
+            class="current-user-block"
+        >
+            <div
+                id="current-user-avatar"
+                class="small-avatar"
+            >
+                ?
+            </div>
+
+            <span id="current-user-name">
+                Гость
+            </span>
+        </div>
+
+        <button
+            id="logout-button"
+            class="secondary-button"
+            type="button"
+        >
+            Выйти
+        </button>
+
+    </div>
+
+</header>
+
+
+<!-- ============================= -->
+<!-- HERO -->
+<!-- ============================= -->
+
+<section class="guild-hero">
+
+    <div
+        id="guild-banner"
+        class="guild-banner"
+    ></div>
+
+    <div class="guild-hero-overlay"></div>
+
+    <div class="guild-hero-content">
+
+        <div class="hero-logo-wrapper">
+
+            <img
+                id="hero-guild-logo"
+                class="hero-guild-logo"
+                src=""
+                alt="Логотип гильдии"
+            >
+
+        </div>
+
+        <div class="hero-info">
+
+            <div class="hero-title-row">
+
+                <h2 id="hero-guild-name">
+                    Загрузка...
+                </h2>
+
+                <span
+                    id="hero-guild-tag"
+                    class="hero-tag hidden"
+                ></span>
+
+            </div>
+
+            <p
+                id="hero-guild-description"
+                class="hero-description"
+            >
+                Загрузка информации о гильдии...
+            </p>
+
+            <div
+                id="hero-links"
+                class="hero-links"
+            ></div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- ============================= -->
+<!-- MAIN -->
+<!-- ============================= -->
+
+<main class="main-layout">
+
+    <!-- SIDEBAR -->
+
+    <aside class="guild-sidebar">
+
+        <nav class="guild-navigation">
+
+            <button
+                class="nav-item active"
+                data-section="about"
+                type="button"
+            >
+                <span class="nav-icon">ℹ</span>
+                <span>О нас</span>
+            </button>
+
+            <button
+                class="nav-item"
+                data-section="news"
+                type="button"
+            >
+                <span class="nav-icon">📰</span>
+                <span>Новости</span>
+            </button>
+
+            <button
+                class="nav-item"
+                data-section="members"
+                type="button"
+            >
+                <span class="nav-icon">👥</span>
+                <span>Участники</span>
+            </button>
+
+            <button
+                class="nav-item"
+                data-section="gallery"
+                type="button"
+            >
+                <span class="nav-icon">🖼</span>
+                <span>Галерея</span>
+            </button>
+
+            <button
+                class="nav-item"
+                data-section="documents"
+                type="button"
+            >
+                <span class="nav-icon">📄</span>
+                <span>Документы</span>
+            </button>
+
+            <button
+                class="nav-item"
+                data-section="diplomacy"
+                type="button"
+            >
+                <span class="nav-icon">⚔</span>
+                <span>Дипломатия</span>
+            </button>
+
+            <button
+                class="nav-item"
+                data-section="applications"
+                type="button"
+            >
+                <span class="nav-icon">✉</span>
+                <span>Заявки</span>
+                <span
+                    id="applications-count"
+                    class="nav-counter hidden"
+                >
+                    0
+                </span>
+            </button>
+
+            <button
+                id="settings-nav"
+                class="nav-item hidden"
+                data-section="settings"
+                type="button"
+            >
+                <span class="nav-icon">⚙</span>
+                <span>Настройки</span>
+            </button>
+
+        </nav>
+
+
+        <div class="sidebar-bottom">
+
+            <button
+                id="leave-guild-button"
+                class="danger-button full-width"
+                type="button"
+            >
+                Выйти из гильдии
+            </button>
+
+        </div>
+
+    </aside>
+
+
+    <!-- CONTENT -->
+
+    <section class="content-area">
+
+
+        <!-- ============================= -->
+        <!-- ABOUT -->
+        <!-- ============================= -->
+
+        <section
+            id="section-about"
+            class="content-section active"
+        >
+
+            <div class="section-header">
+
+                <div>
+                    <h2>О нас</h2>
+                    <p>
+                        Информация о гильдии
+                    </p>
+                </div>
+
+                <button
+                    id="edit-about-button"
+                    class="primary-button hidden"
+                    type="button"
+                >
+                    Редактировать
+                </button>
+
+            </div>
+
+
+            <div class="about-grid">
+
+                <div class="content-card">
+
+                    <h3>Описание</h3>
+
+                    <div
+                        id="about-description"
+                        class="text-content"
+                    >
+                        —
+                    </div>
+
+                </div>
+
+
+                <div class="content-card">
+
+                    <h3>Информация</h3>
+
+                    <div class="info-list">
+
+                        <div class="info-row">
+
+                            <span>
+                                Название
+                            </span>
+
+                            <strong id="about-name">
+                                —
+                            </strong>
+
+                        </div>
+
+
+                        <div class="info-row">
+
+                            <span>
+                                Тег
+                            </span>
+
+                            <strong id="about-tag">
+                                —
+                            </strong>
+
+                        </div>
+
+
+                        <div class="info-row">
+
+                            <span>
+                                Участников
+                            </span>
+
+                            <strong id="about-members-count">
+                                0
+                            </strong>
+
+                        </div>
+
+
+                        <div class="info-row">
+
+                            <span>
+                                Дата создания
+                            </span>
+
+                            <strong id="about-created-at">
+                                —
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="about-links-card"
+                    class="content-card"
+                >
+
+                    <h3>Ссылки</h3>
+
+                    <div
+                        id="about-links"
+                        class="links-list"
+                    >
+                        Ссылки не указаны.
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ============================= -->
+        <!-- NEWS -->
+        <!-- ============================= -->
+
+        <section
+            id="section-news"
+            class="content-section"
+        >
+
+            <div class="section-header">
+
+                <div>
+                    <h2>Новости</h2>
+                    <p>
+                        Новости и объявления гильдии
+                    </p>
+                </div>
+
+                <button
+                    id="create-news-button"
+                    class="primary-button hidden"
+                    type="button"
+                >
+                    + Новость
+                </button>
+
+            </div>
+
+
+            <div
+                id="news-list"
+                class="news-list"
+            >
+
+                <div class="loading-card">
+                    Загрузка новостей...
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ============================= -->
+        <!-- MEMBERS -->
+        <!-- ============================= -->
+
+        <section
+            id="section-members"
+            class="content-section"
+        >
+
+            <div class="section-header">
+
+                <div>
+                    <h2>Участники</h2>
+                    <p>
+                        Состав гильдии
+                    </p>
+                </div>
+
+                <div
+                    id="members-count-label"
+                    class="section-counter"
+                >
+                    0 участников
+                </div>
+
+            </div>
+
+
+            <div
+                id="members-list"
+                class="members-list"
+            >
+
+                <div class="loading-card">
+                    Загрузка участников...
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ============================= -->
+        <!-- GALLERY -->
+        <!-- ============================= -->
+
+        <section
+            id="section-gallery"
+            class="content-section"
+        >
+
+            <div class="section-header">
+
+                <div>
+                    <h2>Галерея</h2>
+                    <p>
+                        Изображения гильдии
+                    </p>
+                </div>
+
+                <button
+                    id="upload-gallery-button"
+                    class="primary-button hidden"
+                    type="button"
+                >
+                    + Загрузить
+                </button>
+
+            </div>
+
+
+            <div
+                id="gallery-list"
+                class="gallery-grid"
+            >
+
+                <div class="loading-card">
+                    Загрузка галереи...
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ============================= -->
+        <!-- DOCUMENTS -->
+        <!-- ============================= -->
+
+        <section
+            id="section-documents"
+            class="content-section"
+        >
+
+            <div class="section-header">
+
+                <div>
+                    <h2>Документы</h2>
+                    <p>
+                        Внутренние документы гильдии
+                    </p>
+                </div>
+
+                <button
+                    id="upload-document-button"
+                    class="primary-button hidden"
+                    type="button"
+                >
+                    + Загрузить документ
+                </button>
+
+            </div>
+
+
+            <div
+                id="documents-list"
+                class="documents-list"
+            >
+
+                <div class="loading-card">
+                    Загрузка документов...
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ============================= -->
+        <!-- DIPLOMACY -->
+        <!-- ============================= -->
+
+        <section
+            id="section-diplomacy"
+            class="content-section"
+        >
+
+            <div class="section-header">
+
+                <div>
+                    <h2>Дипломатия</h2>
+                    <p>
+                        Отношения с другими гильдиями
+                    </p>
+                </div>
+
+                <button
+                    id="create-relation-button"
+                    class="primary-button hidden"
+                    type="button"
+                >
+                    + Предложить отношения
+                </button>
+
+            </div>
+
+
+            <div
+                id="diplomacy-list"
+                class="diplomacy-list"
+            >
+
+                <div class="loading-card">
+                    Загрузка дипломатии...
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ============================= -->
+        <!-- APPLICATIONS -->
+        <!-- ============================= -->
+
+        <section
+            id="section-applications"
+            class="content-section"
+        >
+
+            <div class="section-header">
+
+                <div>
+                    <h2>Заявки</h2>
+                    <p>
+                        Управление заявками на вступление
+                    </p>
+                </div>
+
+            </div>
+
+
+            <div
+                id="application-form-area"
+                class="content-card application-form-card"
+            >
+
+                <h3>
+                    Вступить в гильдию
+                </h3>
+
+                <p class="muted-text">
+                    Укажите игровой ник и сообщение для руководства гильдии.
+                </p>
+
+                <form id="application-form">
+
+                    <div class="form-group">
+
+                        <label for="application-nickname">
+                            Игровой ник
+                        </label>
+
+                        <input
+                            id="application-nickname"
+                            type="text"
+                            maxlength="100"
+                            required
+                            placeholder="Ваш игровой ник"
+                        >
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="application-message">
+                            Сообщение
+                        </label>
+
+                        <textarea
+                            id="application-message"
+                            rows="5"
+                            maxlength="2000"
+                            placeholder="Расскажите немного о себе..."
+                        ></textarea>
+
+                    </div>
+
+
+                    <button
+                        class="primary-button"
+                        type="submit"
+                    >
+                        Отправить заявку
+                    </button>
+
+                </form>
+
+            </div>
+
+
+            <div
+                id="applications-management"
+                class="applications-management hidden"
+            >
+
+                <div class="subsection-header">
+
+                    <h3>
+                        Входящие заявки
+                    </h3>
+
+                </div>
+
+                <div
+                    id="applications-list"
+                    class="applications-list"
+                >
+
+                    <div class="loading-card">
+                        Загрузка заявок...
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ============================= -->
+        <!-- SETTINGS -->
+        <!-- ============================= -->
+
+        <section
+            id="section-settings"
+            class="content-section"
+        >
+
+            <div class="section-header">
+
+                <div>
+                    <h2>Настройки гильдии</h2>
+                    <p>
+                        Управление профилем гильдии
+                    </p>
+                </div>
+
+            </div>
+
+
+            <div class="settings-grid">
+
+                <div class="content-card">
+
+                    <h3>
+                        Основная информация
+                    </h3>
+
+                    <form id="guild-settings-form">
+
+                        <div class="form-group">
+
+                            <label for="settings-name">
+                                Название
+                            </label>
+
+                            <input
+                                id="settings-name"
+                                type="text"
+                                maxlength="150"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label for="settings-tag">
+                                Тег
+                            </label>
+
+                            <input
+                                id="settings-tag"
+                                type="text"
+                                maxlength="30"
+                                placeholder="TAG"
+                            >
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label for="settings-description">
+                                Описание
+                            </label>
+
+                            <textarea
+                                id="settings-description"
+                                rows="7"
+                                maxlength="5000"
+                            ></textarea>
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label for="settings-website">
+                                Сайт
+                            </label>
+
+                            <input
+                                id="settings-website"
+                                type="url"
+                                placeholder="https://example.com"
+                            >
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label for="settings-discord">
+                                Discord
+                            </label>
+
+                            <input
+                                id="settings-discord"
+                                type="url"
+                                placeholder="https://discord.gg/..."
+                            >
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label>
+                                Видимость гильдии
+                            </label>
+
+                            <label class="checkbox-row">
+
+                                <input
+                                    id="settings-public"
+                                    type="checkbox"
+                                >
+
+                                <span>
+                                    Публичная гильдия
+                                </span>
+
+                            </label>
+
+                        </div>
+
+
+                        <button
+                            class="primary-button"
+                            type="submit"
+                        >
+                            Сохранить изменения
+                        </button>
+
+                    </form>
+
+                </div>
+
+
+                <div class="content-card">
+
+                    <h3>
+                        Изображения
+                    </h3>
+
+                    <p class="muted-text">
+                        Логотип и баннер гильдии.
+                    </p>
+
+
+                    <div class="settings-image-block">
+
+                        <div>
+
+                            <div class="image-preview-label">
+                                Логотип
+                            </div>
+
+                            <img
+                                id="settings-logo-preview"
+                                class="settings-logo-preview"
+                                src=""
+                                alt="Логотип"
+                            >
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label for="settings-logo-url">
+                                URL логотипа
+                            </label>
+
+                            <input
+                                id="settings-logo-url"
+                                type="url"
+                                placeholder="https://..."
+                            >
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="settings-image-block">
+
+                        <div>
+
+                            <div class="image-preview-label">
+                                Баннер
+                            </div>
+
+                            <div
+                                id="settings-banner-preview"
+                                class="settings-banner-preview"
+                            ></div>
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label for="settings-banner-url">
+                                URL баннера
+                            </label>
+
+                            <input
+                                id="settings-banner-url"
+                                type="url"
+                                placeholder="https://..."
+                            >
+
+                        </div>
+
+                    </div>
+
+
+                    <button
+                        id="save-image-settings-button"
+                        class="secondary-button"
+                        type="button"
+                    >
+                        Сохранить изображения
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </section>
+
+</main>
+```
+
+</div>
+
+<!-- ============================= -->
+
+<!-- NEWS MODAL -->
+
+<!-- ============================= -->
+
+<div
+    id="news-modal"
+    class="modal hidden"
+>
+
+```
+<div class="modal-overlay"></div>
+
+<div class="modal-window">
+
+    <div class="modal-header">
+
+        <h3>
+            Новость
+        </h3>
+
+        <button
+            class="modal-close"
+            data-close-modal="news-modal"
+            type="button"
+        >
+            ×
+        </button>
+
+    </div>
+
+
+    <form id="news-form">
+
+        <div class="modal-body">
+
+            <div class="form-group">
+
+                <label for="news-title">
+                    Заголовок
+                </label>
+
+                <input
+                    id="news-title"
+                    type="text"
+                    maxlength="200"
+                    required
+                >
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="news-content">
+                    Текст
+                </label>
+
+                <textarea
+                    id="news-content"
+                    rows="10"
+                    maxlength="10000"
+                    required
+                ></textarea>
+
+            </div>
+
+
+            <label class="checkbox-row">
+
+                <input
+                    id="news-pinned"
+                    type="checkbox"
+                >
+
+                <span>
+                    Закрепить новость
+                </span>
+
+            </label>
+
+        </div>
+
+
+        <div class="modal-footer">
+
+            <button
+                type="button"
+                class="secondary-button"
+                data-close-modal="news-modal"
+            >
+                Отмена
+            </button>
+
+            <button
+                type="submit"
+                class="primary-button"
+            >
+                Опубликовать
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+```
+
+</div>
+
+<!-- ============================= -->
+
+<!-- GALLERY MODAL -->
+
+<!-- ============================= -->
+
+<div
+    id="gallery-modal"
+    class="modal hidden"
+>
+
+```
+<div class="modal-overlay"></div>
+
+<div class="modal-window">
+
+    <div class="modal-header">
+
+        <h3>
+            Добавить изображение
+        </h3>
+
+        <button
+            class="modal-close"
+            data-close-modal="gallery-modal"
+            type="button"
+        >
+            ×
+        </button>
+
+    </div>
+
+
+    <form id="gallery-form">
+
+        <div class="modal-body">
+
+            <div class="form-group">
+
+                <label for="gallery-title">
+                    Название
+                </label>
+
+                <input
+                    id="gallery-title"
+                    type="text"
+                    maxlength="200"
+                    required
+                >
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="gallery-description">
+                    Описание
+                </label>
+
+                <textarea
+                    id="gallery-description"
+                    rows="4"
+                    maxlength="2000"
+                ></textarea>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="gallery-file">
+                    Изображение
+                </label>
+
+                <input
+                    id="gallery-file"
+                    type="file"
+                    accept="image/*"
+                    required
+                >
+
+            </div>
+
+        </div>
+
+
+        <div class="modal-footer">
+
+            <button
+                type="button"
+                class="secondary-button"
+                data-close-modal="gallery-modal"
+            >
+                Отмена
+            </button>
+
+            <button
+                type="submit"
+                class="primary-button"
+            >
+                Загрузить
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+```
+
+</div>
+
+<!-- ============================= -->
+
+<!-- DOCUMENT MODAL -->
+
+<!-- ============================= -->
+
+<div
+    id="document-modal"
+    class="modal hidden"
+>
+
+```
+<div class="modal-overlay"></div>
+
+<div class="modal-window">
+
+    <div class="modal-header">
+
+        <h3>
+            Добавить документ
+        </h3>
+
+        <button
+            class="modal-close"
+            data-close-modal="document-modal"
+            type="button"
+        >
+            ×
+        </button>
+
+    </div>
+
+
+    <form id="document-form">
+
+        <div class="modal-body">
+
+            <div class="form-group">
+
+                <label for="document-name">
+                    Название документа
+                </label>
+
+                <input
+                    id="document-name"
+                    type="text"
+                    maxlength="200"
+                    required
+                >
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="document-description">
+                    Описание
+                </label>
+
+                <textarea
+                    id="document-description"
+                    rows="4"
+                    maxlength="2000"
+                ></textarea>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="document-file">
+                    Файл
+                </label>
+
+                <input
+                    id="document-file"
+                    type="file"
+                    required
+                >
+
+                <small>
+                    Максимальный размер будет проверяться перед загрузкой.
+                </small>
+
+            </div>
+
+        </div>
+
+
+        <div class="modal-footer">
+
+            <button
+                type="button"
+                class="secondary-button"
+                data-close-modal="document-modal"
+            >
+                Отмена
+            </button>
+
+            <button
+                type="submit"
+                class="primary-button"
+            >
+                Загрузить
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+```
+
+</div>
+
+<!-- ============================= -->
+
+<!-- RELATION MODAL -->
+
+<!-- ============================= -->
+
+<div
+    id="relation-modal"
+    class="modal hidden"
+>
+
+```
+<div class="modal-overlay"></div>
+
+<div class="modal-window">
+
+    <div class="modal-header">
+
+        <h3>
+            Дипломатические отношения
+        </h3>
+
+        <button
+            class="modal-close"
+            data-close-modal="relation-modal"
+            type="button"
+        >
+            ×
+        </button>
+
+    </div>
+
+
+    <form id="relation-form">
+
+        <div class="modal-body">
+
+            <div class="form-group">
+
+                <label for="relation-guild">
+                    Гильдия
+                </label>
+
+                <select
+                    id="relation-guild"
+                    required
+                >
+
+                    <option value="">
+                        Выберите гильдию
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="relation-type">
+                    Тип отношений
+                </label>
+
+                <select
+                    id="relation-type"
+                    required
+                >
+
+                    <option value="alliance">
+                        Союз
+                    </option>
+
+                    <option value="neutral">
+                        Нейтралитет
+                    </option>
+
+                    <option value="hostile">
+                        Враждебные отношения
+                    </option>
+
+                </select>
+
+            </div>
+
+        </div>
+
+
+        <div class="modal-footer">
+
+            <button
+                type="button"
+                class="secondary-button"
+                data-close-modal="relation-modal"
+            >
+                Отмена
+            </button>
+
+            <button
+                type="submit"
+                class="primary-button"
+            >
+                Отправить предложение
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+```
+
+</div>
+
+<!-- ============================= -->
+
+<!-- CONFIRM MODAL -->
+
+<!-- ============================= -->
+
+<div
+    id="confirm-modal"
+    class="modal hidden"
+>
+
+```
+<div class="modal-overlay"></div>
+
+<div class="modal-window small-modal">
+
+    <div class="modal-header">
+
+        <h3 id="confirm-title">
+            Подтверждение
+        </h3>
+
+        <button
+            class="modal-close"
+            data-close-modal="confirm-modal"
+            type="button"
+        >
+            ×
+        </button>
+
+    </div>
+
+
+    <div class="modal-body">
+
+        <p id="confirm-message">
+            Вы уверены?
+        </p>
+
+    </div>
+
+
+    <div class="modal-footer">
+
+        <button
+            id="confirm-cancel"
+            type="button"
+            class="secondary-button"
+        >
+            Отмена
+        </button>
+
+        <button
+            id="confirm-ok"
+            type="button"
+            class="danger-button"
+        >
+            Подтвердить
+        </button>
+
+    </div>
+
+</div>
+```
+
+</div>
+
+<!-- ============================= -->
+
+<!-- TOAST -->
+
+<!-- ============================= -->
+
+<div
+    id="toast-container"
+    class="toast-container"
+></div>
+
+<script src="guild.js"></script>
+
+</body>
+</html>
