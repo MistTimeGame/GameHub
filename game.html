@@ -27,7 +27,6 @@
             margin: 0 auto;
             min-height: 70px;
             padding: 0 20px;
-
             display: flex;
             align-items: center;
             gap: 20px;
@@ -37,15 +36,11 @@
             border: none;
             background: #eef2f7;
             color: #1f2937;
-
             padding: 10px 16px;
             border-radius: 12px;
-
             cursor: pointer;
             font-size: 14px;
             font-weight: 600;
-
-            transition: 0.2s;
         }
 
         .back-button:hover {
@@ -54,11 +49,9 @@
 
         .game-header-title {
             flex: 1;
-
             display: flex;
             align-items: center;
             gap: 12px;
-
             min-width: 0;
         }
 
@@ -74,7 +67,6 @@
             font-size: 20px;
             font-weight: 700;
             color: #111827;
-
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -96,10 +88,8 @@
             border: none;
             background: #111827;
             color: #ffffff;
-
             padding: 10px 16px;
             border-radius: 12px;
-
             cursor: pointer;
             font-size: 14px;
             font-weight: 600;
@@ -118,7 +108,6 @@
             max-width: 1200px;
             margin: 0 auto;
             padding: 40px 20px;
-
             display: flex;
             align-items: center;
             gap: 28px;
@@ -127,10 +116,8 @@
         .game-logo-large {
             width: 120px;
             height: 120px;
-
             border-radius: 24px;
             object-fit: cover;
-
             background: #eef2f7;
             border: 1px solid #e5e7eb;
         }
@@ -141,7 +128,6 @@
 
         .game-hero-content h1 {
             margin: 0 0 10px;
-
             color: #111827;
             font-size: 36px;
             line-height: 1.15;
@@ -149,7 +135,6 @@
 
         .game-hero-content p {
             margin: 0;
-
             color: #6b7280;
             font-size: 16px;
             line-height: 1.6;
@@ -166,24 +151,18 @@
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-
             margin-bottom: 25px;
         }
 
         .game-nav-button {
-            border: none;
+            border: 1px solid #e5e7eb;
             background: #ffffff;
             color: #4b5563;
-
             padding: 11px 17px;
             border-radius: 12px;
-
             cursor: pointer;
             font-size: 14px;
             font-weight: 600;
-
-            border: 1px solid #e5e7eb;
-
             transition: 0.2s;
         }
 
@@ -210,7 +189,6 @@
             border: 1px solid #e5e7eb;
             border-radius: 18px;
             padding: 25px;
-
             box-shadow: 0 3px 12px rgba(0, 0, 0, 0.03);
         }
 
@@ -219,7 +197,6 @@
             align-items: center;
             justify-content: space-between;
             gap: 15px;
-
             margin-bottom: 20px;
         }
 
@@ -239,14 +216,11 @@
             border: none;
             background: #111827;
             color: #ffffff;
-
             padding: 12px 18px;
             border-radius: 12px;
-
             cursor: pointer;
             font-size: 14px;
             font-weight: 700;
-
             transition: 0.2s;
         }
 
@@ -254,14 +228,17 @@
             background: #000000;
         }
 
+        .primary-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
         .secondary-button {
             border: 1px solid #d1d5db;
             background: #ffffff;
             color: #374151;
-
             padding: 11px 18px;
             border-radius: 12px;
-
             cursor: pointer;
             font-size: 14px;
             font-weight: 600;
@@ -281,9 +258,7 @@
             border: 1px solid #e5e7eb;
             border-radius: 16px;
             padding: 18px;
-
             background: #ffffff;
-
             cursor: pointer;
             transition: 0.2s;
         }
@@ -303,19 +278,15 @@
         .guild-logo {
             width: 58px;
             height: 58px;
-
             border-radius: 14px;
             object-fit: cover;
-
             background: #eef2f7;
             border: 1px solid #e5e7eb;
-
             flex-shrink: 0;
         }
 
         .guild-card-name {
             margin: 0;
-
             color: #111827;
             font-size: 18px;
             font-weight: 700;
@@ -323,24 +294,16 @@
 
         .guild-card-description {
             margin: 14px 0 0;
-
             color: #6b7280;
             font-size: 14px;
             line-height: 1.5;
-
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
         }
 
         .guild-empty {
             padding: 45px 20px;
             text-align: center;
-
             color: #6b7280;
             background: #f9fafb;
-
             border: 1px dashed #d1d5db;
             border-radius: 16px;
         }
@@ -348,18 +311,14 @@
         .guild-empty strong {
             display: block;
             margin-bottom: 8px;
-
             color: #374151;
             font-size: 17px;
         }
 
         .create-guild-panel {
             display: none;
-
             margin-bottom: 20px;
-
             padding: 22px;
-
             border-radius: 16px;
             background: #f9fafb;
             border: 1px solid #e5e7eb;
@@ -371,7 +330,6 @@
 
         .create-guild-panel h3 {
             margin: 0 0 18px;
-
             color: #111827;
             font-size: 20px;
         }
@@ -382,9 +340,7 @@
 
         .form-group label {
             display: block;
-
             margin-bottom: 7px;
-
             color: #374151;
             font-size: 14px;
             font-weight: 600;
@@ -394,19 +350,14 @@
         .form-group textarea {
             width: 100%;
             box-sizing: border-box;
-
             border: 1px solid #d1d5db;
             background: #ffffff;
             color: #111827;
-
             padding: 12px 14px;
             border-radius: 11px;
-
             font-family: inherit;
             font-size: 14px;
-
             outline: none;
-
             transition: 0.2s;
         }
 
@@ -429,13 +380,9 @@
 
         .status-message {
             display: none;
-
             margin-bottom: 16px;
-
             padding: 12px 14px;
-
             border-radius: 12px;
-
             font-size: 14px;
             line-height: 1.5;
         }
@@ -459,10 +406,8 @@
         .placeholder-content {
             padding: 40px 20px;
             text-align: center;
-
             color: #6b7280;
             background: #f9fafb;
-
             border-radius: 15px;
             border: 1px dashed #d1d5db;
         }
@@ -516,8 +461,8 @@
 
 <div class="game-page">
 
-    <!-- HEADER -->
     <header class="game-header">
+
         <div class="game-header-inner">
 
             <button
@@ -535,7 +480,7 @@
                     class="game-header-logo"
                     src=""
                     alt=""
-                    style="display: none;"
+                    style="display:none;"
                 >
 
                 <div
@@ -565,10 +510,10 @@
             </div>
 
         </div>
+
     </header>
 
 
-    <!-- GAME HERO -->
     <section class="game-hero">
 
         <div class="game-hero-inner">
@@ -578,7 +523,7 @@
                 class="game-logo-large"
                 src=""
                 alt=""
-                style="display: none;"
+                style="display:none;"
             >
 
             <div class="game-hero-content">
@@ -598,10 +543,8 @@
     </section>
 
 
-    <!-- MAIN -->
     <main class="game-main">
 
-        <!-- NAVIGATION -->
         <nav class="game-navigation">
 
             <button
@@ -655,7 +598,8 @@
         </nav>
 
 
-        <!-- OVERVIEW -->
+        <!-- ОБЗОР -->
+
         <section
             id="overview-section"
             class="game-section active"
@@ -669,7 +613,7 @@
                         <h2>Обзор игры</h2>
 
                         <p>
-                            Здесь будет основная информация и игровые возможности.
+                            Основная информация и игровые возможности.
                         </p>
                     </div>
 
@@ -677,12 +621,8 @@
 
                 <div class="placeholder-content">
 
-                    <strong>Игровой раздел создаётся</strong>
-
-                    <p>
-                        Позже здесь появятся игровые инструменты,
-                        данные, руководства и другие возможности.
-                    </p>
+                    Здесь будут игровые инструменты,
+                    руководства и данные игры.
 
                 </div>
 
@@ -691,7 +631,8 @@
         </section>
 
 
-        <!-- NEWS -->
+        <!-- НОВОСТИ -->
+
         <section
             id="news-section"
             class="game-section"
@@ -720,7 +661,8 @@
         </section>
 
 
-        <!-- GUILDS -->
+        <!-- ГИЛЬДИИ -->
+
         <section
             id="guilds-section"
             class="game-section"
@@ -731,11 +673,13 @@
                 <div class="section-header">
 
                     <div>
+
                         <h2>Гильдии</h2>
 
                         <p>
                             Гильдии игроков этой игры.
                         </p>
+
                     </div>
 
                     <button
@@ -749,14 +693,14 @@
                 </div>
 
 
-                <!-- STATUS -->
                 <div
                     id="guild-status"
                     class="status-message"
                 ></div>
 
 
-                <!-- CREATE GUILD -->
+                <!-- ФОРМА СОЗДАНИЯ -->
+
                 <div
                     id="create-guild-panel"
                     class="create-guild-panel"
@@ -768,7 +712,6 @@
 
                     <form id="create-guild-form">
 
-                        <!-- NAME -->
                         <div class="form-group">
 
                             <label for="guild-name">
@@ -787,7 +730,6 @@
                         </div>
 
 
-                        <!-- NICKNAME -->
                         <div class="form-group">
 
                             <label for="guild-nickname">
@@ -806,7 +748,6 @@
                         </div>
 
 
-                        <!-- DESCRIPTION -->
                         <div class="form-group">
 
                             <label for="guild-description">
@@ -823,11 +764,10 @@
                         </div>
 
 
-                        <!-- LOGO -->
                         <div class="form-group">
 
                             <label for="guild-logo-url">
-                                Логотип
+                                Ссылка на логотип
                             </label>
 
                             <input
@@ -840,7 +780,6 @@
                         </div>
 
 
-                        <!-- ACTIONS -->
                         <div class="form-actions">
 
                             <button
@@ -865,7 +804,6 @@
                 </div>
 
 
-                <!-- GUILDS LIST -->
                 <div id="guilds-list">
 
                     <div class="loading">
@@ -879,7 +817,8 @@
         </section>
 
 
-        <!-- FORUM -->
+        <!-- ФОРУМ -->
+
         <section
             id="forum-section"
             class="game-section"
@@ -890,11 +829,13 @@
                 <div class="section-header">
 
                     <div>
+
                         <h2>Форум</h2>
 
                         <p>
                             Обсуждения игроков.
                         </p>
+
                     </div>
 
                 </div>
@@ -908,7 +849,8 @@
         </section>
 
 
-        <!-- MARKET -->
+        <!-- РЫНОК -->
+
         <section
             id="market-section"
             class="game-section"
@@ -919,11 +861,13 @@
                 <div class="section-header">
 
                     <div>
+
                         <h2>Рынок</h2>
 
                         <p>
                             Игровые предметы и торговая информация.
                         </p>
+
                     </div>
 
                 </div>
@@ -937,7 +881,8 @@
         </section>
 
 
-        <!-- RATING -->
+        <!-- РЕЙТИНГ -->
+
         <section
             id="rating-section"
             class="game-section"
@@ -948,11 +893,13 @@
                 <div class="section-header">
 
                     <div>
+
                         <h2>Рейтинг</h2>
 
                         <p>
                             Рейтинг игроков и гильдий.
                         </p>
+
                     </div>
 
                 </div>
@@ -970,313 +917,329 @@
 </div>
 
 
-<!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<!-- CONFIG -->
 <script src="supabase-config.js"></script>
 
-<!-- MAIN APP -->
 <script src="app.js"></script>
 
 
 <script>
 
-    let gameId = null;
-    let currentGame = null;
+let gameId = null;
+let currentGame = null;
 
 
-    /*
-     * Получаем ID игры из URL
-     *
-     * Например:
-     *
-     * game.html?id=123
-     */
-    function getGameIdFromUrl() {
+/* =========================================
+   ID ИГРЫ
+========================================= */
 
-        const params = new URLSearchParams(
+function getGameIdFromUrl() {
+
+    const params =
+        new URLSearchParams(
             window.location.search
         );
 
-        return params.get("id");
+    return params.get("id");
+}
+
+
+/* =========================================
+   SUPABASE
+========================================= */
+
+function getSupabase() {
+
+    if (
+        window.GameHub &&
+        typeof window.GameHub.supabase === "function"
+    ) {
+        return window.GameHub.supabase();
     }
 
-
-    /*
-     * Получение Supabase клиента
-     */
-    function getSupabase() {
-
-        if (
-            window.GameHub &&
-            typeof window.GameHub.supabase === "function"
-        ) {
-            return window.GameHub.supabase();
-        }
-
-        if (window.supabaseClient) {
-            return window.supabaseClient;
-        }
-
-        if (window.supabase) {
-            return window.supabase;
-        }
-
-        throw new Error(
-            "Supabase клиент не найден"
-        );
+    if (window.supabaseClient) {
+        return window.supabaseClient;
     }
 
-
-    /*
-     * Получение текущего пользователя
-     */
-    async function getCurrentUser() {
-
-        if (
-            window.GameHub &&
-            typeof window.GameHub.user === "function"
-        ) {
-            return window.GameHub.user();
-        }
-
-        const supabase = getSupabase();
-
-        const {
-            data,
-            error
-        } = await supabase.auth.getUser();
-
-        if (error) {
-            throw error;
-        }
-
-        return data.user;
-    }
+    throw new Error(
+        "Supabase клиент не найден."
+    );
+}
 
 
-    /*
-     * Показать статус
-     */
-    function showGuildStatus(
-        message,
-        type = "error"
+/* =========================================
+   ТЕКУЩИЙ ПОЛЬЗОВАТЕЛЬ
+========================================= */
+
+async function getCurrentUser() {
+
+    if (
+        window.GameHub &&
+        typeof window.GameHub.user === "function"
     ) {
 
-        const element =
-            document.getElementById("guild-status");
+        return window.GameHub.user();
 
-        if (!element) {
-            return;
-        }
+    }
 
-        element.textContent = message;
+    const supabase =
+        getSupabase();
 
-        element.className =
-            "status-message show " + type;
+    const {
+        data,
+        error
+    } =
+        await supabase.auth.getUser();
+
+    if (error) {
+        throw error;
+    }
+
+    return data.user;
+}
+
+
+/* =========================================
+   ЭКРАНИРОВАНИЕ
+========================================= */
+
+function escapeHtml(value) {
+
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+
+/* =========================================
+   СТАТУС
+========================================= */
+
+function showGuildStatus(
+    message,
+    type = "error"
+) {
+
+    const element =
+        document.getElementById(
+            "guild-status"
+        );
+
+    if (!element) {
+        return;
+    }
+
+    element.textContent =
+        message;
+
+    element.className =
+        "status-message show " +
+        type;
+}
+
+
+function hideGuildStatus() {
+
+    const element =
+        document.getElementById(
+            "guild-status"
+        );
+
+    if (!element) {
+        return;
+    }
+
+    element.textContent = "";
+
+    element.className =
+        "status-message";
+}
+
+
+/* =========================================
+   ЗАГРУЗКА ИГРЫ
+========================================= */
+
+async function loadGame() {
+
+    const supabase =
+        getSupabase();
+
+
+    if (!gameId) {
+
+        document.getElementById(
+            "game-name"
+        ).textContent =
+            "Игра не указана";
+
+        document.getElementById(
+            "game-description"
+        ).textContent =
+            "В адресе страницы отсутствует ID игры.";
+
+        return;
     }
 
 
-    /*
-     * Скрыть статус
-     */
-    function hideGuildStatus() {
-
-        const element =
-            document.getElementById("guild-status");
-
-        if (!element) {
-            return;
-        }
-
-        element.textContent = "";
-
-        element.className =
-            "status-message";
-    }
-
-
-    /*
-     * Загрузка игры
-     */
-    async function loadGame() {
-
-        const supabase = getSupabase();
-
-        if (!gameId) {
-
-            document.getElementById(
-                "game-name"
-            ).textContent =
-                "Игра не указана";
-
-            document.getElementById(
-                "game-description"
-            ).textContent =
-                "В адресе страницы отсутствует ID игры.";
-
-            return;
-        }
-
-
-        const {
-            data,
-            error
-        } = await supabase
+    const {
+        data,
+        error
+    } =
+        await supabase
             .from("games")
             .select("*")
             .eq("id", gameId)
             .maybeSingle();
 
 
-        if (error) {
+    if (error) {
 
-            console.error(
-                "Ошибка загрузки игры:",
-                error
-            );
+        console.error(
+            error
+        );
 
-            document.getElementById(
-                "game-name"
-            ).textContent =
-                "Ошибка загрузки";
-
-            document.getElementById(
-                "game-description"
-            ).textContent =
-                error.message;
-
-            return;
-        }
-
-
-        if (!data) {
-
-            document.getElementById(
-                "game-name"
-            ).textContent =
-                "Игра не найдена";
-
-            document.getElementById(
-                "game-description"
-            ).textContent =
-                "Игра отсутствует или недоступна.";
-
-            return;
-        }
-
-
-        currentGame = data;
-
-
-        /*
-         * Название
-         */
         document.getElementById(
             "game-name"
         ).textContent =
-            data.name || "Без названия";
+            "Ошибка загрузки";
 
-
-        document.getElementById(
-            "header-game-name"
-        ).textContent =
-            data.name || "Игра";
-
-
-        /*
-         * Описание
-         */
         document.getElementById(
             "game-description"
         ).textContent =
-            data.description ||
-            "Описание игры пока отсутствует.";
+            error.message;
 
-
-        /*
-         * Логотип
-         */
-        if (data.logo_url) {
-
-            const largeLogo =
-                document.getElementById(
-                    "game-logo-large"
-                );
-
-            largeLogo.src =
-                data.logo_url;
-
-            largeLogo.alt =
-                data.name || "Логотип игры";
-
-            largeLogo.style.display =
-                "block";
-
-
-            const headerLogo =
-                document.getElementById(
-                    "header-game-logo"
-                );
-
-            headerLogo.src =
-                data.logo_url;
-
-            headerLogo.alt =
-                data.name || "Логотип игры";
-
-            headerLogo.style.display =
-                "block";
-        }
-
-
-        document.title =
-            (data.name || "Игра") +
-            " — GameHub";
-
-
-        await loadGuilds();
+        return;
     }
 
 
-    /*
-     * Загрузка гильдий
-     */
-    async function loadGuilds() {
+    if (!data) {
 
-        const container =
+        document.getElementById(
+            "game-name"
+        ).textContent =
+            "Игра не найдена";
+
+        document.getElementById(
+            "game-description"
+        ).textContent =
+            "Игра отсутствует или недоступна.";
+
+        return;
+    }
+
+
+    currentGame =
+        data;
+
+
+    document.getElementById(
+        "game-name"
+    ).textContent =
+        data.name ||
+        "Без названия";
+
+
+    document.getElementById(
+        "header-game-name"
+    ).textContent =
+        data.name ||
+        "Игра";
+
+
+    document.getElementById(
+        "game-description"
+    ).textContent =
+        data.description ||
+        "Описание игры отсутствует.";
+
+
+    if (data.logo_url) {
+
+        const logo =
             document.getElementById(
-                "guilds-list"
+                "game-logo-large"
             );
 
+        logo.src =
+            data.logo_url;
 
-        if (!container) {
-            return;
-        }
+        logo.alt =
+            data.name ||
+            "Логотип игры";
 
-
-        container.innerHTML = `
-            <div class="loading">
-                Загрузка гильдий...
-            </div>
-        `;
+        logo.style.display =
+            "block";
 
 
-        try {
+        const headerLogo =
+            document.getElementById(
+                "header-game-logo"
+            );
 
-            const supabase =
-                getSupabase();
+        headerLogo.src =
+            data.logo_url;
+
+        headerLogo.alt =
+            data.name ||
+            "Логотип игры";
+
+        headerLogo.style.display =
+            "block";
+    }
 
 
-            const {
-                data,
-                error
-            } = await supabase
+    document.title =
+        (data.name || "Игра") +
+        " — GameHub";
+
+
+    await loadGuilds();
+}
+
+
+/* =========================================
+   ЗАГРУЗКА ГИЛЬДИЙ
+========================================= */
+
+async function loadGuilds() {
+
+    const container =
+        document.getElementById(
+            "guilds-list"
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    container.innerHTML = `
+        <div class="loading">
+            Загрузка гильдий...
+        </div>
+    `;
+
+
+    try {
+
+        const supabase =
+            getSupabase();
+
+
+        const {
+            data,
+            error
+        } =
+            await supabase
                 .from("guilds")
                 .select("*")
                 .eq("game_id", gameId)
-                .eq("is_active", true)
                 .order(
                     "name",
                     {
@@ -1285,376 +1248,388 @@
                 );
 
 
-            if (error) {
-                throw error;
-            }
+        if (error) {
+            throw error;
+        }
 
 
-            if (!data || data.length === 0) {
-
-                container.innerHTML = `
-                    <div class="guild-empty">
-
-                        <strong>
-                            Пока нет гильдий
-                        </strong>
-
-                        <span>
-                            Создай первую гильдию в этой игре.
-                        </span>
-
-                    </div>
-                `;
-
-                return;
-            }
-
-
-            container.innerHTML = "";
-
-
-            data.forEach(
-                guild => {
-
-                    const card =
-                        document.createElement(
-                            "div"
-                        );
-
-                    card.className =
-                        "guild-card";
-
-
-                    const logo =
-                        guild.logo_url ||
-                        "";
-
-
-                    const logoHtml =
-                        logo
-                            ? `
-                                <img
-                                    class="guild-logo"
-                                    src="${escapeHtmlAttribute(logo)}"
-                                    alt="${escapeHtmlAttribute(guild.name || "Гильдия")}"
-                                >
-                            `
-                            : `
-                                <div
-                                    class="guild-logo"
-                                ></div>
-                            `;
-
-
-                    card.innerHTML = `
-
-                        <div class="guild-card-top">
-
-                            ${logoHtml}
-
-                            <div>
-
-                                <h3 class="guild-card-name">
-                                    ${escapeHtml(
-                                        guild.name ||
-                                        "Без названия"
-                                    )}
-                                </h3>
-
-                            </div>
-
-                        </div>
-
-                        <p class="guild-card-description">
-                            ${escapeHtml(
-                                guild.description ||
-                                "Описание отсутствует."
-                            )}
-                        </p>
-
-                    `;
-
-
-                    card.addEventListener(
-                        "click",
-                        () => {
-
-                            /*
-                             * Страница гильдии будет
-                             * подключена следующим этапом.
-                             *
-                             * Пока сохраняем ID в URL.
-                             */
-                            window.location.href =
-                                "guild.html?id=" +
-                                encodeURIComponent(
-                                    guild.id
-                                );
-
-                        }
-                    );
-
-
-                    container.appendChild(
-                        card
-                    );
-
-                }
-            );
-
-
-        } catch (error) {
-
-            console.error(
-                "Ошибка загрузки гильдий:",
-                error
-            );
-
+        if (
+            !data ||
+            data.length === 0
+        ) {
 
             container.innerHTML = `
                 <div class="guild-empty">
 
                     <strong>
-                        Не удалось загрузить гильдии
+                        Пока нет гильдий
                     </strong>
 
                     <span>
-                        ${escapeHtml(
-                            error.message ||
-                            "Неизвестная ошибка"
-                        )}
+                        Создай первую гильдию в этой игре.
                     </span>
 
                 </div>
             `;
+
+            return;
         }
+
+
+        container.innerHTML = "";
+
+
+        data.forEach(
+            guild => {
+
+                const card =
+                    document.createElement(
+                        "div"
+                    );
+
+                card.className =
+                    "guild-card";
+
+
+                const logoHtml =
+                    guild.logo_url
+                        ? `
+                            <img
+                                class="guild-logo"
+                                src="${escapeHtml(guild.logo_url)}"
+                                alt="${escapeHtml(guild.name || "Гильдия")}"
+                            >
+                        `
+                        : `
+                            <div class="guild-logo"></div>
+                        `;
+
+
+                card.innerHTML = `
+
+                    <div class="guild-card-top">
+
+                        ${logoHtml}
+
+                        <div>
+
+                            <h3 class="guild-card-name">
+                                ${escapeHtml(
+                                    guild.name ||
+                                    "Без названия"
+                                )}
+                            </h3>
+
+                        </div>
+
+                    </div>
+
+                    <p class="guild-card-description">
+                        ${escapeHtml(
+                            guild.description ||
+                            "Описание отсутствует."
+                        )}
+                    </p>
+
+                `;
+
+
+                card.addEventListener(
+                    "click",
+                    function() {
+
+                        window.location.href =
+                            "guild.html?id=" +
+                            encodeURIComponent(
+                                guild.id
+                            );
+
+                    }
+                );
+
+
+                container.appendChild(
+                    card
+                );
+
+            }
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Ошибка загрузки гильдий:",
+            error
+        );
+
+
+        container.innerHTML = `
+            <div class="guild-empty">
+
+                <strong>
+                    Не удалось загрузить гильдии
+                </strong>
+
+                <span>
+                    ${escapeHtml(
+                        error.message ||
+                        "Неизвестная ошибка"
+                    )}
+                </span>
+
+            </div>
+        `;
+    }
+}
+
+
+/* =========================================
+   СОЗДАНИЕ ГИЛЬДИИ
+========================================= */
+
+async function createGuild(event) {
+
+    event.preventDefault();
+
+    hideGuildStatus();
+
+
+    const name =
+        document
+            .getElementById(
+                "guild-name"
+            )
+            .value
+            .trim();
+
+
+    const nickname =
+        document
+            .getElementById(
+                "guild-nickname"
+            )
+            .value
+            .trim();
+
+
+    const description =
+        document
+            .getElementById(
+                "guild-description"
+            )
+            .value
+            .trim();
+
+
+    const logoUrl =
+        document
+            .getElementById(
+                "guild-logo-url"
+            )
+            .value
+            .trim();
+
+
+    if (!name) {
+
+        showGuildStatus(
+            "Введите название гильдии."
+        );
+
+        return;
     }
 
 
-    /*
-     * Создание гильдии
-     */
-    async function createGuild(
-        event
-    ) {
+    if (!nickname) {
 
-        event.preventDefault();
+        showGuildStatus(
+            "Введите ваш игровой ник."
+        );
 
-
-        hideGuildStatus();
+        return;
+    }
 
 
-        const name =
-            document
-                .getElementById(
-                    "guild-name"
-                )
-                .value
-                .trim();
+    try {
+
+        const user =
+            await getCurrentUser();
 
 
-        const nickname =
-            document
-                .getElementById(
-                    "guild-nickname"
-                )
-                .value
-                .trim();
-
-
-        const description =
-            document
-                .getElementById(
-                    "guild-description"
-                )
-                .value
-                .trim();
-
-
-        const logoUrl =
-            document
-                .getElementById(
-                    "guild-logo-url"
-                )
-                .value
-                .trim();
-
-
-        if (!name) {
+        if (!user) {
 
             showGuildStatus(
-                "Введите название гильдии."
+                "Необходимо войти в аккаунт."
             );
 
             return;
         }
 
 
-        if (!nickname) {
+        const supabase =
+            getSupabase();
 
-            showGuildStatus(
-                "Введите ваш игровой ник."
+
+        const button =
+            document.querySelector(
+                "#create-guild-form button[type='submit']"
             );
 
-            return;
+
+        if (button) {
+
+            button.disabled =
+                true;
+
+            button.textContent =
+                "Создание...";
         }
 
 
-        try {
-
-            const user =
-                await getCurrentUser();
-
-
-            if (!user) {
-
-                showGuildStatus(
-                    "Необходимо войти в аккаунт."
-                );
-
-                return;
-            }
-
-
-            const supabase =
-                getSupabase();
-
-
-            const submitButton =
-                document.querySelector(
-                    "#create-guild-form button[type='submit']"
-                );
-
-
-            if (submitButton) {
-
-                submitButton.disabled =
-                    true;
-
-                submitButton.textContent =
-                    "Создание...";
-            }
-
-
-            const {
-                data,
-                error
-            } = await supabase.rpc(
+        const {
+            data,
+            error
+        } =
+            await supabase.rpc(
                 "create_guild",
                 {
-                    p_game_id: gameId,
-                    p_name: name,
+                    p_game_id:
+                        gameId,
+
+                    p_name:
+                        name,
+
                     p_description:
                         description || "",
+
                     p_logo_url:
                         logoUrl || null,
+
                     p_nickname:
                         nickname
                 }
             );
 
 
-            if (error) {
-
-                console.error(
-                    "Ошибка создания гильдии:",
-                    error
-                );
-
-                throw error;
-            }
+        if (error) {
+            throw error;
+        }
 
 
-            console.log(
-                "Гильдия создана:",
-                data
+        console.log(
+            "Гильдия создана:",
+            data
+        );
+
+
+        showGuildStatus(
+            "Гильдия успешно создана!",
+            "success"
+        );
+
+
+        document
+            .getElementById(
+                "create-guild-form"
+            )
+            .reset();
+
+
+        document
+            .getElementById(
+                "create-guild-panel"
+            )
+            .classList
+            .remove("active");
+
+
+        await loadGuilds();
+
+
+    } catch (error) {
+
+        console.error(
+            "Ошибка создания гильдии:",
+            error
+        );
+
+
+        showGuildStatus(
+            error.message ||
+            "Не удалось создать гильдию."
+        );
+
+
+    } finally {
+
+        const button =
+            document.querySelector(
+                "#create-guild-form button[type='submit']"
             );
 
 
-            showGuildStatus(
-                "Гильдия успешно создана!",
-                "success"
-            );
+        if (button) {
 
+            button.disabled =
+                false;
 
-            document
-                .getElementById(
-                    "create-guild-form"
-                )
-                .reset();
-
-
-            document
-                .getElementById(
-                    "create-guild-panel"
-                )
-                .classList
-                .remove("active");
-
-
-            await loadGuilds();
-
-
-        } catch (error) {
-
-            console.error(
-                "Ошибка:",
-                error
-            );
-
-
-            showGuildStatus(
-                error.message ||
-                "Не удалось создать гильдию."
-            );
-
-
-        } finally {
-
-            const submitButton =
-                document.querySelector(
-                    "#create-guild-form button[type='submit']"
-                );
-
-
-            if (submitButton) {
-
-                submitButton.disabled =
-                    false;
-
-                submitButton.textContent =
-                    "Создать гильдию";
-            }
+            button.textContent =
+                "Создать гильдию";
         }
     }
+}
 
 
-    /*
-     * Навигация по разделам
-     */
-    function setupNavigation() {
+/* =========================================
+   НАВИГАЦИЯ
+========================================= */
 
-        const buttons =
-            document.querySelectorAll(
-                ".game-nav-button"
-            );
+function setupNavigation() {
 
-
-        buttons.forEach(
-            button => {
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        const sectionId =
-                            button.dataset.section;
+    const buttons =
+        document.querySelectorAll(
+            ".game-nav-button"
+        );
 
 
-                        buttons.forEach(
-                            item => {
+    buttons.forEach(
+        button => {
 
-                                item.classList
+            button.addEventListener(
+                "click",
+                function() {
+
+                    const sectionId =
+                        button.dataset.section;
+
+
+                    buttons.forEach(
+                        item => {
+
+                            item.classList
+                                .remove(
+                                    "active"
+                                );
+
+                        }
+                    );
+
+
+                    button.classList
+                        .add(
+                            "active"
+                        );
+
+
+                    document
+                        .querySelectorAll(
+                            ".game-section"
+                        )
+                        .forEach(
+                            section => {
+
+                                section.classList
                                     .remove(
                                         "active"
                                     );
@@ -1663,277 +1638,258 @@
                         );
 
 
-                        button.classList
+                    const target =
+                        document.getElementById(
+                            sectionId
+                        );
+
+
+                    if (target) {
+
+                        target.classList
                             .add(
                                 "active"
                             );
 
-
-                        document
-                            .querySelectorAll(
-                                ".game-section"
-                            )
-                            .forEach(
-                                section => {
-
-                                    section.classList
-                                        .remove(
-                                            "active"
-                                        );
-
-                                }
-                            );
+                    }
 
 
-                        const target =
-                            document.getElementById(
-                                sectionId
-                            );
+                    if (
+                        sectionId ===
+                        "guilds-section"
+                    ) {
 
-
-                        if (target) {
-
-                            target.classList
-                                .add(
-                                    "active"
-                                );
-
-                        }
-
-
-                        if (
-                            sectionId ===
-                            "guilds-section"
-                        ) {
-
-                            loadGuilds();
-
-                        }
+                        loadGuilds();
 
                     }
-                );
+
+                }
+            );
+
+        }
+    );
+}
+
+
+/* =========================================
+   СОЗДАНИЕ ГИЛЬДИИ — UI
+========================================= */
+
+function setupGuildCreation() {
+
+    const openButton =
+        document.getElementById(
+            "open-create-guild"
+        );
+
+
+    const cancelButton =
+        document.getElementById(
+            "cancel-create-guild"
+        );
+
+
+    const panel =
+        document.getElementById(
+            "create-guild-panel"
+        );
+
+
+    const form =
+        document.getElementById(
+            "create-guild-form"
+        );
+
+
+    if (
+        openButton &&
+        panel
+    ) {
+
+        openButton.addEventListener(
+            "click",
+            function() {
+
+                hideGuildStatus();
+
+                panel.classList
+                    .add("active");
+
+                document
+                    .getElementById(
+                        "guild-name"
+                    )
+                    .focus();
 
             }
         );
     }
 
 
-    /*
-     * Кнопка создания гильдии
-     */
-    function setupGuildCreation() {
+    if (
+        cancelButton &&
+        panel
+    ) {
 
-        const openButton =
-            document.getElementById(
-                "open-create-guild"
-            );
+        cancelButton.addEventListener(
+            "click",
+            function() {
 
+                panel.classList
+                    .remove("active");
 
-        const cancelButton =
-            document.getElementById(
-                "cancel-create-guild"
-            );
+                hideGuildStatus();
 
-
-        const panel =
-            document.getElementById(
-                "create-guild-panel"
-            );
-
-
-        const form =
-            document.getElementById(
-                "create-guild-form"
-            );
-
-
-        if (
-            openButton &&
-            panel
-        ) {
-
-            openButton.addEventListener(
-                "click",
-                () => {
-
-                    hideGuildStatus();
-
-                    panel.classList
-                        .add("active");
-
-                    document
-                        .getElementById(
-                            "guild-name"
-                        )
-                        .focus();
-
-                }
-            );
-
-        }
-
-
-        if (
-            cancelButton &&
-            panel
-        ) {
-
-            cancelButton.addEventListener(
-                "click",
-                () => {
-
-                    panel.classList
-                        .remove("active");
-
-                    hideGuildStatus();
-
-                }
-            );
-
-        }
-
-
-        if (form) {
-
-            form.addEventListener(
-                "submit",
-                createGuild
-            );
-
-        }
+            }
+        );
     }
 
 
-    /*
-     * Кнопка назад
-     */
-    function setupBackButton() {
+    if (form) {
 
-        const button =
-            document.getElementById(
-                "back-button"
-            );
+        form.addEventListener(
+            "submit",
+            createGuild
+        );
+
+    }
+}
 
 
-        if (!button) {
-            return;
+/* =========================================
+   НАЗАД
+========================================= */
+
+function setupBackButton() {
+
+    const button =
+        document.getElementById(
+            "back-button"
+        );
+
+
+    if (!button) {
+        return;
+    }
+
+
+    button.addEventListener(
+        "click",
+        function() {
+
+            window.location.href =
+                "index.html";
+
         }
+    );
+}
 
 
-        button.addEventListener(
-            "click",
-            () => {
+/* =========================================
+   ВЫХОД
+========================================= */
+
+function setupLogout() {
+
+    const button =
+        document.getElementById(
+            "logout-button"
+        );
+
+
+    if (!button) {
+        return;
+    }
+
+
+    button.addEventListener(
+        "click",
+        async function() {
+
+            try {
+
+                if (
+                    window.GameHub &&
+                    typeof window.GameHub.logout ===
+                        "function"
+                ) {
+
+                    await window.GameHub.logout();
+
+                } else {
+
+                    const supabase =
+                        getSupabase();
+
+                    await supabase.auth.signOut();
+
+                }
+
 
                 window.location.href =
                     "index.html";
 
+
+            } catch (error) {
+
+                console.error(
+                    error
+                );
+
+                alert(
+                    error.message ||
+                    "Не удалось выйти."
+                );
             }
-        );
-    }
+
+        }
+    );
+}
 
 
-    /*
-     * Logout
-     */
-    function setupLogout() {
+/* =========================================
+   ПОЛЬЗОВАТЕЛЬ
+========================================= */
 
-        const button =
-            document.getElementById(
-                "logout-button"
-            );
+async function setupUser() {
+
+    try {
+
+        const user =
+            await getCurrentUser();
 
 
-        if (!button) {
+        if (!user) {
             return;
         }
 
 
-        button.addEventListener(
-            "click",
-            async () => {
-
-                try {
-
-                    if (
-                        window.GameHub &&
-                        typeof window.GameHub.logout ===
-                            "function"
-                    ) {
-
-                        await window.GameHub.logout();
-
-                    } else {
-
-                        const supabase =
-                            getSupabase();
-
-                        await supabase.auth.signOut();
-
-                    }
+        const element =
+            document.getElementById(
+                "game-user-name"
+            );
 
 
-                    window.location.href =
-                        "index.html";
-
-                } catch (error) {
-
-                    console.error(
-                        "Ошибка выхода:",
-                        error
-                    );
-
-                    alert(
-                        error.message ||
-                        "Не удалось выйти из аккаунта."
-                    );
-                }
-
-            }
-        );
-    }
+        if (!element) {
+            return;
+        }
 
 
-    /*
-     * Показываем имя пользователя
-     */
-    async function setupUser() {
+        let name =
+            user.email ||
+            "Пользователь";
+
 
         try {
 
-            const user =
-                await getCurrentUser();
+            const supabase =
+                getSupabase();
 
 
-            if (!user) {
-                return;
-            }
-
-
-            const element =
-                document.getElementById(
-                    "game-user-name"
-                );
-
-
-            if (!element) {
-                return;
-            }
-
-
-            let name =
-                user.email ||
-                "Пользователь";
-
-
-            try {
-
-                const supabase =
-                    getSupabase();
-
-
-                const {
-                    data
-                } = await supabase
+            const {
+                data
+            } =
+                await supabase
                     .from("profiles")
                     .select(
                         "display_name"
@@ -1945,150 +1901,109 @@
                     .maybeSingle();
 
 
-                if (
-                    data &&
-                    data.display_name
-                ) {
+            if (
+                data &&
+                data.display_name
+            ) {
 
-                    name =
-                        data.display_name;
-
-                }
-
-            } catch (profileError) {
-
-                console.warn(
-                    "Не удалось загрузить профиль:",
-                    profileError
-                );
-
+                name =
+                    data.display_name;
             }
 
-
-            element.textContent =
-                name;
 
         } catch (error) {
 
             console.warn(
-                "Не удалось определить пользователя:",
+                "Профиль не загружен:",
                 error
             );
 
         }
+
+
+        element.textContent =
+            name;
+
+
+    } catch (error) {
+
+        console.warn(
+            "Пользователь не определён:",
+            error
+        );
+
+    }
+}
+
+
+/* =========================================
+   ЗАПУСК
+========================================= */
+
+async function initGamePage() {
+
+    gameId =
+        getGameIdFromUrl();
+
+
+    if (!gameId) {
+
+        document.getElementById(
+            "game-name"
+        ).textContent =
+            "Игра не указана";
+
+        document.getElementById(
+            "game-description"
+        ).textContent =
+            "Откройте игру с главной страницы.";
+
+        return;
     }
 
 
-    /*
-     * Безопасное экранирование HTML
-     */
-    function escapeHtml(
-        value
-    ) {
+    try {
 
-        return String(value)
-            .replaceAll(
-                "&",
-                "&amp;"
-            )
-            .replaceAll(
-                "<",
-                "&lt;"
-            )
-            .replaceAll(
-                ">",
-                "&gt;"
-            )
-            .replaceAll(
-                '"',
-                "&quot;"
-            )
-            .replaceAll(
-                "'",
-                "&#039;"
-            );
+        setupNavigation();
+
+        setupGuildCreation();
+
+        setupBackButton();
+
+        setupLogout();
+
+        await setupUser();
+
+        await loadGame();
+
+
+    } catch (error) {
+
+        console.error(
+            "Ошибка запуска:",
+            error
+        );
+
+
+        document.getElementById(
+            "game-name"
+        ).textContent =
+            "Ошибка";
+
+        document.getElementById(
+            "game-description"
+        ).textContent =
+            error.message ||
+            "Не удалось загрузить страницу.";
+
     }
+}
 
 
-    /*
-     * Безопасное значение атрибута
-     */
-    function escapeHtmlAttribute(
-        value
-    ) {
-
-        return escapeHtml(value);
-    }
-
-
-    /*
-     * Запуск страницы
-     */
-    async function initGamePage() {
-
-        gameId =
-            getGameIdFromUrl();
-
-
-        if (!gameId) {
-
-            document.getElementById(
-                "game-name"
-            ).textContent =
-                "Игра не указана";
-
-            document.getElementById(
-                "game-description"
-            ).textContent =
-                "Откройте игру с главной страницы.";
-
-            return;
-        }
-
-
-        try {
-
-            await setupUser();
-
-            setupNavigation();
-
-            setupGuildCreation();
-
-            setupBackButton();
-
-            setupLogout();
-
-            await loadGame();
-
-        } catch (error) {
-
-            console.error(
-                "Ошибка запуска страницы игры:",
-                error
-            );
-
-            document.getElementById(
-                "game-name"
-            ).textContent =
-                "Ошибка";
-
-            document.getElementById(
-                "game-description"
-            ).textContent =
-                error.message ||
-                "Не удалось загрузить страницу.";
-
-        }
-    }
-
-
-    /*
-     * Запускаем после загрузки DOM
-     */
-    document.addEventListener(
-        "DOMContentLoaded",
-        initGamePage
-    );
+document.addEventListener(
+    "DOMContentLoaded",
+    initGamePage
+);
 
 </script>
 
