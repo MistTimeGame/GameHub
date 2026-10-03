@@ -23,7 +23,7 @@ const SUPABASE_PUBLISHABLE_KEY =
     "sb_publishable_yNWxh02tapOVUQN9iJ_2_Q_IPVc60J3";
 
 const APP_VERSION =
-    "1.8.0";
+    "1.8.1";
 
 
 /* =========================================================
@@ -40,14 +40,23 @@ let currentPage = "home";
 
 let applicationStarted = false;
 
+
 let profileData = {
+
     nickname: "Player",
+
     status: "Онлайн",
+
     age: null,
+
     city: "",
+
     about: "",
+
     avatar_url: "",
+
     vip_level: 0
+
 };
 
 
@@ -138,7 +147,7 @@ let profileMessage = null;
 
 
 /* =========================================================
-   HELPER
+   BASIC HELPERS
 ========================================================= */
 
 function $(id) {
@@ -154,24 +163,51 @@ function escapeHtml(value) {
         value === null ||
         value === undefined
     ) {
+
         return "";
+
     }
 
+
     return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+
+        .replace(
+            /</g,
+            "&lt;"
+        )
+
+        .replace(
+            />/g,
+            "&gt;"
+        )
+
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+
+        .replace(
+            /'/g,
+            "&#039;"
+        );
 
 }
 
 
-function setHidden(element, state) {
+function setHidden(
+    element,
+    state
+) {
 
     if (!element) {
         return;
     }
+
 
     element.classList.toggle(
         "hidden",
@@ -181,40 +217,177 @@ function setHidden(element, state) {
 }
 
 
-function showAuthMessage(message, type) {
+function showAuthMessage(
+    message,
+    type
+) {
 
     if (!authMessage) {
         return;
     }
 
+
     authMessage.textContent =
         message || "";
+
 
     authMessage.className =
         "auth-message";
 
+
     if (type) {
-        authMessage.classList.add(type);
+
+        authMessage.classList.add(
+            type
+        );
+
     }
 
 }
 
 
-function showProfileMessage(message, type) {
+function showProfileMessage(
+    message,
+    type
+) {
 
     if (!profileMessage) {
         return;
     }
 
+
     profileMessage.textContent =
         message || "";
+
 
     profileMessage.className =
         "auth-message";
 
+
     if (type) {
-        profileMessage.classList.add(type);
+
+        profileMessage.classList.add(
+            type
+        );
+
     }
+
+}
+
+
+/* =========================================================
+   NOTICE
+========================================================= */
+
+function showInfo(message) {
+
+    let toast =
+        document.getElementById(
+            "gp-toast"
+        );
+
+
+    if (!toast) {
+
+        toast =
+            document.createElement(
+                "div"
+            );
+
+
+        toast.id =
+            "gp-toast";
+
+
+        toast.style.position =
+            "fixed";
+
+
+        toast.style.left =
+            "50%";
+
+
+        toast.style.bottom =
+            "90px";
+
+
+        toast.style.transform =
+            "translateX(-50%)";
+
+
+        toast.style.zIndex =
+            "99999";
+
+
+        toast.style.maxWidth =
+            "calc(100vw - 30px)";
+
+
+        toast.style.padding =
+            "12px 16px";
+
+
+        toast.style.border =
+            "1px solid rgba(30,40,50,0.2)";
+
+
+        toast.style.borderRadius =
+            "14px";
+
+
+        toast.style.background =
+            "rgba(255,255,255,0.96)";
+
+
+        toast.style.color =
+            "#30363d";
+
+
+        toast.style.boxShadow =
+            "0 8px 30px rgba(0,0,0,0.15), 0 0 20px rgba(59,141,245,0.12)";
+
+
+        toast.style.fontSize =
+            "12px";
+
+
+        toast.style.lineHeight =
+            "1.5";
+
+
+        toast.style.textAlign =
+            "center";
+
+
+        document.body.appendChild(
+            toast
+        );
+
+    }
+
+
+    toast.textContent =
+        message;
+
+
+    clearTimeout(
+        showInfo.timer
+    );
+
+
+    showInfo.timer =
+        setTimeout(
+            function () {
+
+                if (toast) {
+
+                    toast.remove();
+
+                }
+
+            },
+            4500
+        );
 
 }
 
@@ -226,13 +399,17 @@ function showProfileMessage(message, type) {
 function updateVersion() {
 
     document
-        .querySelectorAll(".site-version")
-        .forEach(function (element) {
+        .querySelectorAll(
+            ".site-version"
+        )
+        .forEach(
+            function (element) {
 
-            element.textContent =
-                "v" + APP_VERSION;
+                element.textContent =
+                    "v" + APP_VERSION;
 
-        });
+            }
+        );
 
 }
 
@@ -253,6 +430,7 @@ function initSupabase() {
         );
 
         return false;
+
     }
 
 
@@ -260,15 +438,28 @@ function initSupabase() {
 
         supabaseClient =
             window.supabase.createClient(
+
                 SUPABASE_URL,
+
                 SUPABASE_PUBLISHABLE_KEY,
+
                 {
+
                     auth: {
-                        persistSession: true,
-                        autoRefreshToken: true,
-                        detectSessionInUrl: true
+
+                        persistSession:
+                            true,
+
+                        autoRefreshToken:
+                            true,
+
+                        detectSessionInUrl:
+                            true
+
                     }
+
                 }
+
             );
 
 
@@ -288,6 +479,7 @@ function initSupabase() {
             "Supabase initialization error:",
             error
         );
+
 
         return false;
 
@@ -311,6 +503,7 @@ function initAuthTabs() {
                 loginTab.classList.add(
                     "active"
                 );
+
 
                 if (registerTab) {
 
@@ -484,6 +677,7 @@ async function loginUser() {
         );
 
         return;
+
     }
 
 
@@ -506,6 +700,7 @@ async function loginUser() {
         );
 
         return;
+
     }
 
 
@@ -519,8 +714,13 @@ async function loginUser() {
 
         const result =
             await supabaseClient.auth.signInWithPassword({
-                email,
-                password
+
+                email:
+                    email,
+
+                password:
+                    password
+
             });
 
 
@@ -561,7 +761,9 @@ async function loginUser() {
         if (
             message
                 .toLowerCase()
-                .includes("invalid login credentials")
+                .includes(
+                    "invalid login credentials"
+                )
         ) {
 
             message =
@@ -592,6 +794,7 @@ async function registerUser() {
         );
 
         return;
+
     }
 
 
@@ -629,6 +832,7 @@ async function registerUser() {
         );
 
         return;
+
     }
 
 
@@ -639,6 +843,7 @@ async function registerUser() {
         );
 
         return;
+
     }
 
 
@@ -649,6 +854,7 @@ async function registerUser() {
         );
 
         return;
+
     }
 
 
@@ -659,6 +865,7 @@ async function registerUser() {
         );
 
         return;
+
     }
 
 
@@ -673,15 +880,24 @@ async function registerUser() {
         const result =
             await supabaseClient.auth.signUp({
 
-                email,
+                email:
+                    email,
 
-                password,
+                password:
+                    password,
 
                 options: {
+
                     data: {
-                        nickname,
-                        status: "Онлайн"
+
+                        nickname:
+                            nickname,
+
+                        status:
+                            "Онлайн"
+
                     }
+
                 }
 
             });
@@ -703,11 +919,15 @@ async function registerUser() {
         if (!currentSession) {
 
             showAuthMessage(
+
                 "Аккаунт создан. Проверьте email для подтверждения регистрации.",
+
                 "success"
+
             );
 
             return;
+
         }
 
 
@@ -745,7 +965,10 @@ function subscribeAuthState() {
 
 
     supabaseClient.auth.onAuthStateChange(
-        function (event, session) {
+        function (
+            event,
+            session
+        ) {
 
             console.log(
                 "Auth event:",
@@ -860,7 +1083,9 @@ async function ensureProfile() {
         !currentUser ||
         !supabaseClient
     ) {
+
         return;
+
     }
 
 
@@ -868,7 +1093,7 @@ async function ensureProfile() {
         currentUser.user_metadata || {};
 
 
-    const nickname =
+    const defaultNickname =
         metadata.nickname ||
         (
             currentUser.email
@@ -877,7 +1102,7 @@ async function ensureProfile() {
         );
 
 
-    const status =
+    const defaultStatus =
         metadata.status ||
         "Онлайн";
 
@@ -886,12 +1111,16 @@ async function ensureProfile() {
 
         const result =
             await supabaseClient
+
                 .from("profiles")
+
                 .select("*")
+
                 .eq(
                     "id",
                     currentUser.id
                 )
+
                 .maybeSingle();
 
 
@@ -902,9 +1131,13 @@ async function ensureProfile() {
 
             profileData =
                 Object.assign(
+
                     {},
+
                     profileData,
+
                     result.data
+
                 );
 
 
@@ -913,47 +1146,75 @@ async function ensureProfile() {
         }
 
 
-        const insert =
+        if (result.error) {
+
+            console.error(
+                "Profile select error:",
+                result.error
+            );
+
+        }
+
+
+        const insertResult =
             await supabaseClient
+
                 .from("profiles")
+
                 .insert({
 
                     id:
                         currentUser.id,
 
                     nickname:
-                        nickname,
+                        defaultNickname,
 
                     status:
-                        status,
+                        defaultStatus,
 
                     vip_level:
                         0
 
                 })
+
                 .select()
+
                 .single();
 
 
         if (
-            !insert.error &&
-            insert.data
+            !insertResult.error &&
+            insertResult.data
         ) {
 
             profileData =
                 Object.assign(
+
                     {},
+
                     profileData,
-                    insert.data
+
+                    insertResult.data
+
                 );
 
         } else {
 
             profileData.nickname =
-                nickname;
+                defaultNickname;
 
             profileData.status =
-                status;
+                defaultStatus;
+
+
+            if (insertResult.error) {
+
+                console.error(
+                    "Profile insert error:",
+                    insertResult.error
+                );
+
+            }
 
         }
 
@@ -964,11 +1225,13 @@ async function ensureProfile() {
             error
         );
 
+
         profileData.nickname =
-            nickname;
+            defaultNickname;
+
 
         profileData.status =
-            status;
+            defaultStatus;
 
     }
 
@@ -976,7 +1239,96 @@ async function ensureProfile() {
 
 
 /* =========================================================
-   AVATAR
+   AVATAR URL
+========================================================= */
+
+function normalizeAvatarUrl(
+    value
+) {
+
+    let url =
+        String(value || "").trim();
+
+
+    if (!url) {
+        return "";
+    }
+
+
+    if (
+        url.startsWith("//")
+    ) {
+
+        url =
+            "https:" +
+            url;
+
+    }
+
+
+    if (
+        !url.startsWith("http://") &&
+        !url.startsWith("https://") &&
+        !url.startsWith("data:image/")
+    ) {
+
+        url =
+            "https://" +
+            url;
+
+    }
+
+
+    return url;
+
+}
+
+
+function addCacheBust(
+    url
+) {
+
+    if (
+        !url ||
+        url.startsWith(
+            "data:image/"
+        )
+    ) {
+
+        return url;
+
+    }
+
+
+    try {
+
+        const parsed =
+            new URL(
+                url
+            );
+
+
+        parsed.searchParams.set(
+            "gp_avatar",
+            String(
+                Date.now()
+            )
+        );
+
+
+        return parsed.toString();
+
+    } catch (error) {
+
+        return url;
+
+    }
+
+}
+
+
+/* =========================================================
+   AVATAR RENDER
 ========================================================= */
 
 function renderAvatar(
@@ -994,40 +1346,118 @@ function renderAvatar(
         "";
 
 
-    if (avatarUrl) {
-
-        const image =
-            document.createElement("img");
-
-
-        image.src =
-            avatarUrl;
-
-
-        image.alt =
-            "Avatar";
-
-
-        image.onerror =
-            function () {
-
-                element.textContent =
-                    "🤖";
-
-            };
-
-
-        element.appendChild(
-            image
+    const url =
+        normalizeAvatarUrl(
+            avatarUrl
         );
 
 
+    if (!url) {
+
+        element.textContent =
+            "🤖";
+
+        return;
+
+    }
+
+
+    const image =
+        document.createElement(
+            "img"
+        );
+
+
+    image.alt =
+        "Avatar";
+
+
+    image.decoding =
+        "async";
+
+
+    image.loading =
+        "eager";
+
+
+    image.src =
+        addCacheBust(
+            url
+        );
+
+
+    image.onload =
+        function () {
+
+            element.innerHTML =
+                "";
+
+            element.appendChild(
+                image
+            );
+
+        };
+
+
+    image.onerror =
+        function () {
+
+            console.warn(
+                "Avatar image could not be loaded:",
+                url
+            );
+
+
+            element.innerHTML =
+                "🤖";
+
+        };
+
+
+    element.appendChild(
+        image
+    );
+
+}
+
+
+/* =========================================================
+   AVATAR PREVIEW
+========================================================= */
+
+function initAvatarPreview() {
+
+    const input =
+        $("profile-avatar-input");
+
+
+    if (!input) {
         return;
     }
 
 
-    element.textContent =
-        "🤖";
+    input.addEventListener(
+        "input",
+        function () {
+
+            const value =
+                normalizeAvatarUrl(
+                    input.value
+                );
+
+
+            renderAvatar(
+
+                $("profile-modal-avatar"),
+
+                profileData.nickname,
+
+                value
+
+            );
+
+        }
+    );
 
 }
 
@@ -1036,23 +1466,36 @@ function renderAvatar(
    VIP
 ========================================================= */
 
-function getVipRoman(level) {
+function getVipRoman(
+    level
+) {
 
     const roman = [
 
         "",
 
         "I",
+
         "II",
+
         "III",
+
         "IV",
+
         "V",
+
         "VI",
+
         "VII",
+
         "VIII",
+
         "IX",
+
         "X",
+
         "XI",
+
         "XII"
 
     ];
@@ -1065,7 +1508,9 @@ function getVipRoman(level) {
 }
 
 
-function createVipBadge(level) {
+function createVipBadge(
+    level
+) {
 
     const number =
         Number(level) || 0;
@@ -1080,11 +1525,13 @@ function createVipBadge(level) {
 
         '<span class="vip-badge">' +
 
-            "VIP " +
+        "VIP " +
 
-            escapeHtml(
-                getVipRoman(number)
-            ) +
+        escapeHtml(
+            getVipRoman(
+                number
+            )
+        ) +
 
         "</span>"
 
@@ -1142,23 +1589,35 @@ function applyProfile() {
 
 
     renderAvatar(
+
         $("header-avatar"),
+
         nickname,
+
         profileData.avatar_url
+
     );
 
 
     renderAvatar(
+
         $("profile-avatar"),
+
         nickname,
+
         profileData.avatar_url
+
     );
 
 
     renderAvatar(
+
         $("profile-modal-avatar"),
+
         nickname,
+
         profileData.avatar_url
+
     );
 
 
@@ -1250,11 +1709,15 @@ async function saveProfile() {
 
 
     const nickname =
-        profileNicknameInput.value.trim();
+        profileNicknameInput
+            ? profileNicknameInput.value.trim()
+            : "";
 
 
     const status =
-        profileStatusInput.value.trim();
+        profileStatusInput
+            ? profileStatusInput.value.trim()
+            : "";
 
 
     if (
@@ -1272,30 +1735,48 @@ async function saveProfile() {
     }
 
 
+    const ageInput =
+        $("profile-age-input");
+
+
+    const cityInput =
+        $("profile-city-input");
+
+
+    const avatarInput =
+        $("profile-avatar-input");
+
+
+    const aboutInput =
+        $("profile-about-input");
+
+
     const age =
-        $("profile-age-input") &&
-        $("profile-age-input").value
+        ageInput &&
+        ageInput.value
             ? Number(
-                $("profile-age-input").value
+                ageInput.value
             )
             : null;
 
 
-    const city =
-        $("profile-city-input")
-            ? $("profile-city-input").value.trim()
+    let avatarUrl =
+        avatarInput
+            ? normalizeAvatarUrl(
+                avatarInput.value
+            )
             : "";
 
 
-    const avatar =
-        $("profile-avatar-input")
-            ? $("profile-avatar-input").value.trim()
+    const city =
+        cityInput
+            ? cityInput.value.trim()
             : "";
 
 
     const about =
-        $("profile-about-input")
-            ? $("profile-about-input").value.trim()
+        aboutInput
+            ? aboutInput.value.trim()
             : "";
 
 
@@ -1307,51 +1788,168 @@ async function saveProfile() {
 
     try {
 
+        const profileUpdate = {
+
+            nickname:
+                nickname,
+
+            status:
+                status || "Онлайн",
+
+            age:
+                age,
+
+            city:
+                city,
+
+            about:
+                about,
+
+            avatar_url:
+                avatarUrl,
+
+            updated_at:
+                new Date().toISOString()
+
+        };
+
+
         const result =
             await supabaseClient
+
                 .from("profiles")
-                .update({
 
-                    nickname,
+                .update(
+                    profileUpdate
+                )
 
-                    status:
-                        status || "Онлайн",
-
-                    age,
-
-                    city,
-
-                    avatar_url:
-                        avatar,
-
-                    about,
-
-                    updated_at:
-                        new Date().toISOString()
-
-                })
                 .eq(
                     "id",
                     currentUser.id
                 )
+
                 .select()
+
                 .single();
 
 
         if (result.error) {
+
+            console.error(
+                "Profile update error:",
+                result.error
+            );
+
             throw result.error;
+
         }
 
 
         profileData =
             Object.assign(
+
                 {},
+
                 profileData,
+
                 result.data
+
             );
 
 
+        /* ---------------------------------------------
+           Also store profile information in Auth metadata.
+           This gives us a fallback if the profile is later
+           loaded before a database refresh.
+        --------------------------------------------- */
+
+        try {
+
+            const authResult =
+                await supabaseClient.auth.updateUser({
+
+                    data: {
+
+                        nickname:
+                            nickname,
+
+                        status:
+                            status || "Онлайн",
+
+                        age:
+                            age,
+
+                        city:
+                            city,
+
+                        about:
+                            about,
+
+                        avatar_url:
+                            avatarUrl
+
+                    }
+
+                });
+
+
+            if (authResult.error) {
+
+                console.warn(
+                    "Auth metadata update:",
+                    authResult.error
+                );
+
+            }
+
+        } catch (error) {
+
+            console.warn(
+                "Auth metadata update failed:",
+                error
+            );
+
+        }
+
+
         applyProfile();
+
+
+        /* ---------------------------------------------
+           Force immediate local preview
+        --------------------------------------------- */
+
+        renderAvatar(
+
+            $("profile-modal-avatar"),
+
+            nickname,
+
+            avatarUrl
+
+        );
+
+
+        renderAvatar(
+
+            $("header-avatar"),
+
+            nickname,
+
+            avatarUrl
+
+        );
+
+
+        renderAvatar(
+
+            $("profile-avatar"),
+
+            nickname,
+
+            avatarUrl
+
+        );
 
 
         showProfileMessage(
@@ -1368,7 +1966,7 @@ async function saveProfile() {
                 );
 
             },
-            500
+            700
         );
 
 
@@ -1381,11 +1979,16 @@ async function saveProfile() {
 
 
         showProfileMessage(
+
             error &&
             error.message
+
                 ? error.message
-                : "Ошибка сохранения профиля.",
+
+                : "Не удалось сохранить профиль.",
+
             "error"
+
         );
 
     }
@@ -1394,7 +1997,7 @@ async function saveProfile() {
 
 
 /* =========================================================
-   ENTER
+   ENTER APPLICATION
 ========================================================= */
 
 async function enterApplication() {
@@ -1403,7 +2006,9 @@ async function enterApplication() {
         !currentUser ||
         applicationStarted
     ) {
+
         return;
+
     }
 
 
@@ -1453,10 +2058,23 @@ async function enterApplication() {
 
 
 /* =========================================================
-   LEAVE
+   LEAVE APPLICATION
 ========================================================= */
 
 async function leaveApplication() {
+
+    if (!applicationStarted) {
+
+        currentUser =
+            null;
+
+        currentSession =
+            null;
+
+        return;
+
+    }
+
 
     applicationStarted =
         false;
@@ -1537,8 +2155,12 @@ function initNavigation() {
                                 function (item) {
 
                                     item.classList.toggle(
+
                                         "active",
-                                        item.dataset.page === page
+
+                                        item.dataset.page ===
+                                        page
+
                                     );
 
                                 }
@@ -1553,8 +2175,12 @@ function initNavigation() {
                                 function (item) {
 
                                     item.classList.toggle(
+
                                         "active",
-                                        item.dataset.page === page
+
+                                        item.dataset.page ===
+                                        page
+
                                     );
 
                                 }
@@ -1575,7 +2201,7 @@ function initNavigation() {
 
 
 /* =========================================================
-   HOME PAGE
+   HOME
 ========================================================= */
 
 function renderHome() {
@@ -1616,7 +2242,6 @@ function renderHome() {
 
         <div class="home-grid">
 
-
             <section class="content-card">
 
                 <div class="content-card-header">
@@ -1634,7 +2259,6 @@ function renderHome() {
 
                 <div class="news-list">
 
-
                     <article class="news-item">
 
                         <div class="news-icon">
@@ -1644,13 +2268,13 @@ function renderHome() {
                         <div class="news-info">
 
                             <strong>
-                                Добро пожаловать
+                                GAME PLATFORM
                             </strong>
 
                             <p>
-                                GAME PLATFORM развивается
-                                как единое пространство
-                                для разных игр и сообществ.
+                                Игры, сообщества,
+                                гильдии и общение
+                                объединяются в одном месте.
                             </p>
 
                         </div>
@@ -1661,19 +2285,19 @@ function renderHome() {
                     <article class="news-item">
 
                         <div class="news-icon">
-                            ●
+                            ▱
                         </div>
 
                         <div class="news-info">
 
                             <strong>
-                                Общение в реальном времени
+                                Чат + видеоконференция
                             </strong>
 
                             <p>
-                                В чате можно общаться
-                                и подключаться к общей
-                                видеоконференции.
+                                Общая конференция
+                                доступна непосредственно
+                                внутри чата.
                             </p>
 
                         </div>
@@ -1690,19 +2314,18 @@ function renderHome() {
                         <div class="news-info">
 
                             <strong>
-                                Новый профиль
+                                Профили и VIP
                             </strong>
 
                             <p>
-                                Доступны возраст,
-                                город, информация о себе,
-                                фотография и VIP-статус.
+                                Фото, город, возраст,
+                                информация о себе
+                                и 12 уровней VIP.
                             </p>
 
                         </div>
 
                     </article>
-
 
                 </div>
 
@@ -1721,12 +2344,11 @@ function renderHome() {
 
                 <p>
                     Раздел для игровых видео,
-                    трансляций и будущих
-                    видеоматериалов сообщества.
+                    трансляций и материалов
+                    игрового сообщества.
                 </p>
 
             </section>
-
 
         </div>
 
@@ -1736,7 +2358,7 @@ function renderHome() {
             <div class="content-card-header">
 
                 <strong class="content-card-title">
-                    Ваши игры
+                    Игровое пространство
                 </strong>
 
                 <span class="content-card-label">
@@ -1747,7 +2369,6 @@ function renderHome() {
 
 
             <div class="game-card-grid">
-
 
                 <article class="game-card">
 
@@ -1773,11 +2394,11 @@ function renderHome() {
                     </div>
 
                     <strong>
-                        Новая игра
+                        Добавить игру
                     </strong>
 
                     <span>
-                        Добавить игровой проект
+                        Новый игровой проект
                     </span>
 
                 </article>
@@ -1794,11 +2415,10 @@ function renderHome() {
                     </strong>
 
                     <span>
-                        Новые проекты платформы
+                        Новые игры платформы
                     </span>
 
                 </article>
-
 
             </div>
 
@@ -1838,7 +2458,6 @@ function renderGames() {
 
             <div class="game-card-grid">
 
-
                 <article class="game-card">
 
                     <div class="game-card-icon">
@@ -1850,13 +2469,13 @@ function renderGames() {
                     </strong>
 
                     <span>
-                        Открыть игровой раздел
+                        Игровой раздел
                     </span>
 
                     <button
                         id="wosb-open"
-                        class="primary-button"
                         type="button"
+                        class="primary-button"
                         style="margin-top:12px;"
                     >
                         Открыть
@@ -1881,7 +2500,6 @@ function renderGames() {
 
                 </article>
 
-
             </div>
 
         </section>
@@ -1900,7 +2518,7 @@ function renderGames() {
             function () {
 
                 showInfo(
-                    "Раздел World of Sea Battle будет подключён следующим этапом."
+                    "Игровой раздел будет подключён следующим этапом."
                 );
 
             }
@@ -1940,7 +2558,6 @@ function renderNews() {
 
             <div class="news-list">
 
-
                 <article class="news-item">
 
                     <div class="news-icon">
@@ -1950,13 +2567,13 @@ function renderNews() {
                     <div class="news-info">
 
                         <strong>
-                            GAME PLATFORM
+                            Развитие платформы
                         </strong>
 
                         <p>
-                            Платформа развивается
-                            как шаблон для разных игр,
-                            сообществ и гильдий.
+                            GAME PLATFORM создаётся
+                            как универсальная база
+                            для разных игр.
                         </p>
 
                     </div>
@@ -1973,19 +2590,17 @@ function renderNews() {
                     <div class="news-info">
 
                         <strong>
-                            Чат и видеосвязь
+                            Общение
                         </strong>
 
                         <p>
-                            Видеоконференция теперь
-                            находится непосредственно
-                            внутри чата.
+                            Текстовый чат и видеоконференция
+                            объединены в одном разделе.
                         </p>
 
                     </div>
 
                 </article>
-
 
             </div>
 
@@ -2079,6 +2694,7 @@ function renderProfilePage() {
                             display:block;
                             font-size:20px;
                             margin-bottom:5px;
+                            font-weight:500;
                         "
                     >
                         ${escapeHtml(
@@ -2086,6 +2702,7 @@ function renderProfilePage() {
                             "Player"
                         )}
                     </strong>
+
 
                     <div
                         style="
@@ -2100,9 +2717,9 @@ function renderProfilePage() {
                         )}
                     </div>
 
-                    <div
-                        data-vip-badge
-                    ></div>
+
+                    <div data-vip-badge></div>
+
 
                     <div
                         style="
@@ -2119,6 +2736,7 @@ function renderProfilePage() {
                                 : "Город не указан"
                         }
                     </div>
+
 
                     <button
                         id="page-edit-profile"
@@ -2142,9 +2760,13 @@ function renderProfilePage() {
 
 
     renderAvatar(
+
         $("page-avatar"),
+
         profileData.nickname,
+
         profileData.avatar_url
+
     );
 
 
@@ -2181,7 +2803,7 @@ function renderProfilePage() {
 
 
 /* =========================================================
-   CHAT PAGE
+   CHAT
 ========================================================= */
 
 async function renderChat() {
@@ -2195,10 +2817,7 @@ async function renderChat() {
         <div class="chat-page">
 
 
-            <!-- CHAT -->
-
             <section class="chat-card">
-
 
                 <div class="chat-header">
 
@@ -2241,14 +2860,10 @@ async function renderChat() {
 
                 </form>
 
-
             </section>
 
 
-            <!-- CONFERENCE -->
-
             <section class="conference-card">
-
 
                 <div class="conference-header">
 
@@ -2266,7 +2881,6 @@ async function renderChat() {
                         </div>
 
                     </div>
-
 
                     <span>
                         ●
@@ -2291,8 +2905,7 @@ async function renderChat() {
                         </strong>
 
                         <span>
-                            Камера и микрофон работают
-                            прямо внутри страницы чата.
+                            Нажмите «Войти в конференцию».
                         </span>
 
                     </div>
@@ -2329,6 +2942,7 @@ async function renderChat() {
                         Микрофон
                     </button>
 
+
                     <button
                         id="conference-camera"
                         type="button"
@@ -2337,6 +2951,7 @@ async function renderChat() {
                         Камера
                     </button>
 
+
                     <button
                         id="conference-screen"
                         type="button"
@@ -2344,6 +2959,7 @@ async function renderChat() {
                     >
                         Экран
                     </button>
+
 
                     <button
                         id="conference-refresh"
@@ -2355,9 +2971,7 @@ async function renderChat() {
 
                 </div>
 
-
             </section>
-
 
         </div>
 
@@ -2365,6 +2979,7 @@ async function renderChat() {
 
 
     await loadChatMessages();
+
 
     startChatRealtime();
 
@@ -2395,7 +3010,7 @@ async function renderChat() {
 
 
 /* =========================================================
-   PAGE RENDER
+   PAGE ROUTER
 ========================================================= */
 
 function renderPage(page) {
@@ -2403,47 +3018,25 @@ function renderPage(page) {
     const title =
         $("page-title");
 
-
     const kicker =
         $("page-kicker");
-
 
     const badge =
         $("page-badge");
 
 
-    const content =
-        $("page-content");
-
-
     if (
         !title ||
         !kicker ||
-        !badge ||
-        !content
+        !badge
     ) {
-
         return;
-
     }
 
 
-    if (
-        page !== "chat"
-    ) {
+    if (page !== "chat") {
 
         stopChatRealtime();
-
-    }
-
-
-    if (
-        page !== "home" &&
-        conferenceJoined
-    ) {
-
-        /* Do not stop conference automatically.
-           User may keep it alive while navigating. */
 
     }
 
@@ -2556,13 +3149,13 @@ function renderPage(page) {
     }
 
 
-    renderPage("home");
+    renderHome();
 
 }
 
 
 /* =========================================================
-   SOCIAL BUTTONS
+   SOCIAL
 ========================================================= */
 
 function initSocialButtons() {
@@ -2633,30 +3226,25 @@ function initSocialButtons() {
 
 function initProfileButtons() {
 
-    const buttons = [
-
+    [
         $("profile-edit-button"),
-
         $("header-profile-button")
+    ]
+        .forEach(
+            function (button) {
 
-    ];
+                if (!button) {
+                    return;
+                }
 
 
-    buttons.forEach(
-        function (button) {
+                button.addEventListener(
+                    "click",
+                    openProfileModal
+                );
 
-            if (!button) {
-                return;
             }
-
-
-            button.addEventListener(
-                "click",
-                openProfileModal
-            );
-
-        }
-    );
+        );
 
 }
 
@@ -2701,7 +3289,8 @@ function initModals() {
                     function (event) {
 
                         if (
-                            event.target === overlay
+                            event.target ===
+                            overlay
                         ) {
 
                             overlay.classList.remove(
@@ -2809,6 +3398,7 @@ async function logoutUser() {
             throw result.error;
         }
 
+
     } catch (error) {
 
         console.error(
@@ -2833,6 +3423,7 @@ async function initPresence() {
     ) {
 
         return;
+
     }
 
 
@@ -2849,7 +3440,9 @@ async function initPresence() {
 
         presenceChannel =
             supabaseClient.channel(
+
                 "global-presence",
+
                 {
                     config: {
                         presence: {
@@ -2858,13 +3451,15 @@ async function initPresence() {
                         }
                     }
                 }
+
             );
 
 
         presenceChannel.on(
             "presence",
             {
-                event: "sync"
+                event:
+                    "sync"
             },
             updatePresenceUsers
         );
@@ -2873,7 +3468,8 @@ async function initPresence() {
         presenceChannel.on(
             "presence",
             {
-                event: "join"
+                event:
+                    "join"
             },
             updatePresenceUsers
         );
@@ -2882,7 +3478,8 @@ async function initPresence() {
         presenceChannel.on(
             "presence",
             {
-                event: "leave"
+                event:
+                    "leave"
             },
             updatePresenceUsers
         );
@@ -2898,7 +3495,8 @@ async function initPresence() {
 
 
                 if (
-                    status === "SUBSCRIBED"
+                    status ===
+                    "SUBSCRIBED"
                 ) {
 
                     await presenceChannel.track({
@@ -2954,7 +3552,8 @@ function updatePresenceUsers() {
             presenceChannel.presenceState();
 
 
-        const unique = {};
+        const unique =
+            {};
 
 
         Object.keys(state)
@@ -3001,19 +3600,13 @@ function updatePresenceUsers() {
         updateOnlineCounters();
 
 
-        if (
-            currentPage === "online"
-        ) {
-
-            renderOnlinePlayers(
-                "online-page-list"
-            );
-
-        }
+        renderOnlinePlayers(
+            "online-player-list"
+        );
 
 
         renderOnlinePlayers(
-            "online-player-list"
+            "online-page-list"
         );
 
     } catch (error) {
@@ -3061,7 +3654,9 @@ function updateOnlineCounters() {
 }
 
 
-function renderOnlinePlayers(targetId) {
+function renderOnlinePlayers(
+    targetId
+) {
 
     const element =
         $(targetId);
@@ -3151,6 +3746,7 @@ async function stopPresence() {
     ) {
 
         return;
+
     }
 
 
@@ -3160,7 +3756,8 @@ async function stopPresence() {
 
     } catch (error) {
 
-        console.error(
+        console.warn(
+            "Presence untrack:",
             error
         );
 
@@ -3175,7 +3772,8 @@ async function stopPresence() {
 
     } catch (error) {
 
-        console.error(
+        console.warn(
+            "Presence remove:",
             error
         );
 
@@ -3201,28 +3799,49 @@ async function stopPresence() {
 
 async function loadChatMessages() {
 
-    if (!supabaseClient) {
-        return;
-    }
-
-
     const container =
         $("chat-messages");
 
 
-    if (!container) {
+    if (
+        !container ||
+        !supabaseClient
+    ) {
+
         return;
+
     }
+
+
+    container.innerHTML = `
+
+        <div class="conference-placeholder">
+
+            <strong>
+                Загрузка чата...
+            </strong>
+
+            <span>
+                Подключение к базе данных.
+            </span>
+
+        </div>
+
+    `;
 
 
     const result =
         await supabaseClient
+
             .from("chat_messages")
+
             .select("*")
+
             .eq(
                 "room_type",
                 "global"
             )
+
             .order(
                 "created_at",
                 {
@@ -3230,10 +3849,17 @@ async function loadChatMessages() {
                         true
                 }
             )
+
             .limit(100);
 
 
     if (result.error) {
+
+        console.error(
+            "Chat load error:",
+            result.error
+        );
+
 
         container.innerHTML = `
 
@@ -3244,8 +3870,8 @@ async function loadChatMessages() {
                 </strong>
 
                 <span>
-                    Проверьте таблицу
-                    chat_messages в Supabase.
+                    Выполните SQL-файл chat.sql
+                    в Supabase SQL Editor.
                 </span>
 
             </div>
@@ -3253,6 +3879,7 @@ async function loadChatMessages() {
         `;
 
         return;
+
     }
 
 
@@ -3263,7 +3890,9 @@ async function loadChatMessages() {
 }
 
 
-function renderChatMessages(messages) {
+function renderChatMessages(
+    messages
+) {
 
     const container =
         $("chat-messages");
@@ -3293,6 +3922,7 @@ function renderChatMessages(messages) {
         `;
 
         return;
+
     }
 
 
@@ -3359,6 +3989,7 @@ async function sendChatMessage() {
     ) {
 
         return;
+
     }
 
 
@@ -3371,48 +4002,53 @@ async function sendChatMessage() {
     }
 
 
-    try {
+    const result =
+        await supabaseClient
 
-        const result =
-            await supabaseClient
-                .from("chat_messages")
-                .insert({
+            .from("chat_messages")
 
-                    user_id:
-                        currentUser.id,
+            .insert({
 
-                    nickname:
-                        profileData.nickname ||
-                        "Player",
+                user_id:
+                    currentUser.id,
 
-                    room_type:
-                        "global",
+                nickname:
+                    profileData.nickname ||
+                    "Player",
 
-                    message:
-                        message
+                room_type:
+                    "global",
 
-                });
+                message:
+                    message
 
-
-        if (result.error) {
-            throw result.error;
-        }
+            });
 
 
-        input.value =
-            "";
-
-
-        await loadChatMessages();
-
-    } catch (error) {
+    if (result.error) {
 
         console.error(
-            "Chat send:",
-            error
+            "Chat send error:",
+            result.error
         );
 
+
+        showInfo(
+            "Не удалось отправить сообщение: " +
+            result.error.message
+        );
+
+
+        return;
+
     }
+
+
+    input.value =
+        "";
+
+
+    await loadChatMessages();
 
 }
 
@@ -3458,7 +4094,16 @@ function startChatRealtime() {
     );
 
 
-    chatChannel.subscribe();
+    chatChannel.subscribe(
+        function (status) {
+
+            console.log(
+                "Chat Realtime:",
+                status
+            );
+
+        }
+    );
 
 }
 
@@ -3478,7 +4123,7 @@ function stopChatRealtime() {
 
         } catch (error) {
 
-            console.error(
+            console.warn(
                 error
             );
 
@@ -3502,17 +4147,22 @@ function initConferenceUI() {
     const join =
         $("conference-join");
 
+
     const leave =
         $("conference-leave");
+
 
     const mic =
         $("conference-mic");
 
+
     const camera =
         $("conference-camera");
 
+
     const screen =
         $("conference-screen");
+
 
     const refresh =
         $("conference-refresh");
@@ -3574,11 +4224,7 @@ function initConferenceUI() {
             "click",
             function () {
 
-                if (conferenceJoined) {
-
-                    updateConferenceVideos();
-
-                }
+                updateConferenceVideos();
 
             }
         );
@@ -3588,7 +4234,9 @@ function initConferenceUI() {
 }
 
 
-function setConferenceStatus(text) {
+function setConferenceStatus(
+    text
+) {
 
     const element =
         $("conference-status");
@@ -3598,6 +4246,276 @@ function setConferenceStatus(text) {
 
         element.textContent =
             text;
+
+    }
+
+}
+
+
+/* =========================================================
+   MEDIA ERROR DESCRIPTION
+========================================================= */
+
+function getMediaErrorMessage(
+    error
+) {
+
+    if (!error) {
+
+        return (
+            "Не удалось получить доступ " +
+            "к камере или микрофону."
+        );
+
+    }
+
+
+    switch (
+        error.name
+    ) {
+
+        case "NotAllowedError":
+
+            return (
+                "Доступ к камере или микрофону " +
+                "запрещён. Разрешите камеру и микрофон " +
+                "в настройках браузера для этого сайта."
+            );
+
+
+        case "PermissionDeniedError":
+
+            return (
+                "Браузер запретил доступ " +
+                "к камере или микрофону."
+            );
+
+
+        case "NotFoundError":
+
+            return (
+                "Камера или микрофон не найдены. " +
+                "Проверьте подключение устройства."
+            );
+
+
+        case "DevicesNotFoundError":
+
+            return (
+                "Камера или микрофон не найдены."
+            );
+
+
+        case "NotReadableError":
+
+            return (
+                "Камера или микрофон уже используются " +
+                "другим приложением."
+            );
+
+
+        case "TrackStartError":
+
+            return (
+                "Не удалось запустить камеру " +
+                "или микрофон."
+            );
+
+
+        case "OverconstrainedError":
+
+            return (
+                "Камера не поддерживает запрошенный режим."
+            );
+
+
+        case "SecurityError":
+
+            return (
+                "Браузер заблокировал доступ к устройству."
+            );
+
+
+        case "TypeError":
+
+            return (
+                "Доступ к камере недоступен. " +
+                "Проверьте HTTPS-соединение."
+            );
+
+
+        default:
+
+            return (
+                "Ошибка камеры/микрофона: " +
+                (
+                    error.message ||
+                    error.name ||
+                    "неизвестная ошибка"
+                )
+            );
+
+    }
+
+}
+
+
+/* =========================================================
+   MEDIA DEVICE CHECK
+========================================================= */
+
+function checkMediaEnvironment() {
+
+    if (
+        !window.isSecureContext &&
+        location.hostname !== "localhost" &&
+        location.hostname !== "127.0.0.1"
+    ) {
+
+        return {
+
+            ok:
+                false,
+
+            message:
+                "Камера и микрофон требуют HTTPS. " +
+                "Откройте сайт через https://."
+
+        };
+
+    }
+
+
+    if (
+        !navigator.mediaDevices ||
+        typeof navigator.mediaDevices.getUserMedia !==
+            "function"
+    ) {
+
+        return {
+
+            ok:
+                false,
+
+            message:
+                "Этот браузер не предоставил сайту " +
+                "доступ к камере и микрофону."
+
+        };
+
+    }
+
+
+    return {
+        ok:
+            true
+    };
+
+}
+
+
+/* =========================================================
+   GET MEDIA
+========================================================= */
+
+async function requestLocalMedia() {
+
+    const environment =
+        checkMediaEnvironment();
+
+
+    if (!environment.ok) {
+
+        throw new Error(
+            environment.message
+        );
+
+    }
+
+
+    const primaryConstraints = {
+
+        video: {
+
+            facingMode: {
+                ideal:
+                    "user"
+            },
+
+            width: {
+                ideal:
+                    1280
+            },
+
+            height: {
+                ideal:
+                    720
+            }
+
+        },
+
+        audio: {
+
+            echoCancellation:
+                true,
+
+            noiseSuppression:
+                true,
+
+            autoGainControl:
+                true
+
+        }
+
+    };
+
+
+    try {
+
+        return await navigator.mediaDevices.getUserMedia(
+            primaryConstraints
+        );
+
+    } catch (firstError) {
+
+        console.warn(
+            "Primary media request failed:",
+            firstError
+        );
+
+
+        if (
+            firstError &&
+            (
+                firstError.name ===
+                    "OverconstrainedError" ||
+                firstError.name ===
+                    "ConstraintNotSatisfiedError"
+            )
+        ) {
+
+            try {
+
+                return await navigator.mediaDevices.getUserMedia({
+
+                    video:
+                        true,
+
+                    audio:
+                        true
+
+                });
+
+            } catch (secondError) {
+
+                throw secondError;
+
+            }
+
+        }
+
+
+        throw firstError;
 
     }
 
@@ -3617,46 +4535,55 @@ async function startConference() {
     ) {
 
         return;
+
     }
 
 
-    if (
-        !navigator.mediaDevices ||
-        !navigator.mediaDevices.getUserMedia
-    ) {
-
-        setConferenceStatus(
-            "КАМЕРА НЕДОСТУПНА"
-        );
-
-        showInfo(
-            "Браузер не поддерживает доступ к камере и микрофону."
-        );
-
-        return;
-    }
+    setConferenceStatus(
+        "ПРОВЕРКА КАМЕРЫ..."
+    );
 
 
     try {
 
-        setConferenceStatus(
-            "ПОДКЛЮЧЕНИЕ..."
+        localStream =
+            await requestLocalMedia();
+
+
+    } catch (error) {
+
+        console.error(
+            "Media error:",
+            error
         );
 
 
         localStream =
-            await navigator.mediaDevices.getUserMedia({
+            null;
 
-                video: {
-                    facingMode:
-                        "user"
-                },
 
-                audio:
-                    true
+        const message =
+            getMediaErrorMessage(
+                error
+            );
 
-            });
 
+        setConferenceStatus(
+            "КАМЕРА НЕ ПОДКЛЮЧЕНА"
+        );
+
+
+        showInfo(
+            message
+        );
+
+
+        return;
+
+    }
+
+
+    try {
 
         conferenceJoined =
             true;
@@ -3668,57 +4595,80 @@ async function startConference() {
 
         conferenceChannel =
             supabaseClient.channel(
+
                 "conference-" +
                 conferenceRoom,
+
                 {
+
                     config: {
+
                         broadcast: {
+
                             self:
                                 false
+
                         }
+
                     }
+
                 }
+
             );
 
 
         conferenceChannel.on(
+
             "broadcast",
+
             {
                 event:
                     "join"
             },
+
             async function (payload) {
 
-                const peerId =
+                const data =
                     payload &&
                     payload.payload
-                        ? payload.payload.userId
+                        ? payload.payload
                         : null;
 
 
-                if (
-                    !peerId ||
-                    peerId === currentUser.id
-                ) {
-
+                if (!data) {
                     return;
                 }
 
 
+                if (
+                    !data.userId ||
+                    data.userId ===
+                        currentUser.id
+                ) {
+
+                    return;
+
+                }
+
+
                 await createPeerOffer(
-                    peerId
+                    data.userId
                 );
 
             }
+
         );
 
 
         conferenceChannel.on(
+
             "broadcast",
+
             {
                 event:
                     "offer"
             },
+
             async function (payload) {
 
                 const data =
@@ -3739,6 +4689,7 @@ async function startConference() {
                 ) {
 
                     return;
+
                 }
 
 
@@ -3747,15 +4698,19 @@ async function startConference() {
                 );
 
             }
+
         );
 
 
         conferenceChannel.on(
+
             "broadcast",
+
             {
                 event:
                     "answer"
             },
+
             async function (payload) {
 
                 const data =
@@ -3776,6 +4731,7 @@ async function startConference() {
                 ) {
 
                     return;
+
                 }
 
 
@@ -3784,15 +4740,19 @@ async function startConference() {
                 );
 
             }
+
         );
 
 
         conferenceChannel.on(
+
             "broadcast",
+
             {
                 event:
                     "ice"
             },
+
             async function (payload) {
 
                 const data =
@@ -3813,6 +4773,7 @@ async function startConference() {
                 ) {
 
                     return;
+
                 }
 
 
@@ -3821,95 +4782,99 @@ async function startConference() {
                 );
 
             }
+
         );
 
 
         conferenceChannel.on(
+
             "broadcast",
+
             {
                 event:
                     "leave"
             },
+
             function (payload) {
 
-                const peerId =
+                const data =
                     payload &&
                     payload.payload
-                        ? payload.payload.userId
+                        ? payload.payload
                         : null;
 
 
-                if (peerId) {
+                if (
+                    data &&
+                    data.userId
+                ) {
 
                     removePeer(
-                        peerId
+                        data.userId
                     );
+
+                }
+
+            }
+
+        );
+
+
+        conferenceChannel.subscribe(
+            async function (status) {
+
+                console.log(
+                    "Conference Realtime:",
+                    status
+                );
+
+
+                if (
+                    status ===
+                    "SUBSCRIBED"
+                ) {
+
+                    updateLocalVideo();
+
+
+                    await conferenceChannel.send({
+
+                        type:
+                            "broadcast",
+
+                        event:
+                            "join",
+
+                        payload: {
+
+                            userId:
+                                currentUser.id,
+
+                            nickname:
+                                profileData.nickname ||
+                                "Player"
+
+                        }
+
+                    });
+
+
+                    setConferenceStatus(
+                        "ПОДКЛЮЧЕНО"
+                    );
+
+
+                    updateConferenceButtons();
 
                 }
 
             }
         );
 
-
-        await new Promise(
-            function (resolve) {
-
-                conferenceChannel.subscribe(
-                    async function (status) {
-
-                        if (
-                            status ===
-                            "SUBSCRIBED"
-                        ) {
-
-                            updateLocalVideo();
-
-
-                            await conferenceChannel.send({
-
-                                type:
-                                    "broadcast",
-
-                                event:
-                                    "join",
-
-                                payload: {
-
-                                    userId:
-                                        currentUser.id,
-
-                                    nickname:
-                                        profileData.nickname ||
-                                        "Player"
-
-                                }
-
-                            });
-
-
-                            resolve();
-
-                        }
-
-                    }
-                );
-
-            }
-        );
-
-
-        setConferenceStatus(
-            "ПОДКЛЮЧЕНО"
-        );
-
-
-        updateConferenceButtons();
-
-
     } catch (error) {
 
         console.error(
-            "Conference error:",
+            "Conference setup error:",
             error
         );
 
@@ -3923,7 +4888,8 @@ async function startConference() {
 
 
         showInfo(
-            "Не удалось получить доступ к камере или микрофону."
+            "Не удалось подключить конференцию. " +
+            "Проверьте соединение с Supabase Realtime."
         );
 
     }
@@ -3941,7 +4907,9 @@ function createPeerConnection(
 
     if (peerConnections[peerId]) {
 
-        return peerConnections[peerId];
+        return peerConnections[
+            peerId
+        ];
 
     }
 
@@ -3966,7 +4934,9 @@ function createPeerConnection(
         });
 
 
-    peerConnections[peerId] =
+    peerConnections[
+        peerId
+    ] =
         connection;
 
 
@@ -3997,6 +4967,7 @@ function createPeerConnection(
             ) {
 
                 return;
+
             }
 
 
@@ -4057,27 +5028,30 @@ function createPeerConnection(
                 "failed"
             ) {
 
-                connection.restartIce();
+                try {
+
+                    connection.restartIce();
+
+                } catch (error) {
+
+                    console.warn(
+                        error
+                    );
+
+                }
 
             }
 
 
             if (
                 connection.connectionState ===
-                "closed" ||
+                    "closed" ||
                 connection.connectionState ===
-                "disconnected"
+                    "disconnected"
             ) {
 
-                setTimeout(
-                    function () {
-
-                        removePeer(
-                            peerId
-                        );
-
-                    },
-                    1000
+                removePeer(
+                    peerId
                 );
 
             }
@@ -4100,10 +5074,13 @@ async function createPeerOffer(
 
     if (
         !conferenceJoined ||
-        peerId === currentUser.id
+        !peerId ||
+        peerId ===
+            currentUser.id
     ) {
 
         return;
+
     }
 
 
@@ -4122,11 +5099,6 @@ async function createPeerOffer(
         await connection.setLocalDescription(
             offer
         );
-
-
-        if (!conferenceChannel) {
-            return;
-        }
 
 
         await conferenceChannel.send({
@@ -4165,7 +5137,7 @@ async function createPeerOffer(
 
 
 /* =========================================================
-   OFFER HANDLER
+   HANDLE OFFER
 ========================================================= */
 
 async function handleOffer(
@@ -4228,7 +5200,6 @@ async function handleOffer(
 
         });
 
-
     } catch (error) {
 
         console.error(
@@ -4242,7 +5213,7 @@ async function handleOffer(
 
 
 /* =========================================================
-   ANSWER
+   HANDLE ANSWER
 ========================================================= */
 
 async function handleAnswer(
@@ -4281,7 +5252,7 @@ async function handleAnswer(
 
 
 /* =========================================================
-   ICE
+   HANDLE ICE
 ========================================================= */
 
 async function handleIceCandidate(
@@ -4325,6 +5296,11 @@ async function handleIceCandidate(
 
 function updateLocalVideo() {
 
+    if (!localStream) {
+        return;
+    }
+
+
     const container =
         $("conference-videos");
 
@@ -4338,16 +5314,17 @@ function updateLocalVideo() {
         "";
 
 
-    if (!localStream) {
-        return;
-    }
-
-
     addVideoTile(
+
         currentUser.id,
+
         localStream,
-        profileData.nickname || "Вы",
+
+        profileData.nickname ||
+            "Вы",
+
         true
+
     );
 
 }
@@ -4398,10 +5375,15 @@ function addRemoteVideo(
 
 
     addVideoTile(
+
         peerId,
+
         stream,
+
         "Участник",
+
         false
+
     );
 
 }
@@ -4430,7 +5412,9 @@ function addVideoTile(
 
 
     if (placeholder) {
+
         placeholder.remove();
+
     }
 
 
@@ -4512,7 +5496,9 @@ function removePeer(
 ) {
 
     if (
-        peerConnections[peerId]
+        peerConnections[
+            peerId
+        ]
     ) {
 
         try {
@@ -4523,7 +5509,7 @@ function removePeer(
 
         } catch (error) {
 
-            console.error(
+            console.warn(
                 error
             );
 
@@ -4556,67 +5542,39 @@ function removePeer(
 
     }
 
-
-    updateConferenceVideos();
-
 }
 
 
 /* =========================================================
-   CONFERENCE VIDEOS
+   CONFERENCE BUTTONS
 ========================================================= */
 
-function updateConferenceVideos() {
+function updateConferenceButtons() {
 
-    const container =
-        $("conference-videos");
-
-
-    if (!container) {
-        return;
-    }
+    const join =
+        $("conference-join");
 
 
-    if (
-        localStream &&
-        !document.querySelector(
-            '[data-peer-id="' +
-            currentUser.id +
-            '"]'
-        )
-    ) {
+    const leave =
+        $("conference-leave");
 
-        updateLocalVideo();
+
+    if (join) {
+
+        join.style.display =
+            conferenceJoined
+                ? "none"
+                : "block";
 
     }
 
 
-    if (
-        !localStream &&
-        Object.keys(
-            conferenceParticipants
-        ).length === 0
-    ) {
+    if (leave) {
 
-        container.innerHTML = `
-
-            <div class="conference-placeholder">
-
-                <div class="conference-placeholder-icon">
-                    ◉
-                </div>
-
-                <strong>
-                    Конференция не подключена
-                </strong>
-
-                <span>
-                    Нажмите «Войти в конференцию».
-                </span>
-
-            </div>
-
-        `;
+        leave.style.display =
+            conferenceJoined
+                ? "block"
+                : "none";
 
     }
 
@@ -4624,13 +5582,19 @@ function updateConferenceVideos() {
 
 
 /* =========================================================
-   MICROPHONE
+   MIC
 ========================================================= */
 
 function toggleConferenceMic() {
 
     if (!localStream) {
+
+        showInfo(
+            "Сначала войдите в конференцию."
+        );
+
         return;
+
     }
 
 
@@ -4656,16 +5620,16 @@ function toggleConferenceMic() {
 
     if (button) {
 
-        button.classList.toggle(
-            "active",
-            !micEnabled
-        );
-
-
         button.textContent =
             micEnabled
                 ? "Микрофон"
                 : "Микрофон выкл.";
+
+
+        button.classList.toggle(
+            "active",
+            !micEnabled
+        );
 
     }
 
@@ -4679,7 +5643,13 @@ function toggleConferenceMic() {
 function toggleConferenceCamera() {
 
     if (!localStream) {
+
+        showInfo(
+            "Сначала войдите в конференцию."
+        );
+
         return;
+
     }
 
 
@@ -4705,16 +5675,16 @@ function toggleConferenceCamera() {
 
     if (button) {
 
-        button.classList.toggle(
-            "active",
-            !cameraEnabled
-        );
-
-
         button.textContent =
             cameraEnabled
                 ? "Камера"
                 : "Камера выкл.";
+
+
+        button.classList.toggle(
+            "active",
+            !cameraEnabled
+        );
 
     }
 
@@ -4727,21 +5697,29 @@ function toggleConferenceCamera() {
 
 async function toggleConferenceScreen() {
 
-    if (
-        !navigator.mediaDevices ||
-        !navigator.mediaDevices.getDisplayMedia
-    ) {
+    if (!conferenceJoined) {
 
         showInfo(
-            "Ваш браузер не поддерживает демонстрацию экрана."
+            "Сначала войдите в конференцию."
         );
 
         return;
+
     }
 
 
-    if (!conferenceJoined) {
+    if (
+        !navigator.mediaDevices ||
+        typeof navigator.mediaDevices.getDisplayMedia !==
+            "function"
+    ) {
+
+        showInfo(
+            "Этот браузер не поддерживает демонстрацию экрана."
+        );
+
         return;
+
     }
 
 
@@ -4751,8 +5729,10 @@ async function toggleConferenceScreen() {
 
             screenStream =
                 await navigator.mediaDevices.getDisplayMedia({
+
                     video:
                         true
+
                 });
 
 
@@ -4788,9 +5768,12 @@ async function toggleConferenceScreen() {
                                     function (item) {
 
                                         return (
+
                                             item.track &&
+
                                             item.track.kind ===
-                                            "video"
+                                                "video"
+
                                         );
 
                                     }
@@ -4823,16 +5806,15 @@ async function toggleConferenceScreen() {
 
             if (button) {
 
+                button.textContent =
+                    "Экран вкл.";
+
+
                 button.classList.add(
                     "active"
                 );
 
-
-                button.textContent =
-                    "Экран вкл.";
-
             }
-
 
         } else {
 
@@ -4903,9 +5885,12 @@ async function stopScreenShare() {
                             function (item) {
 
                                 return (
+
                                     item.track &&
+
                                     item.track.kind ===
-                                    "video"
+                                        "video"
+
                                 );
 
                             }
@@ -4933,49 +5918,13 @@ async function stopScreenShare() {
 
     if (button) {
 
-        button.classList.remove(
-            "active"
-        );
-
-
         button.textContent =
             "Экран";
 
-    }
 
-}
-
-
-/* =========================================================
-   CONFERENCE BUTTON STATE
-========================================================= */
-
-function updateConferenceButtons() {
-
-    const join =
-        $("conference-join");
-
-
-    const leave =
-        $("conference-leave");
-
-
-    if (join) {
-
-        join.style.display =
-            conferenceJoined
-                ? "none"
-                : "block";
-
-    }
-
-
-    if (leave) {
-
-        leave.style.display =
-            conferenceJoined
-                ? "block"
-                : "none";
+        button.classList.remove(
+            "active"
+        );
 
     }
 
@@ -5014,7 +5963,7 @@ async function stopConference() {
 
         } catch (error) {
 
-            console.error(
+            console.warn(
                 error
             );
 
@@ -5075,7 +6024,7 @@ async function stopConference() {
 
                 } catch (error) {
 
-                    console.error(
+                    console.warn(
                         error
                     );
 
@@ -5106,7 +6055,7 @@ async function stopConference() {
 
         } catch (error) {
 
-            console.error(
+            console.warn(
                 error
             );
 
@@ -5125,6 +6074,14 @@ async function stopConference() {
 
     screenSharing =
         false;
+
+
+    setConferenceStatus(
+        "НЕ ПОДКЛЮЧЕНО"
+    );
+
+
+    updateConferenceButtons();
 
 
     const videos =
@@ -5146,8 +6103,7 @@ async function stopConference() {
                 </strong>
 
                 <span>
-                    Камера и микрофон работают
-                    прямо внутри страницы чата.
+                    Нажмите «Войти в конференцию».
                 </span>
 
             </div>
@@ -5157,18 +6113,11 @@ async function stopConference() {
     }
 
 
-    setConferenceStatus(
-        "НЕ ПОДКЛЮЧЕНО"
-    );
-
-
-    updateConferenceButtons();
-
-
     if ($("conference-mic")) {
 
         $("conference-mic").textContent =
             "Микрофон";
+
 
         $("conference-mic").classList.remove(
             "active"
@@ -5182,6 +6131,7 @@ async function stopConference() {
         $("conference-camera").textContent =
             "Камера";
 
+
         $("conference-camera").classList.remove(
             "active"
         );
@@ -5194,28 +6144,12 @@ async function stopConference() {
         $("conference-screen").textContent =
             "Экран";
 
+
         $("conference-screen").classList.remove(
             "active"
         );
 
     }
-
-}
-
-
-/* =========================================================
-   INFO
-========================================================= */
-
-function showInfo(message) {
-
-    console.log(
-        message
-    );
-
-    window.alert(
-        message
-    );
 
 }
 
@@ -5231,62 +6165,84 @@ document.addEventListener(
         authScreen =
             $("auth-screen");
 
+
         appShell =
             $("app-shell");
+
 
         authTitle =
             $("auth-title");
 
+
         authSubtitle =
             $("auth-subtitle");
+
 
         loginTab =
             $("login-tab");
 
+
         registerTab =
             $("register-tab");
+
 
         loginForm =
             $("login-form");
 
+
         registerForm =
             $("register-form");
+
 
         authMessage =
             $("auth-message");
 
+
         loginEmail =
             $("login-email");
+
 
         loginPassword =
             $("login-password");
 
+
         registerNickname =
             $("register-nickname");
+
 
         registerEmail =
             $("register-email");
 
+
         registerPassword =
             $("register-password");
+
 
         registerPasswordConfirm =
             $("register-password-confirm");
 
+
         logoutButton =
             $("logout-button");
+
 
         profileForm =
             $("profile-form");
 
+
         profileNicknameInput =
             $("profile-nickname-input");
+
 
         profileStatusInput =
             $("profile-status-input");
 
+
         profileMessage =
             $("profile-message");
+
+
+        updateVersion();
 
 
         if (appShell) {
@@ -5297,8 +6253,6 @@ document.addEventListener(
 
         }
 
-
-        updateVersion();
 
         initAuthTabs();
 
@@ -5312,48 +6266,16 @@ document.addEventListener(
 
         initProfileButtons();
 
+        initAvatarPreview();
+
 
         if (!initSupabase()) {
 
             showAuthMessage(
-                "Не удалось загрузить Supabase."
+                "Не удалось загрузить библиотеку Supabase."
             );
 
             return;
-
-        }
-
-
-        if (logoutButton) {
-
-            logoutButton.addEventListener(
-                "click",
-                logoutUser
-            );
-
-        }
-
-
-        const onlineButton =
-            $("header-online-button");
-
-
-        if (onlineButton) {
-
-            onlineButton.addEventListener(
-                "click",
-                function () {
-
-                    renderOnlinePlayers(
-                        "online-player-list"
-                    );
-
-                    openModal(
-                        "online-modal"
-                    );
-
-                }
-            );
 
         }
 
@@ -5382,22 +6304,30 @@ window.gamePlatform = {
 
     getUser:
         function () {
+
             return currentUser;
+
         },
 
     getSession:
         function () {
+
             return currentSession;
+
         },
 
     getProfile:
         function () {
+
             return profileData;
+
         },
 
     getSupabase:
         function () {
+
             return supabaseClient;
+
         },
 
     startConference:
