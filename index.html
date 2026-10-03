@@ -15,26 +15,63 @@
 
     <meta
         name="description"
-        content="GAME PLATFORM — игровая платформа"
+        content="GAME PLATFORM"
     >
 
     <title>GAME PLATFORM</title>
+
+    <link
+        rel="icon"
+        href="data:,"
+    >
 
     <link
         rel="stylesheet"
         href="style.css"
     >
 
-    <link
-        rel="stylesheet"
-        href="profile-vip.css"
-    >
+    <style>
+        #app-shell {
+            visibility: hidden;
+        }
+
+        #app-shell.active {
+            visibility: visible !important;
+            opacity: 1 !important;
+            display: flex !important;
+        }
+
+        #auth-screen {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        #auth-screen.hidden-screen {
+            display: none !important;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .vip-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            color: #d4a72c;
+            font-weight: 800;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+    </style>
 </head>
 
 <body>
 
     <!-- =====================================================
-         AUTH SCREEN
+         AUTH
     ====================================================== -->
 
     <section
@@ -63,8 +100,6 @@
             </p>
 
 
-            <!-- AUTH TABS -->
-
             <div class="auth-tabs">
 
                 <button
@@ -86,15 +121,11 @@
             </div>
 
 
-            <!-- AUTH MESSAGE -->
-
             <div
                 id="auth-message"
                 class="auth-message"
             ></div>
 
-
-            <!-- LOGIN -->
 
             <form
                 id="login-form"
@@ -109,7 +140,6 @@
 
                     <input
                         id="login-email"
-                        name="email"
                         type="email"
                         autocomplete="email"
                         placeholder="Введите email"
@@ -127,7 +157,6 @@
 
                     <input
                         id="login-password"
-                        name="password"
                         type="password"
                         autocomplete="current-password"
                         placeholder="Введите пароль"
@@ -147,8 +176,6 @@
             </form>
 
 
-            <!-- REGISTER -->
-
             <form
                 id="register-form"
                 class="auth-form hidden"
@@ -162,12 +189,11 @@
 
                     <input
                         id="register-nickname"
-                        name="nickname"
                         type="text"
                         minlength="3"
                         maxlength="24"
                         autocomplete="nickname"
-                        placeholder="Ваш игровой ник"
+                        placeholder="Игровой ник"
                         required
                     >
 
@@ -182,7 +208,6 @@
 
                     <input
                         id="register-email"
-                        name="email"
                         type="email"
                         autocomplete="email"
                         placeholder="Введите email"
@@ -200,7 +225,6 @@
 
                     <input
                         id="register-password"
-                        name="password"
                         type="password"
                         minlength="6"
                         autocomplete="new-password"
@@ -219,7 +243,6 @@
 
                     <input
                         id="register-password-confirm"
-                        name="password-confirm"
                         type="password"
                         minlength="6"
                         autocomplete="new-password"
@@ -243,9 +266,7 @@
             <div class="auth-footer">
                 GAME PLATFORM
                 <span>•</span>
-                <span class="site-version">
-                    v1.7.2
-                </span>
+                <span class="site-version">v1.7.2</span>
             </div>
 
         </div>
@@ -254,7 +275,7 @@
 
 
     <!-- =====================================================
-         APPLICATION
+         APP
     ====================================================== -->
 
     <div
@@ -262,9 +283,7 @@
         class="app-shell"
     >
 
-        <!-- =================================================
-             HEADER
-        ================================================== -->
+        <!-- HEADER -->
 
         <header class="app-header">
 
@@ -347,16 +366,9 @@
         </header>
 
 
-        <!-- =================================================
-             MAIN LAYOUT
-        ================================================== -->
-
         <div class="app-layout">
 
-
-            <!-- =============================================
-                 SIDEBAR
-            ============================================== -->
+            <!-- SIDEBAR -->
 
             <aside class="sidebar">
 
@@ -544,17 +556,11 @@
 
 
                     <div class="sidebar-version">
-
                         GAME PLATFORM
-
-                        <span>
-                            •
-                        </span>
-
+                        <span>•</span>
                         <span class="site-version">
                             v1.7.2
                         </span>
-
                     </div>
 
                 </div>
@@ -562,9 +568,7 @@
             </aside>
 
 
-            <!-- =============================================
-                 CONTENT
-            ============================================== -->
+            <!-- MAIN -->
 
             <main class="main-content">
 
@@ -599,85 +603,12 @@
                 <div
                     id="page-content"
                     class="page-content"
-                >
-
-                    <div class="welcome-grid">
-
-                        <article class="info-card">
-
-                            <div class="info-card-icon">
-                                ◈
-                            </div>
-
-                            <div>
-
-                                <strong>
-                                    Добро пожаловать
-                                </strong>
-
-                                <p>
-                                    GAME PLATFORM
-                                </p>
-
-                            </div>
-
-                        </article>
-
-
-                        <article class="info-card">
-
-                            <div class="info-card-icon">
-                                ♜
-                            </div>
-
-                            <div>
-
-                                <strong>
-                                    Игры
-                                </strong>
-
-                                <p>
-                                    Каталог игровых проектов.
-                                </p>
-
-                            </div>
-
-                        </article>
-
-
-                        <article class="info-card">
-
-                            <div class="info-card-icon">
-                                ◉
-                            </div>
-
-                            <div>
-
-                                <strong>
-                                    Онлайн
-                                </strong>
-
-                                <p>
-                                    Игроков онлайн:
-                                    <span id="hero-online-count">
-                                        0
-                                    </span>
-                                </p>
-
-                            </div>
-
-                        </article>
-
-                    </div>
-
-                </div>
+                ></div>
 
             </main>
 
 
-            <!-- =============================================
-                 RIGHT PANEL
-            ============================================== -->
+            <!-- RIGHT PANEL -->
 
             <aside class="right-panel">
 
@@ -731,7 +662,6 @@
                         СОЦСЕТИ
                     </div>
 
-
                     <div class="right-social-buttons">
 
                         <button
@@ -761,7 +691,6 @@
                         ОНЛАЙН
                     </div>
 
-
                     <div class="right-online-box">
 
                         <span class="online-dot"></span>
@@ -785,11 +714,10 @@
                         ВИДЕОСВЯЗЬ
                     </div>
 
-
                     <button
                         type="button"
                         class="call-start-button"
-                        onclick="window.gamePlatform && window.gamePlatform.startCall('global')"
+                        id="start-call-button"
                     >
                         Открыть конференцию
                     </button>
@@ -913,7 +841,7 @@
                         id="profile-modal-avatar"
                         class="profile-modal-avatar"
                     >
-                        P
+                        🤖
                     </div>
 
                     <div>
@@ -923,7 +851,7 @@
                         </strong>
 
                         <span>
-                            Измените информацию о себе.
+                            Заполните информацию по желанию.
                         </span>
 
                     </div>
@@ -1001,18 +929,15 @@
                 <div class="form-group">
 
                     <label for="profile-avatar-input">
-                        Фото профиля
+                        Фото
                     </label>
 
                     <input
                         id="profile-avatar-input"
                         type="url"
-                        placeholder="Ссылка на изображение"
+                        maxlength="2000"
+                        placeholder="Ссылка на фото"
                     >
-
-                    <small>
-                        Если фото не указано, используется стандартный аватар.
-                    </small>
 
                 </div>
 
@@ -1190,97 +1115,13 @@
          SUPABASE
     ====================================================== -->
 
-    <script
-        src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
-    ></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <!-- =====================================================
-         APPLICATION
+         APP
     ====================================================== -->
 
     <script src="app.js"></script>
-
-    <script src="profile-vip.js"></script>
-
-
-    <!-- =====================================================
-         SMALL UI SYNC
-    ====================================================== -->
-
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-
-            const heroOnline =
-                document.getElementById("hero-online-count");
-
-            const heroOnlineRight =
-                document.getElementById("hero-online-count-right");
-
-            const sideCardCount =
-                document.getElementById("online-side-card-count");
-
-            const originalUpdate =
-                window.gamePlatform;
-
-            function syncOnlineCounters() {
-
-                const header =
-                    document.getElementById("online-header-count");
-
-                const side =
-                    document.getElementById("online-side-count");
-
-                const modal =
-                    document.getElementById("online-modal-count");
-
-                let count = 0;
-
-                if (
-                    originalUpdate &&
-                    typeof originalUpdate.getProfile === "function"
-                ) {
-                    /* Profile API exists — actual presence count
-                       is synchronised by app.js. */
-                }
-
-                if (heroOnline && header) {
-                    heroOnline.textContent =
-                        header.textContent || "0";
-                }
-
-                if (heroOnlineRight && header) {
-                    heroOnlineRight.textContent =
-                        header.textContent || "0";
-                }
-
-                if (sideCardCount && header) {
-                    sideCardCount.textContent =
-                        header.textContent || "0";
-                }
-
-                if (side && header) {
-                    side.textContent =
-                        header.textContent || "0";
-                }
-
-                if (modal && header) {
-                    modal.textContent =
-                        header.textContent || "0";
-                }
-
-                return count;
-            }
-
-            setInterval(
-                syncOnlineCounters,
-                1000
-            );
-
-            syncOnlineCounters();
-
-        });
-    </script>
 
 </body>
 </html>
