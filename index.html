@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="ru">
 
@@ -17,19 +18,46 @@
 
     <title>Game Platform</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+    <!-- =====================================================
+         FONT
+    ====================================================== -->
+
+    <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com"
+    >
 
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
         rel="stylesheet"
     >
 
+
+    <!-- =====================================================
+         ОСНОВНОЙ CSS
+    ====================================================== -->
+
     <link
         rel="stylesheet"
         href="style.css"
     >
 
+
+    <!-- =====================================================
+         PROFILE + VIP CSS
+
+         Файл должен лежать рядом с index.html:
+         profile-vip.css
+    ====================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="profile-vip.css"
+    >
+
 </head>
+
 
 <body>
 
@@ -267,7 +295,9 @@
 >
 
 
-    <!-- HEADER -->
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
 
     <header class="top-header">
 
@@ -313,6 +343,10 @@
             </button>
 
 
+            <!-- =============================================
+                 КНОПКА МОЕГО ПРОФИЛЯ
+            ============================================== -->
+
             <button
                 type="button"
                 class="header-profile"
@@ -345,12 +379,16 @@
     </header>
 
 
-    <!-- MAIN -->
+    <!-- =====================================================
+         MAIN
+    ====================================================== -->
 
     <main class="main-layout">
 
 
-        <!-- SIDEBAR -->
+        <!-- =================================================
+             SIDEBAR
+        ================================================== -->
 
         <aside class="sidebar">
 
@@ -561,7 +599,9 @@
         </aside>
 
 
-        <!-- CENTER -->
+        <!-- =================================================
+             CENTER
+        ================================================== -->
 
         <section class="content-area">
 
@@ -628,7 +668,9 @@
             </section>
 
 
-            <!-- PAGE PANEL -->
+            <!-- =================================================
+                 PAGE PANEL
+            ================================================== -->
 
             <section class="page-panel">
 
@@ -738,7 +780,9 @@
         </section>
 
 
-        <!-- RIGHT -->
+        <!-- =================================================
+             RIGHT
+        ================================================== -->
 
         <aside class="right-column">
 
@@ -783,12 +827,16 @@
                 </div>
 
 
+                <!-- =============================================
+                     НОВАЯ КНОПКА VIP-ПРОФИЛЯ
+                ============================================== -->
+
                 <button
                     type="button"
                     class="profile-edit-button"
                     id="profile-edit-button"
                 >
-                    Редактировать профиль
+                    Открыть профиль
                 </button>
 
             </section>
@@ -949,7 +997,9 @@
 
 
 <!-- =========================================================
-     PROFILE MODAL
+     СТАРОЕ PROFILE MODAL
+     
+     ОСТАВЛЯЕМ ДЛЯ СОВМЕСТИМОСТИ С app.js
 ========================================================= -->
 
 <div
@@ -1206,16 +1256,245 @@
 </div>
 
 
-<!-- SUPABASE -->
+<!-- =========================================================
+     SUPABASE JS
+========================================================= -->
 
 <script
     src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
 ></script>
 
 
-<!-- APP -->
+<!-- =========================================================
+     SUPABASE CONFIG
+     
+     ВАЖНО:
+     ЗАМЕНИ ДВА ЗНАЧЕНИЯ НИЖЕ НА СВОИ.
+========================================================= -->
+
+<script>
+
+    const SUPABASE_URL =
+        'YOUR_SUPABASE_URL';
+
+    const SUPABASE_ANON_KEY =
+        'YOUR_SUPABASE_ANON_KEY';
+
+
+    /*
+     * Создаём клиент Supabase.
+     */
+
+    const supabaseClient =
+        window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_ANON_KEY
+        );
+
+
+    /*
+     * profile-vip.js использует
+     * window.supabaseClient.
+     */
+
+    window.supabaseClient =
+        supabaseClient;
+
+
+    /*
+     * Также оставляем глобальный
+     * объект для совместимости
+     * с существующим app.js.
+     */
+
+    window.gamePlatformSupabase =
+        supabaseClient;
+
+</script>
+
+
+<!-- =========================================================
+     APP
+     
+     ТВОЙ СУЩЕСТВУЮЩИЙ app.js
+========================================================= -->
 
 <script src="app.js"></script>
 
+
+<!-- =========================================================
+     PROFILE + VIP
+     
+     ДОЛЖЕН ИДТИ ПОСЛЕ:
+     1. Supabase
+     2. window.supabaseClient
+     3. app.js
+========================================================= -->
+
+<script src="profile-vip.js"></script>
+
+
+<!-- =========================================================
+     КНОПКА "ОТКРЫТЬ ПРОФИЛЬ"
+     
+     Используем отдельный обработчик, чтобы не ломать
+     существующий app.js.
+========================================================= -->
+
+<script>
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        function () {
+
+            const profileButton =
+                document.getElementById(
+                    'profile-edit-button'
+                );
+
+
+            if (profileButton) {
+
+                profileButton.addEventListener(
+                    'click',
+                    async function () {
+
+                        try {
+
+                            const result =
+                                await window.supabaseClient
+                                    .auth
+                                    .getUser();
+
+
+                            if (
+                                result.error
+                            ) {
+
+                                console.error(
+                                    result.error
+                                );
+
+                                return;
+                            }
+
+
+                            const user =
+                                result.data.user;
+
+
+                            if (!user) {
+
+                                alert(
+                                    'Сначала войдите в аккаунт.'
+                                );
+
+                                return;
+                            }
+
+
+                            /*
+                             * Открываем новую систему
+                             * Profile + VIP.
+                             */
+
+                            window.openVipProfile(
+                                user.id
+                            );
+
+                        } catch (error) {
+
+                            console.error(
+                                'Не удалось открыть профиль:',
+                                error
+                            );
+
+                            alert(
+                                error.message ||
+                                'Не удалось открыть профиль.'
+                            );
+
+                        }
+
+                    }
+                );
+
+            }
+
+
+            /*
+             * Кнопка профиля в HEADER.
+             */
+
+            const headerProfile =
+                document.getElementById(
+                    'header-profile-button'
+                );
+
+
+            if (headerProfile) {
+
+                headerProfile.addEventListener(
+                    'click',
+                    async function () {
+
+                        try {
+
+                            const result =
+                                await window.supabaseClient
+                                    .auth
+                                    .getUser();
+
+
+                            if (
+                                result.error
+                            ) {
+                                throw result.error;
+                            }
+
+
+                            const user =
+                                result.data.user;
+
+
+                            if (!user) {
+
+                                alert(
+                                    'Сначала войдите в аккаунт.'
+                                );
+
+                                return;
+                            }
+
+
+                            window.openVipProfile(
+                                user.id
+                            );
+
+                        } catch (error) {
+
+                            console.error(
+                                error
+                            );
+
+                            alert(
+                                error.message ||
+                                'Не удалось открыть профиль.'
+                            );
+
+                        }
+
+                    }
+                );
+
+            }
+
+        }
+    );
+
+</script>
+
+
 </body>
 </html>
+```
