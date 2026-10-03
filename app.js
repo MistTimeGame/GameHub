@@ -1,6 +1,5 @@
 "use strict";
 
-
 /* =========================================================
    GAME PLATFORM
    AUTH
@@ -20,10 +19,13 @@ const SUPABASE_URL =
     "https://tpdpciooxfulythevhgw.supabase.co";
 
 const SUPABASE_PUBLISHABLE_KEY =
-    "sb_publishable_yNWxh02tapOVUQN9iJ_2_Q_IPVc60J3";
+    "sb_publishable_yNWxh02tapOVUQN9iJ_2_Q_IPVc60J3_2_Q_IPVc60J3".replace(
+        "sb_publishable_yNWxh02tapOVUQN9iJ_2_Q_IPVc60J3_2_Q_IPVc60J3",
+        "sb_publishable_yNWxh02tapOVUQN9iJ_2_Q_IPVc60J3"
+    );
 
 const APP_VERSION =
-    "1.8.1";
+    "1.8.2";
 
 
 /* =========================================================
@@ -75,6 +77,8 @@ let presenceUsers = [];
 
 let chatChannel = null;
 
+let globalChatRoomId = null;
+
 
 /* =========================================================
    CONFERENCE
@@ -90,9 +94,9 @@ let localStream = null;
 
 let screenStream = null;
 
-let micEnabled = true;
+let micEnabled = false;
 
-let cameraEnabled = true;
+let cameraEnabled = false;
 
 let screenSharing = false;
 
@@ -1141,6 +1145,25 @@ async function ensureProfile() {
                 );
 
 
+            /*
+               Если avatar_url в profiles пустой,
+               но он есть в Auth metadata,
+               используем metadata как резерв.
+            */
+
+            if (
+                !profileData.avatar_url &&
+                metadata.avatar_url
+            ) {
+
+                profileData.avatar_url =
+                    normalizeAvatarUrl(
+                        metadata.avatar_url
+                    );
+
+            }
+
+
             return;
 
         }
@@ -1171,6 +1194,22 @@ async function ensureProfile() {
 
                     status:
                         defaultStatus,
+
+                    avatar_url:
+                        metadata.avatar_url
+                            ? normalizeAvatarUrl(
+                                metadata.avatar_url
+                            )
+                            : null,
+
+                    age:
+                        metadata.age || null,
+
+                    city:
+                        metadata.city || null,
+
+                    about:
+                        metadata.about || null,
 
                     vip_level:
                         0
@@ -1207,6 +1246,19 @@ async function ensureProfile() {
                 defaultStatus;
 
 
+            if (
+                metadata.avatar_url &&
+                !profileData.avatar_url
+            ) {
+
+                profileData.avatar_url =
+                    normalizeAvatarUrl(
+                        metadata.avatar_url
+                    );
+
+            }
+
+
             if (insertResult.error) {
 
                 console.error(
@@ -1232,6 +1284,19 @@ async function ensureProfile() {
 
         profileData.status =
             defaultStatus;
+
+
+        if (
+            metadata.avatar_url &&
+            !profileData.avatar_url
+        ) {
+
+            profileData.avatar_url =
+                normalizeAvatarUrl(
+                    metadata.avatar_url
+                );
+
+        }
 
     }
 
@@ -1284,49 +1349,6 @@ function normalizeAvatarUrl(
 }
 
 
-function addCacheBust(
-    url
-) {
-
-    if (
-        !url ||
-        url.startsWith(
-            "data:image/"
-        )
-    ) {
-
-        return url;
-
-    }
-
-
-    try {
-
-        const parsed =
-            new URL(
-                url
-            );
-
-
-        parsed.searchParams.set(
-            "gp_avatar",
-            String(
-                Date.now()
-            )
-        );
-
-
-        return parsed.toString();
-
-    } catch (error) {
-
-        return url;
-
-    }
-
-}
-
-
 /* =========================================================
    AVATAR RENDER
 ========================================================= */
@@ -1369,7 +1391,9 @@ function renderAvatar(
 
 
     image.alt =
-        "Avatar";
+        nickname
+            ? "Аватар " + nickname
+            : "Avatar";
 
 
     image.decoding =
@@ -1380,10 +1404,19 @@ function renderAvatar(
         "eager";
 
 
+    image.referrerPolicy =
+        "no-referrer";
+
+
+    /*
+       ВАЖНО:
+       не добавляем cache-bust параметр.
+       Некоторые CDN, VK/Google/внешние хостинги
+       ломают такие ссылки после изменения URL.
+    */
+
     image.src =
-        addCacheBust(
-            url
-        );
+        url;
 
 
     image.onload =
@@ -1760,6 +1793,25 @@ async function saveProfile() {
             : null;
 
 
+    if (
+        age !== null &&
+        (
+            !Number.isInteger(age) ||
+            age < 1 ||
+            age > 120
+        )
+    ) {
+
+        showProfileMessage(
+            "Возраст должен быть от 1 до 120 лет.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
     let avatarUrl =
         avatarInput
             ? normalizeAvatarUrl(
@@ -1806,7 +1858,7 @@ async function saveProfile() {
                 about,
 
             avatar_url:
-                avatarUrl,
+                avatarUrl || null,
 
             updated_at:
                 new Date().toISOString()
@@ -1857,11 +1909,10 @@ async function saveProfile() {
             );
 
 
-        /* ---------------------------------------------
-           Also store profile information in Auth metadata.
-           This gives us a fallback if the profile is later
-           loaded before a database refresh.
-        --------------------------------------------- */
+        /*
+           Также сохраняем данные в Auth metadata.
+           Это резервный источник для профиля.
+        */
 
         try {
 
@@ -1915,10 +1966,6 @@ async function saveProfile() {
         applyProfile();
 
 
-        /* ---------------------------------------------
-           Force immediate local preview
-        --------------------------------------------- */
-
         renderAvatar(
 
             $("profile-modal-avatar"),
@@ -1950,6 +1997,54 @@ async function saveProfile() {
             avatarUrl
 
         );
+
+
+        /*
+           Если Presence уже работает,
+           отправляем обновлённый avatar_url
+           в presence-state.
+        */
+
+        if (
+            presenceChannel &&
+            currentUser
+        ) {
+
+            try {
+
+                await presenceChannel.track({
+
+                    user_id:
+                        currentUser.id,
+
+                    nickname:
+                        profileData.nickname ||
+                        "Player",
+
+                    status:
+                        profileData.status ||
+                        "Онлайн",
+
+                    avatar_url:
+                        profileData.avatar_url ||
+                        "",
+
+                    vip_level:
+                        profileData.vip_level ||
+                        0
+
+                });
+
+            } catch (error) {
+
+                console.warn(
+                    "Presence profile refresh:",
+                    error
+                );
+
+            }
+
+        }
 
 
         showProfileMessage(
@@ -2210,6 +2305,11 @@ function renderHome() {
         $("page-content");
 
 
+    if (!content) {
+        return;
+    }
+
+
     content.innerHTML = `
 
         <section class="home-hero">
@@ -2439,6 +2539,11 @@ function renderGames() {
         $("page-content");
 
 
+    if (!content) {
+        return;
+    }
+
+
     content.innerHTML = `
 
         <section class="content-card">
@@ -2539,6 +2644,11 @@ function renderNews() {
         $("page-content");
 
 
+    if (!content) {
+        return;
+    }
+
+
     content.innerHTML = `
 
         <section class="content-card">
@@ -2621,6 +2731,11 @@ function renderOnlinePage() {
         $("page-content");
 
 
+    if (!content) {
+        return;
+    }
+
+
     content.innerHTML = `
 
         <section class="content-card">
@@ -2666,6 +2781,11 @@ function renderProfilePage() {
         $("page-content");
 
 
+    if (!content) {
+        return;
+    }
+
+
     content.innerHTML = `
 
         <section class="content-card">
@@ -2682,9 +2802,7 @@ function renderProfilePage() {
                 <div
                     id="page-avatar"
                     class="avatar avatar-large"
-                >
-                    🤖
-                </div>
+                ></div>
 
 
                 <div>
@@ -2803,6 +2921,87 @@ function renderProfilePage() {
 
 
 /* =========================================================
+   CHAT ROOM
+========================================================= */
+
+async function getGlobalChatRoomId() {
+
+    if (
+        globalChatRoomId &&
+        supabaseClient
+    ) {
+
+        return globalChatRoomId;
+
+    }
+
+
+    if (!supabaseClient) {
+        return null;
+    }
+
+
+    try {
+
+        const result =
+            await supabaseClient
+
+                .from("chat_rooms")
+
+                .select(
+                    "id"
+                )
+
+                .eq(
+                    "type",
+                    "global"
+                )
+
+                .limit(
+                    1
+                )
+
+                .maybeSingle();
+
+
+        if (
+            result.error ||
+            !result.data
+        ) {
+
+            console.error(
+                "Global chat room error:",
+                result.error
+            );
+
+
+            return null;
+
+        }
+
+
+        globalChatRoomId =
+            result.data.id;
+
+
+        return globalChatRoomId;
+
+    } catch (error) {
+
+        console.error(
+            "Global chat room exception:",
+            error
+        );
+
+
+        return null;
+
+    }
+
+}
+
+
+/* =========================================================
    CHAT
 ========================================================= */
 
@@ -2810,6 +3009,11 @@ async function renderChat() {
 
     const content =
         $("page-content");
+
+
+    if (!content) {
+        return;
+    }
 
 
     content.innerHTML = `
@@ -2905,7 +3109,7 @@ async function renderChat() {
                         </strong>
 
                         <span>
-                            Нажмите «Войти в конференцию».
+                            Войти можно даже без камеры и микрофона.
                         </span>
 
                     </div>
@@ -2939,7 +3143,7 @@ async function renderChat() {
                         type="button"
                         class="conference-button"
                     >
-                        Микрофон
+                        Микрофон: выкл.
                     </button>
 
 
@@ -2948,7 +3152,7 @@ async function renderChat() {
                         type="button"
                         class="conference-button"
                     >
-                        Камера
+                        Камера: выкл.
                     </button>
 
 
@@ -3696,13 +3900,21 @@ function renderOnlinePlayers(
             .map(
                 function (user) {
 
+                    const avatar =
+                        user.avatar_url ||
+                        "";
+
+
                     return `
 
                         <div class="online-player">
 
-                            <div class="avatar avatar-medium">
-                                🤖
-                            </div>
+                            <div
+                                class="avatar avatar-medium"
+                                data-online-avatar="${escapeHtml(
+                                    user.user_id || ""
+                                )}"
+                            ></div>
 
                             <div>
 
@@ -3734,6 +3946,48 @@ function renderOnlinePlayers(
                 }
             )
             .join("");
+
+
+    element
+        .querySelectorAll(
+            "[data-online-avatar]"
+        )
+        .forEach(
+            function (avatarElement) {
+
+                const userId =
+                    avatarElement.dataset.onlineAvatar;
+
+
+                const user =
+                    presenceUsers.find(
+                        function (item) {
+
+                            return (
+                                item.user_id ===
+                                userId
+                            );
+
+                        }
+                    );
+
+
+                renderAvatar(
+
+                    avatarElement,
+
+                    user
+                        ? user.nickname
+                        : "Player",
+
+                    user
+                        ? user.avatar_url
+                        : ""
+
+                );
+
+            }
+        );
 
 }
 
@@ -3830,6 +4084,33 @@ async function loadChatMessages() {
     `;
 
 
+    const roomId =
+        await getGlobalChatRoomId();
+
+
+    if (!roomId) {
+
+        container.innerHTML = `
+
+            <div class="conference-placeholder">
+
+                <strong>
+                    Глобальная комната чата не найдена
+                </strong>
+
+                <span>
+                    Проверьте таблицу chat_rooms и глобальную комнату.
+                </span>
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
     const result =
         await supabaseClient
 
@@ -3838,8 +4119,8 @@ async function loadChatMessages() {
             .select("*")
 
             .eq(
-                "room_type",
-                "global"
+                "room_id",
+                roomId
             )
 
             .order(
@@ -3866,12 +4147,14 @@ async function loadChatMessages() {
             <div class="conference-placeholder">
 
                 <strong>
-                    Чат пока не настроен
+                    Не удалось загрузить чат
                 </strong>
 
                 <span>
-                    Выполните SQL-файл chat.sql
-                    в Supabase SQL Editor.
+                    ${escapeHtml(
+                        result.error.message ||
+                        "Ошибка базы данных"
+                    )}
                 </span>
 
             </div>
@@ -3885,6 +4168,23 @@ async function loadChatMessages() {
 
     renderChatMessages(
         result.data || []
+    );
+
+}
+
+
+function getMessageText(message) {
+
+    if (!message) {
+        return "";
+    }
+
+
+    return (
+        message.body ??
+        message.message ??
+        message.text ??
+        ""
     );
 
 }
@@ -3956,8 +4256,9 @@ function renderChatMessages(
 
                             <span>
                                 ${escapeHtml(
-                                    message.message ||
-                                    ""
+                                    getMessageText(
+                                        message
+                                    )
                                 )}
                             </span>
 
@@ -4002,27 +4303,59 @@ async function sendChatMessage() {
     }
 
 
+    const roomId =
+        await getGlobalChatRoomId();
+
+
+    if (!roomId) {
+
+        showInfo(
+            "Глобальная комната чата не найдена."
+        );
+
+        return;
+
+    }
+
+
+    /*
+       Отправляем сразу оба варианта содержимого:
+       body — для новой схемы;
+       message — для совместимости со старой.
+    */
+
+    const payload = {
+
+        room_id:
+            roomId,
+
+        user_id:
+            currentUser.id,
+
+        nickname:
+            profileData.nickname ||
+            "Player",
+
+        room_type:
+            "global",
+
+        body:
+            message,
+
+        message:
+            message
+
+    };
+
+
     const result =
         await supabaseClient
 
             .from("chat_messages")
 
-            .insert({
-
-                user_id:
-                    currentUser.id,
-
-                nickname:
-                    profileData.nickname ||
-                    "Player",
-
-                room_type:
-                    "global",
-
-                message:
-                    message
-
-            });
+            .insert(
+                payload
+            );
 
 
     if (result.error) {
@@ -4063,44 +4396,92 @@ function startChatRealtime() {
     }
 
 
+    const channelName =
+        "global-chat-" +
+        Date.now();
+
+
     chatChannel =
         supabaseClient.channel(
-            "global-chat-" +
-            Date.now()
+            channelName
         );
 
 
+    const filter =
+        globalChatRoomId
+            ? "room_id=eq." +
+                globalChatRoomId
+            : undefined;
+
+
+    const changesConfig = {
+
+        event:
+            "INSERT",
+
+        schema:
+            "public",
+
+        table:
+            "chat_messages"
+
+    };
+
+
+    if (filter) {
+
+        changesConfig.filter =
+            filter;
+
+    }
+
+
     chatChannel.on(
+
         "postgres_changes",
-        {
-            event:
-                "INSERT",
 
-            schema:
-                "public",
+        changesConfig,
 
-            table:
-                "chat_messages",
-
-            filter:
-                "room_type=eq.global"
-
-        },
         function () {
 
             loadChatMessages();
 
         }
+
     );
 
 
     chatChannel.subscribe(
-        function (status) {
+        async function (status) {
 
             console.log(
                 "Chat Realtime:",
                 status
             );
+
+
+            if (
+                status ===
+                "SUBSCRIBED"
+            ) {
+
+                const roomId =
+                    await getGlobalChatRoomId();
+
+
+                if (
+                    roomId &&
+                    chatChannel
+                ) {
+
+                    console.log(
+                        "Global chat room:",
+                        roomId
+                    );
+
+                }
+
+            }
 
         }
     );
@@ -4231,6 +4612,11 @@ function initConferenceUI() {
 
     }
 
+
+    updateConferenceButtons();
+
+    updateConferenceMediaButtons();
+
 }
 
 
@@ -4264,7 +4650,7 @@ function getMediaErrorMessage(
 
         return (
             "Не удалось получить доступ " +
-            "к камере или микрофону."
+            "к устройству."
         );
 
     }
@@ -4277,55 +4663,51 @@ function getMediaErrorMessage(
         case "NotAllowedError":
 
             return (
-                "Доступ к камере или микрофону " +
-                "запрещён. Разрешите камеру и микрофон " +
-                "в настройках браузера для этого сайта."
+                "Доступ к устройству запрещён. " +
+                "Разрешите использование камеры или микрофона " +
+                "в настройках браузера."
             );
 
 
         case "PermissionDeniedError":
 
             return (
-                "Браузер запретил доступ " +
-                "к камере или микрофону."
+                "Браузер запретил доступ к устройству."
             );
 
 
         case "NotFoundError":
 
             return (
-                "Камера или микрофон не найдены. " +
-                "Проверьте подключение устройства."
+                "Запрошенное устройство не найдено."
             );
 
 
         case "DevicesNotFoundError":
 
             return (
-                "Камера или микрофон не найдены."
+                "Запрошенное устройство не найдено."
             );
 
 
         case "NotReadableError":
 
             return (
-                "Камера или микрофон уже используются " +
-                "другим приложением."
+                "Устройство уже используется другим приложением."
             );
 
 
         case "TrackStartError":
 
             return (
-                "Не удалось запустить камеру " +
-                "или микрофон."
+                "Не удалось запустить устройство."
             );
 
 
         case "OverconstrainedError":
 
             return (
-                "Камера не поддерживает запрошенный режим."
+                "Устройство не поддерживает запрошенный режим."
             );
 
 
@@ -4339,7 +4721,7 @@ function getMediaErrorMessage(
         case "TypeError":
 
             return (
-                "Доступ к камере недоступен. " +
+                "Устройство недоступно. " +
                 "Проверьте HTTPS-соединение."
             );
 
@@ -4347,7 +4729,7 @@ function getMediaErrorMessage(
         default:
 
             return (
-                "Ошибка камеры/микрофона: " +
+                "Ошибка устройства: " +
                 (
                     error.message ||
                     error.name ||
@@ -4378,8 +4760,7 @@ function checkMediaEnvironment() {
                 false,
 
             message:
-                "Камера и микрофон требуют HTTPS. " +
-                "Откройте сайт через https://."
+                "Камера и микрофон требуют HTTPS."
 
         };
 
@@ -4398,8 +4779,7 @@ function checkMediaEnvironment() {
                 false,
 
             message:
-                "Этот браузер не предоставил сайту " +
-                "доступ к камере и микрофону."
+                "Этот браузер не предоставляет доступ к устройствам."
 
         };
 
@@ -4415,10 +4795,10 @@ function checkMediaEnvironment() {
 
 
 /* =========================================================
-   GET MEDIA
+   REQUEST AUDIO
 ========================================================= */
 
-async function requestLocalMedia() {
+async function requestAudioTrack() {
 
     const environment =
         checkMediaEnvironment();
@@ -4433,53 +4813,150 @@ async function requestLocalMedia() {
     }
 
 
-    const primaryConstraints = {
+    try {
 
-        video: {
+        const stream =
+            await navigator.mediaDevices.getUserMedia({
 
-            facingMode: {
-                ideal:
-                    "user"
-            },
+                audio: {
 
-            width: {
-                ideal:
-                    1280
-            },
+                    echoCancellation:
+                        true,
 
-            height: {
-                ideal:
-                    720
-            }
+                    noiseSuppression:
+                        true,
 
-        },
+                    autoGainControl:
+                        true
 
-        audio: {
+                },
 
-            echoCancellation:
-                true,
+                video:
+                    false
 
-            noiseSuppression:
-                true,
+            });
 
-            autoGainControl:
-                true
+
+        const track =
+            stream.getAudioTracks()[0];
+
+
+        if (!track) {
+
+            stream
+                .getTracks()
+                .forEach(
+                    function (item) {
+
+                        item.stop();
+
+                    }
+                );
+
+
+            throw new Error(
+                "Микрофон не вернул аудиотрек."
+            );
 
         }
 
-    };
+
+        return track;
+
+    } catch (error) {
+
+        throw error;
+
+    }
+
+}
+
+
+/* =========================================================
+   REQUEST VIDEO
+========================================================= */
+
+async function requestVideoTrack() {
+
+    const environment =
+        checkMediaEnvironment();
+
+
+    if (!environment.ok) {
+
+        throw new Error(
+            environment.message
+        );
+
+    }
 
 
     try {
 
-        return await navigator.mediaDevices.getUserMedia(
-            primaryConstraints
-        );
+        const stream =
+            await navigator.mediaDevices.getUserMedia({
+
+                video: {
+
+                    facingMode: {
+
+                        ideal:
+                            "user"
+
+                    },
+
+                    width: {
+
+                        ideal:
+                            1280
+
+                    },
+
+                    height: {
+
+                        ideal:
+                            720
+
+                    }
+
+                },
+
+                audio:
+                    false
+
+            });
+
+
+        const track =
+            stream.getVideoTracks()[0];
+
+
+        if (!track) {
+
+            stream
+                .getTracks()
+                .forEach(
+                    function (item) {
+
+                        item.stop();
+
+                    }
+                );
+
+
+            throw new Error(
+                "Камера не вернула видеотрек."
+            );
+
+        }
+
+
+        return track;
 
     } catch (firstError) {
 
         console.warn(
-            "Primary media request failed:",
+            "Primary video request failed:",
             firstError
         );
 
@@ -4494,28 +4971,641 @@ async function requestLocalMedia() {
             )
         ) {
 
-            try {
-
-                return await navigator.mediaDevices.getUserMedia({
+            const fallback =
+                await navigator.mediaDevices.getUserMedia({
 
                     video:
                         true,
 
                     audio:
-                        true
+                        false
 
                 });
 
-            } catch (secondError) {
 
-                throw secondError;
+            const track =
+                fallback.getVideoTracks()[0];
+
+
+            if (!track) {
+
+                fallback
+                    .getTracks()
+                    .forEach(
+                        function (item) {
+
+                            item.stop();
+
+                        }
+                    );
+
+
+                throw new Error(
+                    "Камера не вернула видеотрек."
+                );
 
             }
+
+
+            return track;
 
         }
 
 
         throw firstError;
+
+    }
+
+}
+
+
+/* =========================================================
+   LOCAL STREAM HELPERS
+========================================================= */
+
+function ensureLocalStream() {
+
+    if (!localStream) {
+
+        localStream =
+            new MediaStream();
+
+    }
+
+
+    return localStream;
+
+}
+
+
+function addTrackToLocalStream(
+    track
+) {
+
+    const stream =
+        ensureLocalStream();
+
+
+    const existing =
+        stream
+            .getTracks()
+            .find(
+                function (item) {
+
+                    return (
+                        item.kind ===
+                        track.kind
+                    );
+
+                }
+            );
+
+
+    if (existing) {
+
+        existing.stop();
+
+        stream.removeTrack(
+            existing
+        );
+
+    }
+
+
+    stream.addTrack(
+        track
+    );
+
+
+    return stream;
+
+}
+
+
+function getLocalTrack(
+    kind
+) {
+
+    if (!localStream) {
+        return null;
+    }
+
+
+    return (
+        localStream
+            .getTracks()
+            .find(
+                function (track) {
+
+                    return (
+                        track.kind ===
+                        kind
+                    );
+
+                }
+            ) ||
+        null
+    );
+
+}
+
+
+/* =========================================================
+   ADD OR REPLACE LOCAL TRACK
+========================================================= */
+
+async function addOrReplaceLocalTrack(
+    kind,
+    track
+) {
+
+    Object.keys(
+        peerConnections
+    )
+        .forEach(
+            async function (peerId) {
+
+                const connection =
+                    peerConnections[
+                        peerId
+                    ];
+
+
+                if (
+                    !connection ||
+                    connection.connectionState ===
+                        "closed"
+                ) {
+
+                    return;
+
+                }
+
+
+                try {
+
+                    let sender =
+                        connection
+                            .getSenders()
+                            .find(
+                                function (item) {
+
+                                    return (
+                                        item.track &&
+                                        item.track.kind ===
+                                            kind
+                                    );
+
+                                }
+                            );
+
+
+                    let transceiver =
+                        connection
+                            .getTransceivers()
+                            .find(
+                                function (item) {
+
+                                    return (
+                                        item.receiver &&
+                                        item.receiver.track &&
+                                        item.receiver.track.kind ===
+                                            kind
+                                    );
+
+                                }
+                            );
+
+
+                    if (!transceiver) {
+
+                        transceiver =
+                            connection.addTransceiver(
+                                kind,
+                                {
+                                    direction:
+                                        "sendrecv"
+                                }
+                            );
+
+                    }
+
+
+                    sender =
+                        transceiver.sender;
+
+
+                    if (sender) {
+
+                        await sender.replaceTrack(
+                            track
+                        );
+
+                    }
+
+
+                    transceiver.direction =
+                        "sendrecv";
+
+                } catch (error) {
+
+                    console.warn(
+                        "Replace local track error:",
+                        error
+                    );
+
+                }
+
+            }
+        );
+
+
+    updateLocalVideo();
+
+    await renegotiatePeers();
+
+}
+
+
+/* =========================================================
+   REMOVE LOCAL TRACK
+========================================================= */
+
+async function removeLocalTrack(
+    kind
+) {
+
+    if (!localStream) {
+        return;
+    }
+
+
+    const track =
+        getLocalTrack(
+            kind
+        );
+
+
+    if (track) {
+
+        track.stop();
+
+        try {
+
+            localStream.removeTrack(
+                track
+            );
+
+        } catch (error) {
+
+            console.warn(
+                error
+            );
+
+        }
+
+    }
+
+
+    Object.keys(
+        peerConnections
+    )
+        .forEach(
+            async function (peerId) {
+
+                const connection =
+                    peerConnections[
+                        peerId
+                    ];
+
+
+                if (!connection) {
+                    return;
+                }
+
+
+                const transceiver =
+                    connection
+                        .getTransceivers()
+                        .find(
+                            function (item) {
+
+                                return (
+                                    item.receiver &&
+                                    item.receiver.track &&
+                                    item.receiver.track.kind ===
+                                        kind
+                                );
+
+                            }
+                        );
+
+
+                if (transceiver) {
+
+                    try {
+
+                        await transceiver.sender.replaceTrack(
+                            null
+                        );
+
+
+                        transceiver.direction =
+                            "recvonly";
+
+                    } catch (error) {
+
+                        console.warn(
+                            "Remove local track:",
+                            error
+                        );
+
+                    }
+
+                }
+
+            }
+        );
+
+
+    updateLocalVideo();
+
+    await renegotiatePeers();
+
+}
+
+
+/* =========================================================
+   ENABLE AUDIO
+========================================================= */
+
+async function enableConferenceMic() {
+
+    if (!conferenceJoined) {
+
+        showInfo(
+            "Сначала войдите в конференцию."
+        );
+
+        return false;
+
+    }
+
+
+    if (
+        getLocalTrack(
+            "audio"
+        )
+    ) {
+
+        const track =
+            getLocalTrack(
+                "audio"
+            );
+
+
+        track.enabled =
+            true;
+
+
+        micEnabled =
+            true;
+
+
+        updateConferenceMediaButtons();
+
+        return true;
+
+    }
+
+
+    try {
+
+        const track =
+            await requestAudioTrack();
+
+
+        addTrackToLocalStream(
+            track
+        );
+
+
+        track.enabled =
+            true;
+
+
+        micEnabled =
+            true;
+
+
+        await addOrReplaceLocalTrack(
+            "audio",
+            track
+        );
+
+
+        updateConferenceMediaButtons();
+
+
+        return true;
+
+    } catch (error) {
+
+        console.error(
+            "Microphone error:",
+            error
+        );
+
+
+        micEnabled =
+            false;
+
+
+        updateConferenceMediaButtons();
+
+
+        showInfo(
+            getMediaErrorMessage(
+                error
+            )
+        );
+
+
+        return false;
+
+    }
+
+}
+
+
+/* =========================================================
+   ENABLE VIDEO
+========================================================= */
+
+async function enableConferenceCamera() {
+
+    if (!conferenceJoined) {
+
+        showInfo(
+            "Сначала войдите в конференцию."
+        );
+
+        return false;
+
+    }
+
+
+    if (
+        getLocalTrack(
+            "video"
+        )
+    ) {
+
+        const track =
+            getLocalTrack(
+                "video"
+            );
+
+
+        track.enabled =
+            true;
+
+
+        cameraEnabled =
+            true;
+
+
+        updateLocalVideo();
+
+        updateConferenceMediaButtons();
+
+        return true;
+
+    }
+
+
+    try {
+
+        const track =
+            await requestVideoTrack();
+
+
+        addTrackToLocalStream(
+            track
+        );
+
+
+        track.enabled =
+            true;
+
+
+        cameraEnabled =
+            true;
+
+
+        await addOrReplaceLocalTrack(
+            "video",
+            track
+        );
+
+
+        updateLocalVideo();
+
+        updateConferenceMediaButtons();
+
+
+        return true;
+
+    } catch (error) {
+
+        console.error(
+            "Camera error:",
+            error
+        );
+
+
+        cameraEnabled =
+            false;
+
+
+        updateConferenceMediaButtons();
+
+
+        showInfo(
+            getMediaErrorMessage(
+                error
+            )
+        );
+
+
+        return false;
+
+    }
+
+}
+
+
+/* =========================================================
+   CONFERENCE BUTTON STATE
+========================================================= */
+
+function updateConferenceMediaButtons() {
+
+    const mic =
+        $("conference-mic");
+
+
+    const camera =
+        $("conference-camera");
+
+
+    if (mic) {
+
+        mic.textContent =
+            micEnabled
+                ? "Микрофон: вкл."
+                : "Микрофон: выкл.";
+
+
+        mic.classList.toggle(
+            "active",
+            micEnabled
+        );
+
+    }
+
+
+    if (camera) {
+
+        camera.textContent =
+            cameraEnabled
+                ? "Камера: вкл."
+                : "Камера: выкл.";
+
+
+        camera.classList.toggle(
+            "active",
+            cameraEnabled
+        );
+
+    }
+
+
+    const screen =
+        $("conference-screen");
+
+
+    if (screen) {
+
+        screen.textContent =
+            screenSharing
+                ? "Экран: вкл."
+                : "Экран";
+
+        screen.classList.toggle(
+            "active",
+            screenSharing
+        );
 
     }
 
@@ -4540,58 +5630,41 @@ async function startConference() {
 
 
     setConferenceStatus(
-        "ПРОВЕРКА КАМЕРЫ..."
+        "ПОДКЛЮЧЕНИЕ..."
     );
 
 
-    try {
+    /*
+       ВАЖНО:
+       здесь больше НЕТ getUserMedia().
+       Камера и микрофон НЕ обязательны.
+    */
 
-        localStream =
-            await requestLocalMedia();
-
-
-    } catch (error) {
-
-        console.error(
-            "Media error:",
-            error
-        );
+    micEnabled =
+        false;
 
 
-        localStream =
-            null;
+    cameraEnabled =
+        false;
 
 
-        const message =
-            getMediaErrorMessage(
-                error
-            );
+    screenSharing =
+        false;
 
 
-        setConferenceStatus(
-            "КАМЕРА НЕ ПОДКЛЮЧЕНА"
-        );
+    localStream =
+        null;
 
 
-        showInfo(
-            message
-        );
+    conferenceJoined =
+        true;
 
 
-        return;
-
-    }
+    conferenceParticipants =
+        {};
 
 
     try {
-
-        conferenceJoined =
-            true;
-
-
-        conferenceParticipants =
-            {};
-
 
         conferenceChannel =
             supabaseClient.channel(
@@ -4852,7 +5925,11 @@ async function startConference() {
 
                             nickname:
                                 profileData.nickname ||
-                                "Player"
+                                "Player",
+
+                            avatar_url:
+                                profileData.avatar_url ||
+                                ""
 
                         }
 
@@ -4865,6 +5942,29 @@ async function startConference() {
 
 
                     updateConferenceButtons();
+
+                    updateConferenceMediaButtons();
+
+                }
+
+
+                if (
+                    status ===
+                        "CHANNEL_ERROR" ||
+                    status ===
+                        "TIMED_OUT" ||
+                    status ===
+                        "CLOSED"
+                ) {
+
+                    setConferenceStatus(
+                        "ОШИБКА ПОДКЛЮЧЕНИЯ"
+                    );
+
+
+                    showInfo(
+                        "Не удалось подключить конференцию к Supabase Realtime."
+                    );
 
                 }
 
@@ -4940,20 +6040,61 @@ function createPeerConnection(
         connection;
 
 
-    if (localStream) {
+    /*
+       Если локальных устройств пока нет,
+       создаём recvonly transceivers.
+       Это позволяет принимать медиа,
+       даже если собственная камера/гарнитура выключены.
+    */
 
-        localStream
-            .getTracks()
-            .forEach(
-                function (track) {
+    const localAudio =
+        getLocalTrack(
+            "audio"
+        );
 
-                    connection.addTrack(
-                        track,
-                        localStream
-                    );
 
-                }
-            );
+    const localVideo =
+        getLocalTrack(
+            "video"
+        );
+
+
+    if (localAudio) {
+
+        connection.addTrack(
+            localAudio,
+            localStream
+        );
+
+    } else {
+
+        connection.addTransceiver(
+            "audio",
+            {
+                direction:
+                    "recvonly"
+            }
+        );
+
+    }
+
+
+    if (localVideo) {
+
+        connection.addTrack(
+            localVideo,
+            localStream
+        );
+
+    } else {
+
+        connection.addTransceiver(
+            "video",
+            {
+                direction:
+                    "recvonly"
+            }
+        );
 
     }
 
@@ -5065,6 +6206,107 @@ function createPeerConnection(
 
 
 /* =========================================================
+   RENEGOTIATE
+========================================================= */
+
+async function renegotiatePeers() {
+
+    if (
+        !conferenceJoined ||
+        !conferenceChannel
+    ) {
+
+        return;
+
+    }
+
+
+    const peerIds =
+        Object.keys(
+            peerConnections
+        );
+
+
+    for (
+        const peerId of peerIds
+    ) {
+
+        const connection =
+            peerConnections[
+                peerId
+            ];
+
+
+        if (
+            !connection ||
+            connection.connectionState ===
+                "closed"
+        ) {
+
+            continue;
+
+        }
+
+
+        if (
+            connection.signalingState !==
+            "stable"
+        ) {
+
+            continue;
+
+        }
+
+
+        try {
+
+            const offer =
+                await connection.createOffer();
+
+
+            await connection.setLocalDescription(
+                offer
+            );
+
+
+            await conferenceChannel.send({
+
+                type:
+                    "broadcast",
+
+                event:
+                    "offer",
+
+                payload: {
+
+                    from:
+                        currentUser.id,
+
+                    to:
+                        peerId,
+
+                    offer:
+                        offer
+
+                }
+
+            });
+
+        } catch (error) {
+
+            console.error(
+                "Renegotiation error:",
+                error
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
    OFFER
 ========================================================= */
 
@@ -5161,6 +6403,54 @@ async function handleOffer(
             );
 
 
+        if (
+            connection.signalingState ===
+            "closed"
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            connection.signalingState !==
+            "stable" &&
+            connection.signalingState !==
+            "have-local-offer"
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            connection.signalingState ===
+            "have-local-offer"
+        ) {
+
+            try {
+
+                await connection.setLocalDescription(
+                    {
+                        type:
+                            "rollback"
+                    }
+                );
+
+            } catch (error) {
+
+                console.warn(
+                    "Rollback failed:",
+                    error
+                );
+
+            }
+
+        }
+
+
         await connection.setRemoteDescription(
             new RTCSessionDescription(
                 data.offer
@@ -5233,6 +6523,16 @@ async function handleAnswer(
         }
 
 
+        if (
+            connection.signalingState !==
+            "have-local-offer"
+        ) {
+
+            return;
+
+        }
+
+
         await connection.setRemoteDescription(
             new RTCSessionDescription(
                 data.answer
@@ -5296,11 +6596,6 @@ async function handleIceCandidate(
 
 function updateLocalVideo() {
 
-    if (!localStream) {
-        return;
-    }
-
-
     const container =
         $("conference-videos");
 
@@ -5310,21 +6605,164 @@ function updateLocalVideo() {
     }
 
 
-    container.innerHTML =
-        "";
+    const oldLocal =
+        container.querySelector(
+            '[data-peer-id="' +
+            (
+                currentUser
+                    ? currentUser.id
+                    : "local"
+            ) +
+            '"]'
+        );
 
 
-    addVideoTile(
+    if (oldLocal) {
 
-        currentUser.id,
+        oldLocal.remove();
 
-        localStream,
+    }
 
-        profileData.nickname ||
-            "Вы",
 
-        true
+    if (
+        !conferenceJoined ||
+        !currentUser
+    ) {
 
+        return;
+
+    }
+
+
+    const videoTrack =
+        getLocalTrack(
+            "video"
+        );
+
+
+    if (
+        videoTrack &&
+        cameraEnabled
+    ) {
+
+        const stream =
+            localStream;
+
+
+        addVideoTile(
+
+            currentUser.id,
+
+            stream,
+
+            profileData.nickname ||
+                "Вы",
+
+            true
+
+        );
+
+        return;
+
+    }
+
+
+    addLocalPlaceholderTile();
+
+}
+
+
+function addLocalPlaceholderTile() {
+
+    const container =
+        $("conference-videos");
+
+
+    if (!container || !currentUser) {
+        return;
+    }
+
+
+    const placeholder =
+        container.querySelector(
+            ".conference-placeholder"
+        );
+
+
+    if (placeholder && conferenceParticipants &&
+        Object.keys(conferenceParticipants).length === 0) {
+
+        placeholder.remove();
+
+    }
+
+
+    const tile =
+        document.createElement(
+            "div"
+        );
+
+
+    tile.className =
+        "video-tile";
+
+
+    tile.dataset.peerId =
+        currentUser.id;
+
+
+    tile.innerHTML = `
+
+        <div
+            style="
+                width:100%;
+                height:100%;
+                min-height:120px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                flex-direction:column;
+                gap:8px;
+                background:rgba(30,40,50,.06);
+                border-radius:12px;
+            "
+        >
+
+            <div
+                style="
+                    font-size:42px;
+                "
+            >
+                ${getLocalTrack("video") ? "◉" : "🤖"}
+            </div>
+
+            <strong>
+                ${escapeHtml(
+                    profileData.nickname ||
+                    "Вы"
+                )}
+            </strong>
+
+            <span
+                style="
+                    font-size:11px;
+                    opacity:.7;
+                "
+            >
+                ${
+                    cameraEnabled
+                        ? "Камера активна"
+                        : "Камера выключена"
+                }
+            </span>
+
+        </div>
+
+    `;
+
+
+    container.appendChild(
+        tile
     );
 
 }
@@ -5414,6 +6852,35 @@ function addVideoTile(
     if (placeholder) {
 
         placeholder.remove();
+
+    }
+
+
+    const existing =
+        container.querySelector(
+            '[data-peer-id="' +
+            id +
+            '"]'
+        );
+
+
+    if (existing) {
+
+        const existingVideo =
+            existing.querySelector(
+                "video"
+            );
+
+
+        if (existingVideo) {
+
+            existingVideo.srcObject =
+                stream;
+
+        }
+
+
+        return;
 
     }
 
@@ -5542,6 +7009,34 @@ function removePeer(
 
     }
 
+
+    if (
+        conferenceJoined &&
+        Object.keys(
+            peerConnections
+        ).length === 0
+    ) {
+
+        const localTile =
+            document.querySelector(
+                '[data-peer-id="' +
+                (
+                    currentUser
+                        ? currentUser.id
+                        : ""
+                ) +
+                '"]'
+            );
+
+
+        if (!localTile) {
+
+            addLocalPlaceholderTile();
+
+        }
+
+    }
+
 }
 
 
@@ -5585,13 +7080,28 @@ function updateConferenceButtons() {
    MIC
 ========================================================= */
 
-function toggleConferenceMic() {
+async function toggleConferenceMic() {
 
-    if (!localStream) {
+    if (!conferenceJoined) {
 
         showInfo(
             "Сначала войдите в конференцию."
         );
+
+        return;
+
+    }
+
+
+    const existingTrack =
+        getLocalTrack(
+            "audio"
+        );
+
+
+    if (!existingTrack) {
+
+        await enableConferenceMic();
 
         return;
 
@@ -5602,36 +7112,21 @@ function toggleConferenceMic() {
         !micEnabled;
 
 
-    localStream
-        .getAudioTracks()
-        .forEach(
-            function (track) {
-
-                track.enabled =
-                    micEnabled;
-
-            }
-        );
+    existingTrack.enabled =
+        micEnabled;
 
 
-    const button =
-        $("conference-mic");
+    if (!micEnabled) {
 
-
-    if (button) {
-
-        button.textContent =
-            micEnabled
-                ? "Микрофон"
-                : "Микрофон выкл.";
-
-
-        button.classList.toggle(
-            "active",
-            !micEnabled
-        );
+        /*
+           Track остаётся в localStream,
+           но перестаёт передавать звук.
+        */
 
     }
+
+
+    updateConferenceMediaButtons();
 
 }
 
@@ -5640,9 +7135,9 @@ function toggleConferenceMic() {
    CAMERA
 ========================================================= */
 
-function toggleConferenceCamera() {
+async function toggleConferenceCamera() {
 
-    if (!localStream) {
+    if (!conferenceJoined) {
 
         showInfo(
             "Сначала войдите в конференцию."
@@ -5653,40 +7148,32 @@ function toggleConferenceCamera() {
     }
 
 
+    const existingTrack =
+        getLocalTrack(
+            "video"
+        );
+
+
+    if (!existingTrack) {
+
+        await enableConferenceCamera();
+
+        return;
+
+    }
+
+
     cameraEnabled =
         !cameraEnabled;
 
 
-    localStream
-        .getVideoTracks()
-        .forEach(
-            function (track) {
-
-                track.enabled =
-                    cameraEnabled;
-
-            }
-        );
+    existingTrack.enabled =
+        cameraEnabled;
 
 
-    const button =
-        $("conference-camera");
+    updateLocalVideo();
 
-
-    if (button) {
-
-        button.textContent =
-            cameraEnabled
-                ? "Камера"
-                : "Камера выкл.";
-
-
-        button.classList.toggle(
-            "active",
-            !cameraEnabled
-        );
-
-    }
+    updateConferenceMediaButtons();
 
 }
 
@@ -5741,7 +7228,9 @@ async function toggleConferenceScreen() {
 
 
             if (!screenTrack) {
+
                 return;
+
             }
 
 
@@ -5753,7 +7242,7 @@ async function toggleConferenceScreen() {
                 peerConnections
             )
                 .forEach(
-                    function (peerId) {
+                    async function (peerId) {
 
                         const connection =
                             peerConnections[
@@ -5761,35 +7250,104 @@ async function toggleConferenceScreen() {
                             ];
 
 
-                        const sender =
+                        if (!connection) {
+                            return;
+                        }
+
+
+                        let transceiver =
                             connection
-                                .getSenders()
+                                .getTransceivers()
                                 .find(
                                     function (item) {
 
                                         return (
-
-                                            item.track &&
-
-                                            item.track.kind ===
+                                            item.receiver &&
+                                            item.receiver.track &&
+                                            item.receiver.track.kind ===
                                                 "video"
-
                                         );
 
                                     }
                                 );
 
 
-                        if (sender) {
+                        if (!transceiver) {
 
-                            sender.replaceTrack(
+                            transceiver =
+                                connection.addTransceiver(
+                                    "video",
+                                    {
+                                        direction:
+                                            "sendrecv"
+                                    }
+                                );
+
+                        }
+
+
+                        try {
+
+                            await transceiver.sender.replaceTrack(
                                 screenTrack
+                            );
+
+
+                            transceiver.direction =
+                                "sendrecv";
+
+                        } catch (error) {
+
+                            console.warn(
+                                "Screen sender error:",
+                                error
                             );
 
                         }
 
                     }
                 );
+
+
+            /*
+               Показываем экран локально.
+            */
+
+            const container =
+                $("conference-videos");
+
+
+            if (container) {
+
+                const oldLocal =
+                    container.querySelector(
+                        '[data-peer-id="' +
+                        currentUser.id +
+                        '"]'
+                    );
+
+
+                if (oldLocal) {
+
+                    oldLocal.remove();
+
+                }
+
+
+                addVideoTile(
+
+                    currentUser.id,
+
+                    screenStream,
+
+                    profileData.nickname ||
+                        "Вы",
+
+                    true
+
+                );
+
+            }
 
 
             screenTrack.onended =
@@ -5800,21 +7358,9 @@ async function toggleConferenceScreen() {
                 };
 
 
-            const button =
-                $("conference-screen");
+            updateConferenceMediaButtons();
 
-
-            if (button) {
-
-                button.textContent =
-                    "Экран вкл.";
-
-
-                button.classList.add(
-                    "active"
-                );
-
-            }
+            await renegotiatePeers();
 
         } else {
 
@@ -5829,10 +7375,25 @@ async function toggleConferenceScreen() {
             error
         );
 
+
+        screenSharing =
+            false;
+
+
+        screenStream =
+            null;
+
+
+        updateConferenceMediaButtons();
+
     }
 
 }
 
+
+/* =========================================================
+   STOP SCREEN SHARE
+========================================================= */
 
 async function stopScreenShare() {
 
@@ -5860,17 +7421,16 @@ async function stopScreenShare() {
 
 
     const cameraTrack =
-        localStream &&
-        localStream.getVideoTracks()[0]
-            ? localStream.getVideoTracks()[0]
-            : null;
+        getLocalTrack(
+            "video"
+        );
 
 
     Object.keys(
         peerConnections
     )
         .forEach(
-            function (peerId) {
+            async function (peerId) {
 
                 const connection =
                     peerConnections[
@@ -5878,32 +7438,62 @@ async function stopScreenShare() {
                     ];
 
 
-                const sender =
+                if (!connection) {
+                    return;
+                }
+
+
+                const transceiver =
                     connection
-                        .getSenders()
+                        .getTransceivers()
                         .find(
                             function (item) {
 
                                 return (
-
-                                    item.track &&
-
-                                    item.track.kind ===
+                                    item.receiver &&
+                                    item.receiver.track &&
+                                    item.receiver.track.kind ===
                                         "video"
-
                                 );
 
                             }
                         );
 
 
-                if (
-                    sender &&
-                    cameraTrack
-                ) {
+                if (!transceiver) {
+                    return;
+                }
 
-                    sender.replaceTrack(
-                        cameraTrack
+
+                try {
+
+                    if (cameraTrack) {
+
+                        await transceiver.sender.replaceTrack(
+                            cameraTrack
+                        );
+
+
+                        transceiver.direction =
+                            "sendrecv";
+
+                    } else {
+
+                        await transceiver.sender.replaceTrack(
+                            null
+                        );
+
+
+                        transceiver.direction =
+                            "recvonly";
+
+                    }
+
+                } catch (error) {
+
+                    console.warn(
+                        "Restore camera track:",
+                        error
                     );
 
                 }
@@ -5912,21 +7502,59 @@ async function stopScreenShare() {
         );
 
 
-    const button =
-        $("conference-screen");
+    updateLocalVideo();
+
+    updateConferenceMediaButtons();
+
+    await renegotiatePeers();
+
+}
 
 
-    if (button) {
+/* =========================================================
+   REFRESH CONFERENCE VIDEO
+========================================================= */
 
-        button.textContent =
-            "Экран";
+function updateConferenceVideos() {
 
+    if (!conferenceJoined) {
 
-        button.classList.remove(
-            "active"
+        showInfo(
+            "Сначала войдите в конференцию."
         );
 
+        return;
+
     }
+
+
+    updateLocalVideo();
+
+
+    Object.keys(
+        conferenceParticipants
+    )
+        .forEach(
+            function (peerId) {
+
+                const stream =
+                    conferenceParticipants[
+                        peerId
+                    ];
+
+
+                if (!stream) {
+                    return;
+                }
+
+
+                addRemoteVideo(
+                    peerId,
+                    stream
+                );
+
+            }
+        );
 
 }
 
@@ -6072,6 +7700,14 @@ async function stopConference() {
         false;
 
 
+    micEnabled =
+        false;
+
+
+    cameraEnabled =
+        false;
+
+
     screenSharing =
         false;
 
@@ -6082,6 +7718,8 @@ async function stopConference() {
 
 
     updateConferenceButtons();
+
+    updateConferenceMediaButtons();
 
 
     const videos =
@@ -6103,51 +7741,12 @@ async function stopConference() {
                 </strong>
 
                 <span>
-                    Нажмите «Войти в конференцию».
+                    Войти можно без камеры и микрофона.
                 </span>
 
             </div>
 
         `;
-
-    }
-
-
-    if ($("conference-mic")) {
-
-        $("conference-mic").textContent =
-            "Микрофон";
-
-
-        $("conference-mic").classList.remove(
-            "active"
-        );
-
-    }
-
-
-    if ($("conference-camera")) {
-
-        $("conference-camera").textContent =
-            "Камера";
-
-
-        $("conference-camera").classList.remove(
-            "active"
-        );
-
-    }
-
-
-    if ($("conference-screen")) {
-
-        $("conference-screen").textContent =
-            "Экран";
-
-
-        $("conference-screen").classList.remove(
-            "active"
-        );
 
     }
 
@@ -6267,6 +7866,16 @@ document.addEventListener(
         initProfileButtons();
 
         initAvatarPreview();
+
+
+        if (logoutButton) {
+
+            logoutButton.addEventListener(
+                "click",
+                logoutUser
+            );
+
+        }
 
 
         if (!initSupabase()) {
