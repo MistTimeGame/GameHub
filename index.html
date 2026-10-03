@@ -22,23 +22,122 @@ Game Platform
 <header class="header">
 
 
+<div class="brand">
+
+
 <div class="logo">
+
 GP
+
 </div>
 
 
 <h1>
+
 Game Platform
+
 </h1>
+
+
+</div>
+
+
+
+
+
+<nav class="flash-menu">
+
+
+<div class="menu-item active">
+
+Главная
+
+</div>
+
+
+
+
+<div class="menu-item dropdown">
+
+
+Игры ▼
+
+
+
+<div class="dropdown-content">
+
+
+<div>
+Все игры
+</div>
+
+
+<div>
+Новые
+</div>
+
+
+<div>
+Популярные
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="menu-item">
+
+Гильдии
+
+</div>
+
+
+
+
+
+<div class="menu-item">
+
+Рейтинг
+
+</div>
+
+
+
+
+
+<div class="menu-item">
+
+Новости
+
+</div>
+
+
+
+</nav>
+
+
+
+
 
 
 <div id="userPanel">
 
+
 <button onclick="openAuth()">
+
 Войти
+
 </button>
 
+
 </div>
+
 
 
 </header>
@@ -47,20 +146,29 @@ Game Platform
 
 
 
+
+
+
 <main>
+
 
 
 <section class="hero">
 
 
 <h2>
+
 Игровая платформа
+
 </h2>
 
 
 <p>
-Создавайте игровые сообщества, гильдии и игровые проекты
+
+Создавайте игровые сообщества, гильдии и проекты
+
 </p>
+
 
 
 </section>
@@ -75,8 +183,12 @@ Game Platform
 
 
 <h2>
+
 Игры
+
 </h2>
+
+
 
 
 
@@ -84,19 +196,29 @@ Game Platform
 
 
 <input
+
 id="search"
+
 placeholder="Поиск игры..."
+
 oninput="searchGames()"
->
+
+/>
+
+
 
 
 <button onclick="openAddGame()">
+
 Добавить игру
+
 </button>
 
 
 
 </div>
+
+
 
 
 
@@ -120,35 +242,54 @@ oninput="searchGames()"
 
 
 <section
+
 id="addGame"
+
 class="card"
-hidden
->
+
+hidden>
 
 
 <h2>
+
 Добавить игру
+
 </h2>
 
 
 
+
 <input
+
 id="gameName"
+
 placeholder="Название игры"
+
 >
 
 
+
 <textarea
+
 id="gameDescription"
+
 placeholder="Описание игры">
+
 </textarea>
 
 
 
+
+
 <input
+
 id="gameImage"
+
 placeholder="Ссылка на изображение"
+
 >
+
+
 
 
 
@@ -157,6 +298,7 @@ placeholder="Ссылка на изображение"
 Создать
 
 </button>
+
 
 
 
@@ -171,33 +313,49 @@ placeholder="Ссылка на изображение"
 
 
 <section
+
 id="authWindow"
+
 class="modal"
-hidden
->
+
+hidden>
+
 
 
 <div class="modal-box">
 
 
+
 <h2>
+
 Вход
+
 </h2>
 
 
 
+
 <input
+
 id="email"
+
 placeholder="Email"
+
 >
+
 
 
 
 <input
+
 id="password"
+
 type="password"
+
 placeholder="Пароль"
+
 >
+
 
 
 
@@ -210,35 +368,58 @@ placeholder="Пароль"
 
 
 
+
+
+
 <hr>
 
 
 
+
+
+
+
 <h3>
+
 Регистрация
+
 </h3>
 
 
 
+
 <input
+
 id="regEmail"
+
 placeholder="Email"
+
 >
 
 
 
+
 <input
+
 id="regPassword"
+
 type="password"
+
 placeholder="Пароль"
+
 >
+
 
 
 
 <input
+
 id="nickname"
+
 placeholder="Никнейм"
+
 >
+
 
 
 
@@ -253,9 +434,8 @@ placeholder="Никнейм"
 
 </div>
 
+
 </section>
-
-
 
 
 
@@ -268,11 +448,14 @@ placeholder="Никнейм"
 
 
 
+
+
 <div id="version">
 
-v1.0.0
+v1.1.0
 
 </div>
+
 
 
 
@@ -282,5 +465,6 @@ v1.0.0
 
 
 </body>
+
 
 </html>
