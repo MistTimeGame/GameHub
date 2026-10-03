@@ -18,125 +18,81 @@ const SUPABASE_URL =
 const SUPABASE_PUBLISHABLE_KEY =
     "sb_publishable_yNWxh02tapOVUQN9iJ_2_Q_IPVc60J3";
 
-
-/* =========================================================
-   APP
-========================================================= */
-
 const APP_VERSION =
     "1.7.2";
 
 
-let supabaseClient =
-    null;
-
-
-let currentUser =
-    null;
-
-
-let currentSession =
-    null;
-
-
-let currentPage =
-    "home";
-
-
 /* =========================================================
-   PROFILE
+   GLOBAL STATE
 ========================================================= */
 
+let supabaseClient = null;
+
+let currentUser = null;
+let currentSession = null;
+
+let currentPage = "home";
+
 let profileData = {
-
-    nickname:
-        "Player",
-
-    status:
-        "Онлайн"
-
+    nickname: "Player",
+    status: "Онлайн",
+    age: null,
+    city: "",
+    about: "",
+    avatar_url: "",
+    vip_level: 0
 };
 
 
 /* =========================================================
-   GLOBAL PRESENCE
+   PRESENCE
 ========================================================= */
 
-let onlinePresenceChannel =
-    null;
+let presenceChannel = null;
 
+let presenceUsers = {};
 
-let onlinePlayers =
-    [];
-
-
-const presenceKey =
-    typeof crypto !== "undefined" &&
-    typeof crypto.randomUUID === "function"
-
-        ? crypto.randomUUID()
-
-        : (
-            Date.now().toString(36) +
-            "-" +
-            Math.random().toString(36).slice(2)
-        );
+let presenceReady = false;
 
 
 /* =========================================================
    CHAT
 ========================================================= */
 
-let chatRooms =
-    [];
+let currentChatRoom = {
+    type: "global",
+    gameId: null,
+    guildId: null
+};
 
-let activeChatRoom =
-    null;
+let chatChannel = null;
 
-let chatChannel =
-    null;
+let chatMessages = [];
+
+let chatSubscriptionReady = false;
 
 
 /* =========================================================
-   VIDEO CALL
+   WEBRTC
 ========================================================= */
 
-let callChannel =
-    null;
+let callChannel = null;
 
-let callRoom =
-    null;
+let localStream = null;
 
-let callSessionId =
-    null;
+let screenStream = null;
 
-let localMediaStream =
-    null;
+let peerConnections = {};
 
-let screenMediaStream =
-    null;
+let callRoomId = null;
 
-let callPeers =
-    new Map();
+let callParticipants = {};
 
-let callPresenceUsers =
-    new Map();
+let microphoneEnabled = true;
 
-let pendingIceCandidates =
-    new Map();
+let cameraEnabled = true;
 
-let sentOffers =
-    new Set();
-
-
-const ICE_SERVERS = [
-
-    {
-        urls:
-            "stun:stun.l.google.com:19302"
-    }
-
-];
+let screenSharing = false;
 
 
 /* =========================================================
@@ -144,250 +100,186 @@ const ICE_SERVERS = [
 ========================================================= */
 
 const authScreen =
-    document.getElementById(
-        "auth-screen"
-    );
-
+    document.getElementById("auth-screen");
 
 const appShell =
-    document.getElementById(
-        "app-shell"
-    );
-
+    document.getElementById("app-shell");
 
 const loginTab =
-    document.getElementById(
-        "login-tab"
-    );
-
+    document.getElementById("login-tab");
 
 const registerTab =
-    document.getElementById(
-        "register-tab"
-    );
-
+    document.getElementById("register-tab");
 
 const loginForm =
-    document.getElementById(
-        "login-form"
-    );
-
+    document.getElementById("login-form");
 
 const registerForm =
-    document.getElementById(
-        "register-form"
-    );
-
-
-const authTitle =
-    document.getElementById(
-        "auth-title"
-    );
-
-
-const authSubtitle =
-    document.getElementById(
-        "auth-subtitle"
-    );
-
+    document.getElementById("register-form");
 
 const authMessage =
-    document.getElementById(
-        "auth-message"
-    );
+    document.getElementById("auth-message");
+
+const authTitle =
+    document.getElementById("auth-title");
+
+const authSubtitle =
+    document.getElementById("auth-subtitle");
+
+const logoutButton =
+    document.getElementById("logout-button");
+
+const profileForm =
+    document.getElementById("profile-form");
 
 
 /* =========================================================
-   START
+   BASIC HELPERS
 ========================================================= */
 
-document.addEventListener(
-    "DOMContentLoaded",
-    async () => {
+function escapeHtml(value) {
 
-        updateVersion();
-
-        initAuthTabs();
-
-        initForms();
-
-        initNavigation();
-
-        initModals();
-
-        initButtons();
-
-
-        if (
-            !window.supabase ||
-            typeof window.supabase.createClient !==
-                "function"
-        ) {
-
-            showAuthMessage(
-                "Не удалось загрузить библиотеку Supabase.",
-                "error"
-            );
-
-            return;
-        }
-
-
-        try {
-
-            supabaseClient =
-                window.supabase.createClient(
-                    SUPABASE_URL,
-                    SUPABASE_PUBLISHABLE_KEY,
-                    {
-
-                        auth: {
-
-                            persistSession:
-                                true,
-
-                            autoRefreshToken:
-                                true,
-
-                            detectSessionInUrl:
-                                true
-
-                        }
-
-                    }
-                );
-
-        } catch (error) {
-
-            console.error(
-                "Supabase initialization error:",
-                error
-            );
-
-            showAuthMessage(
-                "Не удалось подключить Supabase.",
-                "error"
-            );
-
-            return;
-        }
-
-
-        subscribeAuthState();
-
-        await loadInitialSession();
-
-    }
-);
-
-
-/* =========================================================
-   SESSION
-========================================================= */
-
-async function loadInitialSession() {
-
-    const {
-        data,
-        error
-    } =
-        await supabaseClient.auth.getSession();
-
-
-    if (error) {
-
-        console.error(
-            "Session error:",
-            error
-        );
-
-        showAuthMessage(
-            "Не удалось получить текущую сессию.",
-            "error"
-        );
-
-        showAuthScreen();
-
-        return;
+    if (value === null || value === undefined) {
+        return "";
     }
 
-
-    currentSession =
-        data.session || null;
-
-
-    currentUser =
-        data.session
-            ? data.session.user
-            : null;
-
-
-    if (currentUser) {
-
-        await enterApplication();
-
-    } else {
-
-        showAuthScreen();
-
-    }
-
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 
-function subscribeAuthState() {
+function getInitials(name) {
 
-    supabaseClient.auth.onAuthStateChange(
-        (
-            event,
-            session
-        ) => {
+    const text =
+        String(name || "Player")
+            .trim();
 
-            console.log(
-                "Auth state:",
-                event
-            );
+    if (!text) {
+        return "?";
+    }
+
+    const parts =
+        text
+            .split(/\s+/)
+            .filter(Boolean);
+
+    if (parts.length === 1) {
+        return parts[0]
+            .slice(0, 2)
+            .toUpperCase();
+    }
+
+    return (
+        parts[0][0] +
+        parts[parts.length - 1][0]
+    ).toUpperCase();
+}
 
 
-            currentSession =
-                session || null;
+function setText(id, value) {
+
+    const element =
+        document.getElementById(id);
+
+    if (!element) {
+        return;
+    }
+
+    element.textContent =
+        value === null ||
+        value === undefined
+            ? ""
+            : value;
+}
 
 
-            currentUser =
-                session
-                    ? session.user
-                    : null;
+function showAuthMessage(message, type = "error") {
+
+    if (!authMessage) {
+        return;
+    }
+
+    authMessage.textContent =
+        message || "";
+
+    authMessage.className =
+        "auth-message " +
+        type;
+}
 
 
-            if (session) {
+function clearAuthMessage() {
 
-                setTimeout(
-                    () => {
+    if (!authMessage) {
+        return;
+    }
 
-                        enterApplication();
+    authMessage.textContent = "";
 
-                    },
-                    0
-                );
+    authMessage.className =
+        "auth-message";
+}
 
-            } else {
 
-                setTimeout(
-                    () => {
+function showModal(id) {
 
-                        cleanupRealtime();
+    const modal =
+        document.getElementById(id);
 
-                        showAuthScreen();
+    if (!modal) {
+        return;
+    }
 
-                    },
-                    0
-                );
+    modal.classList.add("open");
+}
 
+
+function hideModal(id) {
+
+    const modal =
+        document.getElementById(id);
+
+    if (!modal) {
+        return;
+    }
+
+    modal.classList.remove("open");
+}
+
+
+/* =========================================================
+   VERSION
+========================================================= */
+
+function updateVersion() {
+
+    document
+        .querySelectorAll(".site-version")
+        .forEach(function (element) {
+
+            element.textContent =
+                "v" + APP_VERSION;
+
+        });
+
+
+    document
+        .querySelectorAll(".auth-footer")
+        .forEach(function (element) {
+
+            const spans =
+                element.querySelectorAll("span");
+
+            if (spans.length > 0) {
+                spans[0].nextSibling.textContent =
+                    " v" + APP_VERSION;
             }
 
-        }
-    );
-
+        });
 }
 
 
@@ -397,117 +289,127 @@ function subscribeAuthState() {
 
 function initAuthTabs() {
 
-    loginTab?.addEventListener(
-        "click",
-        () => {
+    if (loginTab) {
 
-            loginTab.classList.add(
-                "active"
-            );
+        loginTab.addEventListener(
+            "click",
+            function () {
 
-            registerTab.classList.remove(
-                "active"
-            );
+                loginTab.classList.add("active");
 
+                if (registerTab) {
+                    registerTab.classList.remove("active");
+                }
 
-            loginForm.classList.remove(
-                "hidden"
-            );
+                if (loginForm) {
+                    loginForm.classList.remove("hidden");
+                }
 
-            registerForm.classList.add(
-                "hidden"
-            );
+                if (registerForm) {
+                    registerForm.classList.add("hidden");
+                }
 
+                if (authTitle) {
+                    authTitle.textContent =
+                        "Добро пожаловать";
+                }
 
-            authTitle.textContent =
-                "Добро пожаловать";
+                if (authSubtitle) {
+                    authSubtitle.textContent =
+                        "Войдите в свой игровой профиль";
+                }
 
+                clearAuthMessage();
 
-            authSubtitle.textContent =
-                "Войдите в свой игровой профиль";
+            }
+        );
 
-
-            clearAuthMessage();
-
-        }
-    );
-
-
-    registerTab?.addEventListener(
-        "click",
-        () => {
-
-            registerTab.classList.add(
-                "active"
-            );
-
-            loginTab.classList.remove(
-                "active"
-            );
+    }
 
 
-            registerForm.classList.remove(
-                "hidden"
-            );
+    if (registerTab) {
 
-            loginForm.classList.add(
-                "hidden"
-            );
+        registerTab.addEventListener(
+            "click",
+            function () {
 
+                registerTab.classList.add("active");
 
-            authTitle.textContent =
-                "Создать профиль";
+                if (loginTab) {
+                    loginTab.classList.remove("active");
+                }
 
+                if (registerForm) {
+                    registerForm.classList.remove("hidden");
+                }
 
-            authSubtitle.textContent =
-                "Присоединитесь к Game Platform";
+                if (loginForm) {
+                    loginForm.classList.add("hidden");
+                }
 
+                if (authTitle) {
+                    authTitle.textContent =
+                        "Создать профиль";
+                }
 
-            clearAuthMessage();
+                if (authSubtitle) {
+                    authSubtitle.textContent =
+                        "Присоединитесь к игровому сообществу";
+                }
 
-        }
-    );
+                clearAuthMessage();
+
+            }
+        );
+
+    }
 
 }
 
 
 /* =========================================================
-   FORMS
+   INIT FORMS
 ========================================================= */
 
 function initForms() {
 
-    loginForm?.addEventListener(
-        "submit",
-        async event => {
+    if (loginForm) {
 
-            event.preventDefault();
-
-            await loginUser();
-
-        }
-    );
-
-
-    registerForm?.addEventListener(
-        "submit",
-        async event => {
-
-            event.preventDefault();
-
-            await registerUser();
-
-        }
-    );
-
-
-    document
-        .getElementById(
-            "profile-form"
-        )
-        ?.addEventListener(
+        loginForm.addEventListener(
             "submit",
-            async event => {
+            async function (event) {
+
+                event.preventDefault();
+
+                await loginUser();
+
+            }
+        );
+
+    }
+
+
+    if (registerForm) {
+
+        registerForm.addEventListener(
+            "submit",
+            async function (event) {
+
+                event.preventDefault();
+
+                await registerUser();
+
+            }
+        );
+
+    }
+
+
+    if (profileForm) {
+
+        profileForm.addEventListener(
+            "submit",
+            async function (event) {
 
                 event.preventDefault();
 
@@ -515,6 +417,8 @@ function initForms() {
 
             }
         );
+
+    }
 
 }
 
@@ -525,41 +429,59 @@ function initForms() {
 
 async function loginUser() {
 
-    const email =
-        document
-            .getElementById(
-                "login-email"
-            )
-            ?.value
-            .trim();
-
-
-    const password =
-        document
-            .getElementById(
-                "login-password"
-            )
-            ?.value || "";
-
-
-    if (!email || !password) {
+    if (!supabaseClient) {
 
         showAuthMessage(
-            "Введите email и пароль.",
-            "error"
+            "Supabase ещё не инициализирован."
         );
 
         return;
     }
 
 
-    setAuthLoading(
-        loginForm,
-        true
-    );
+    const emailInput =
+        document.getElementById("login-email");
+
+    const passwordInput =
+        document.getElementById("login-password");
+
+
+    const email =
+        emailInput
+            ? emailInput.value.trim()
+            : "";
+
+    const password =
+        passwordInput
+            ? passwordInput.value
+            : "";
+
+
+    if (!email || !password) {
+
+        showAuthMessage(
+            "Введите email и пароль."
+        );
+
+        return;
+    }
 
 
     clearAuthMessage();
+
+
+    const submitButton =
+        loginForm
+            ? loginForm.querySelector(
+                'button[type="submit"]'
+            )
+            : null;
+
+
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Вход...";
+    }
 
 
     try {
@@ -568,51 +490,31 @@ async function loginUser() {
             data,
             error
         } =
-            await supabaseClient
-                .auth
-                .signInWithPassword({
-
-                    email,
-
-                    password
-
-                });
+            await supabaseClient.auth.signInWithPassword({
+                email,
+                password
+            });
 
 
         if (error) {
-
-            showAuthMessage(
-                translateSupabaseError(error),
-                "error"
-            );
-
-            return;
-        }
-
-
-        if (!data || !data.user) {
-
-            showAuthMessage(
-                "Supabase не вернул пользователя после входа.",
-                "error"
-            );
-
-            return;
+            throw error;
         }
 
 
         currentSession =
             data.session || null;
 
-
         currentUser =
-            data.user;
+            data.user || null;
 
 
-        console.log(
-            "Login successful:",
-            currentUser.id
-        );
+        if (!currentUser) {
+
+            throw new Error(
+                "Supabase не вернул пользователя."
+            );
+
+        }
 
 
         await enterApplication();
@@ -624,18 +526,21 @@ async function loginUser() {
             error
         );
 
-
         showAuthMessage(
-            translateSupabaseError(error),
-            "error"
+            error.message ||
+            "Не удалось войти."
         );
 
     } finally {
 
-        setAuthLoading(
-            loginForm,
-            false
-        );
+        if (submitButton) {
+
+            submitButton.disabled = false;
+
+            submitButton.textContent =
+                "Войти";
+
+        }
 
     }
 
@@ -648,116 +553,248 @@ async function loginUser() {
 
 async function registerUser() {
 
-    const nickname =
-        document
-            .getElementById(
-                "register-nickname"
-            )
-            ?.value
-            .trim() || "";
+    if (!supabaseClient) {
 
+        showAuthMessage(
+            "Supabase ещё не инициализирован."
+        );
+
+        return;
+    }
+
+
+    const nicknameInput =
+        document.getElementById(
+            "register-nickname"
+        );
+
+    const emailInput =
+        document.getElementById(
+            "register-email"
+        );
+
+    const passwordInput =
+        document.getElementById(
+            "register-password"
+        );
+
+    const confirmInput =
+        document.getElementById(
+            "register-password-confirm"
+        );
+
+
+    const nickname =
+        nicknameInput
+            ? nicknameInput.value.trim()
+            : "";
 
     const email =
-        document
-            .getElementById(
-                "register-email"
-            )
-            ?.value
-            .trim() || "";
-
+        emailInput
+            ? emailInput.value.trim()
+            : "";
 
     const password =
-        document
-            .getElementById(
-                "register-password"
-            )
-            ?.value || "";
+        passwordInput
+            ? passwordInput.value
+            : "";
+
+    const confirmPassword =
+        confirmInput
+            ? confirmInput.value
+            : "";
 
 
-    const passwordConfirm =
-        document
-            .getElementById(
-                "register-password-confirm"
-            )
-            ?.value || "";
-
-
-    if (
-        nickname.length < 3
-    ) {
+    if (!nickname) {
 
         showAuthMessage(
-            "Никнейм должен содержать минимум 3 символа.",
-            "error"
+            "Введите никнейм."
         );
 
         return;
     }
 
 
-    if (
-        nickname.length > 24
-    ) {
+    if (password !== confirmPassword) {
 
         showAuthMessage(
-            "Никнейм не должен быть длиннее 24 символов.",
-            "error"
+            "Пароли не совпадают."
         );
 
         return;
     }
 
 
-    if (!email) {
+    if (password.length < 6) {
 
         showAuthMessage(
-            "Введите email.",
-            "error"
+            "Пароль должен содержать минимум 6 символов."
         );
 
         return;
     }
-
-
-    if (
-        password.length < 6
-    ) {
-
-        showAuthMessage(
-            "Пароль должен содержать минимум 6 символов.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    if (
-        password !==
-        passwordConfirm
-    ) {
-
-        showAuthMessage(
-            "Пароли не совпадают.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    setAuthLoading(
-        registerForm,
-        true
-    );
 
 
     clearAuthMessage();
 
 
-    const redirectUrl =
-        window.location.origin +
-        window.location.pathname;
+    const submitButton =
+        registerForm
+            ? registerForm.querySelector(
+                'button[type="submit"]'
+            )
+            : null;
+
+
+    if (submitButton) {
+
+        submitButton.disabled = true;
+
+        submitButton.textContent =
+            "Создание...";
+
+    }
+
+
+    try {
+
+        const redirectUrl =
+            window.location.origin +
+            window.location.pathname;
+
+
+        const {
+            data,
+            error
+        } =
+            await supabaseClient.auth.signUp({
+
+                email,
+
+                password,
+
+                options: {
+
+                    emailRedirectTo:
+                        redirectUrl,
+
+                    data: {
+
+                        nickname,
+
+                        status: "Онлайн"
+
+                    }
+
+                }
+
+            });
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        currentSession =
+            data.session || null;
+
+        currentUser =
+            data.user || null;
+
+
+        if (data.session) {
+
+            await enterApplication();
+
+        } else {
+
+            showAuthMessage(
+                "Аккаунт создан. Проверьте почту для подтверждения.",
+                "success"
+            );
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Register error:",
+            error
+        );
+
+        showAuthMessage(
+            error.message ||
+            "Не удалось создать аккаунт."
+        );
+
+    } finally {
+
+        if (submitButton) {
+
+            submitButton.disabled = false;
+
+            submitButton.textContent =
+                "Создать аккаунт";
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   AUTH STATE
+========================================================= */
+
+function subscribeAuthState() {
+
+    if (!supabaseClient) {
+        return;
+    }
+
+
+    supabaseClient.auth.onAuthStateChange(
+        async function (
+            event,
+            session
+        ) {
+
+            currentSession =
+                session || null;
+
+            currentUser =
+                session
+                    ? session.user
+                    : null;
+
+
+            if (session && session.user) {
+
+                await enterApplication();
+
+            } else {
+
+                leaveApplication();
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   INITIAL SESSION
+========================================================= */
+
+async function loadInitialSession() {
+
+    if (!supabaseClient) {
+        return;
+    }
 
 
     try {
@@ -766,101 +803,41 @@ async function registerUser() {
             data,
             error
         } =
-            await supabaseClient
-                .auth
-                .signUp({
-
-                    email,
-
-                    password,
-
-                    options: {
-
-                        data: {
-
-                            nickname,
-
-                            status:
-                                "Онлайн"
-
-                        },
-
-                        emailRedirectTo:
-                            redirectUrl
-
-                    }
-
-                });
+            await supabaseClient.auth.getSession();
 
 
         if (error) {
-
-            showAuthMessage(
-                translateSupabaseError(error),
-                "error"
-            );
-
-            return;
-        }
-
-
-        if (
-            data.user &&
-            !data.session
-        ) {
-
-            registerForm.reset();
-
-
-            showAuthMessage(
-                "Аккаунт создан. Проверьте почту и подтвердите email.",
-                "success"
-            );
-
-            return;
+            throw error;
         }
 
 
         currentSession =
             data.session || null;
 
-
         currentUser =
-            data.user || null;
+            data.session
+                ? data.session.user
+                : null;
 
 
-        if (!currentUser) {
+        if (currentSession && currentUser) {
 
-            showAuthMessage(
-                "Регистрация выполнена, но пользователь не был возвращён.",
-                "error"
-            );
+            await enterApplication();
 
-            return;
+        } else {
+
+            leaveApplication();
+
         }
-
-
-        await enterApplication();
 
     } catch (error) {
 
         console.error(
-            "Registration error:",
+            "Session error:",
             error
         );
 
-
-        showAuthMessage(
-            translateSupabaseError(error),
-            "error"
-        );
-
-    } finally {
-
-        setAuthLoading(
-            registerForm,
-            false
-        );
+        leaveApplication();
 
     }
 
@@ -874,77 +851,70 @@ async function registerUser() {
 async function enterApplication() {
 
     if (!currentUser) {
-
-        showAuthScreen();
-
         return;
-
     }
 
 
-    console.log(
-        "Entering application:",
-        currentUser.id
-    );
-
-
     if (authScreen) {
-
-        authScreen.style.display =
-            "none";
-
+        authScreen.classList.add("hidden");
     }
 
 
     if (appShell) {
-
-        appShell.classList.add(
-            "visible"
-        );
-
+        appShell.classList.add("visible");
     }
 
 
-    /*
-       ВАЖНО:
-       Ошибка profiles больше НЕ должна
-       блокировать вход в приложение.
-    */
-
-    try {
-
-        await ensureProfile();
-
-    } catch (error) {
-
-        console.error(
-            "ensureProfile failed:",
-            error
-        );
-
-    }
-
+    await ensureProfile();
 
     applyProfile();
 
+    renderPage(currentPage);
 
-    renderPage(
-        currentPage
-    );
+    initGlobalPresence();
+
+}
 
 
-    try {
+/* =========================================================
+   LEAVE APPLICATION
+========================================================= */
 
-        await initGlobalPresence();
+function leaveApplication() {
 
-    } catch (error) {
+    currentUser = null;
 
-        console.error(
-            "Presence initialization failed:",
-            error
-        );
+    currentSession = null;
 
+    profileData = {
+        nickname: "Player",
+        status: "Онлайн",
+        age: null,
+        city: "",
+        about: "",
+        avatar_url: "",
+        vip_level: 0
+    };
+
+
+    if (appShell) {
+        appShell.classList.remove("visible");
     }
+
+
+    if (authScreen) {
+        authScreen.classList.remove("hidden");
+    }
+
+
+    cleanupPresence();
+
+    cleanupChat();
+
+    cleanupCall();
+
+
+    clearProfileUI();
 
 }
 
@@ -956,9 +926,7 @@ async function enterApplication() {
 async function ensureProfile() {
 
     if (!currentUser) {
-
         return;
-
     }
 
 
@@ -980,14 +948,6 @@ async function ensureProfile() {
         "Онлайн";
 
 
-    /*
-       Сначала пытаемся прочитать существующий профиль.
-
-       Это безопаснее, чем делать upsert сразу:
-       если RLS на UPDATE настроен неправильно,
-       обычный вход пользователя всё равно не ломается.
-    */
-
     try {
 
         const {
@@ -997,10 +957,7 @@ async function ensureProfile() {
             await supabaseClient
                 .from("profiles")
                 .select("*")
-                .eq(
-                    "id",
-                    currentUser.id
-                )
+                .eq("id", currentUser.id)
                 .maybeSingle();
 
 
@@ -1011,15 +968,11 @@ async function ensureProfile() {
                 selectError
             );
 
-
             profileData = {
-
                 nickname,
-
-                status
-
+                status,
+                vip_level: 0
             };
-
 
             return;
 
@@ -1031,16 +984,10 @@ async function ensureProfile() {
             profileData =
                 existingProfile;
 
-
             return;
 
         }
 
-
-        /*
-           Профиля ещё нет.
-           Создаём его только один раз.
-        */
 
         const {
             data: newProfile,
@@ -1050,15 +997,13 @@ async function ensureProfile() {
                 .from("profiles")
                 .insert({
 
-                    id:
-                        currentUser.id,
+                    id: currentUser.id,
 
                     nickname,
 
                     status,
 
-                    vip_level:
-                        0
+                    vip_level: 0
 
                 })
                 .select()
@@ -1072,21 +1017,11 @@ async function ensureProfile() {
                 insertError
             );
 
-
-            /*
-               Даже если создание профиля
-               запрещено RLS, приложение
-               продолжает работу.
-            */
-
             profileData = {
-
                 nickname,
-
-                status
-
+                status,
+                vip_level: 0
             };
-
 
             return;
 
@@ -1095,11 +1030,9 @@ async function ensureProfile() {
 
         profileData =
             newProfile || {
-
                 nickname,
-
-                status
-
+                status,
+                vip_level: 0
             };
 
 
@@ -1110,13 +1043,10 @@ async function ensureProfile() {
             error
         );
 
-
         profileData = {
-
             nickname,
-
-            status
-
+            status,
+            vip_level: 0
         };
 
     }
@@ -1124,66 +1054,41 @@ async function ensureProfile() {
 }
 
 
-function getUserNickname() {
-
-    return (
-        profileData.nickname ||
-        "Player"
-    );
-
-}
-
-
-function getUserStatus() {
-
-    return (
-        profileData.status ||
-        "Онлайн"
-    );
-
-}
-
+/* =========================================================
+   APPLY PROFILE
+========================================================= */
 
 function applyProfile() {
 
     const nickname =
-        getUserNickname();
+        profileData.nickname ||
+        "Player";
 
 
     const status =
-        getUserStatus();
+        profileData.status ||
+        "Онлайн";
 
 
-    const letter =
+    setText(
+        "header-nickname",
         nickname
-            .trim()
-            .charAt(0)
-            .toUpperCase() ||
-        "?";
+    );
 
+    setText(
+        "header-status",
+        status
+    );
 
-    const headerNickname =
-        document.getElementById(
-            "header-nickname"
-        );
+    setText(
+        "profile-nickname",
+        nickname
+    );
 
-
-    const profileNickname =
-        document.getElementById(
-            "profile-nickname"
-        );
-
-
-    const headerStatus =
-        document.getElementById(
-            "header-status"
-        );
-
-
-    const profileStatus =
-        document.getElementById(
-            "profile-status"
-        );
+    setText(
+        "profile-status",
+        status
+    );
 
 
     const headerAvatar =
@@ -1191,6 +1096,110 @@ function applyProfile() {
             "header-avatar"
         );
 
+    const profileAvatar =
+        document.getElementById(
+            "profile-avatar"
+        );
+
+
+    const avatarUrl =
+        profileData.avatar_url ||
+        "";
+
+
+    if (avatarUrl) {
+
+        if (headerAvatar) {
+
+            headerAvatar.innerHTML =
+                `<img src="${escapeHtml(avatarUrl)}" alt="Avatar">`;
+
+        }
+
+
+        if (profileAvatar) {
+
+            profileAvatar.innerHTML =
+                `<img src="${escapeHtml(avatarUrl)}" alt="Avatar">`;
+
+        }
+
+    } else {
+
+        const initials =
+            getInitials(nickname);
+
+
+        if (headerAvatar) {
+            headerAvatar.textContent =
+                initials;
+        }
+
+
+        if (profileAvatar) {
+            profileAvatar.textContent =
+                initials;
+        }
+
+    }
+
+
+    const nicknameInput =
+        document.getElementById(
+            "profile-nickname-input"
+        );
+
+    const statusInput =
+        document.getElementById(
+            "profile-status-input"
+        );
+
+
+    if (nicknameInput) {
+        nicknameInput.value =
+            nickname;
+    }
+
+
+    if (statusInput) {
+        statusInput.value =
+            status;
+    }
+
+}
+
+
+/* =========================================================
+   CLEAR PROFILE UI
+========================================================= */
+
+function clearProfileUI() {
+
+    setText(
+        "header-nickname",
+        "Player"
+    );
+
+    setText(
+        "header-status",
+        "Онлайн"
+    );
+
+    setText(
+        "profile-nickname",
+        "Player"
+    );
+
+    setText(
+        "profile-status",
+        "Онлайн"
+    );
+
+
+    const headerAvatar =
+        document.getElementById(
+            "header-avatar"
+        );
 
     const profileAvatar =
         document.getElementById(
@@ -1198,68 +1207,50 @@ function applyProfile() {
         );
 
 
-    if (headerNickname) {
-
-        headerNickname.textContent =
-            nickname;
-
-    }
-
-
-    if (profileNickname) {
-
-        profileNickname.textContent =
-            nickname;
-
-    }
-
-
-    if (headerStatus) {
-
-        headerStatus.textContent =
-            status;
-
-    }
-
-
-    if (profileStatus) {
-
-        profileStatus.textContent =
-            status;
-
-    }
-
-
     if (headerAvatar) {
-
-        headerAvatar.textContent =
-            letter;
-
+        headerAvatar.textContent = "?";
     }
 
 
     if (profileAvatar) {
-
-        profileAvatar.textContent =
-            letter;
-
+        profileAvatar.textContent = "?";
     }
 
 }
 
 
-function openProfile() {
+/* =========================================================
+   SAVE PROFILE
+========================================================= */
+
+async function saveProfile() {
+
+    if (!currentUser) {
+        return;
+    }
+
 
     const nicknameInput =
         document.getElementById(
             "profile-nickname-input"
         );
 
-
     const statusInput =
         document.getElementById(
             "profile-status-input"
         );
+
+
+    const nickname =
+        nicknameInput
+            ? nicknameInput.value.trim()
+            : "";
+
+
+    const status =
+        statusInput
+            ? statusInput.value.trim()
+            : "";
 
 
     const message =
@@ -1268,81 +1259,15 @@ function openProfile() {
         );
 
 
-    if (nicknameInput) {
+    if (!nickname) {
 
-        nicknameInput.value =
-            getUserNickname();
-
-    }
-
-
-    if (statusInput) {
-
-        statusInput.value =
-            getUserStatus();
-
-    }
-
-
-    if (message) {
-
-        message.textContent =
-            "";
-
-    }
-
-
-    openModal(
-        "profile-modal"
-    );
-
-}
-
-
-async function saveProfile() {
-
-    const nickname =
-        document
-            .getElementById(
-                "profile-nickname-input"
-            )
-            ?.value
-            .trim() || "";
-
-
-    const status =
-        document
-            .getElementById(
-                "profile-status-input"
-            )
-            ?.value
-            .trim() ||
-        "Онлайн";
-
-
-    if (
-        nickname.length < 3
-    ) {
-
-        showModalMessage(
-            "Никнейм должен содержать минимум 3 символа.",
-            "error"
-        );
+        if (message) {
+            message.textContent =
+                "Введите никнейм.";
+        }
 
         return;
-    }
 
-
-    if (
-        nickname.length > 24
-    ) {
-
-        showModalMessage(
-            "Никнейм не должен быть длиннее 24 символов.",
-            "error"
-        );
-
-        return;
     }
 
 
@@ -1353,63 +1278,46 @@ async function saveProfile() {
             error
         } =
             await supabaseClient
-                .auth
-                .updateUser(
-                    {
-                        data: {
+                .from("profiles")
+                .update({
 
-                            nickname,
+                    nickname,
 
-                            status
+                    status:
+                        status ||
+                        "Онлайн",
 
-                        }
-                    }
-                );
+                    updated_at:
+                        new Date().toISOString()
+
+                })
+                .eq("id", currentUser.id)
+                .select()
+                .single();
 
 
         if (error) {
-
-            showModalMessage(
-                translateSupabaseError(error),
-                "error"
-            );
-
-            return;
+            throw error;
         }
 
 
-        currentUser =
-            data.user;
-
-
-        await ensureProfile();
+        profileData =
+            data || profileData;
 
 
         applyProfile();
 
 
-        await updateGlobalPresence();
+        if (message) {
 
+            message.textContent =
+                "Профиль сохранён.";
 
-        renderOnlinePlayers();
+            message.className =
+                "modal-message success";
 
+        }
 
-        showModalMessage(
-            "Профиль сохранён.",
-            "success"
-        );
-
-
-        setTimeout(
-            () => {
-
-                closeModal(
-                    "profile-modal"
-                );
-
-            },
-            700
-        );
 
     } catch (error) {
 
@@ -1419,402 +1327,18 @@ async function saveProfile() {
         );
 
 
-        showModalMessage(
-            translateSupabaseError(error),
-            "error"
-        );
+        if (message) {
 
-    }
+            message.textContent =
+                error.message ||
+                "Не удалось сохранить профиль.";
 
-}
-
-
-/* =========================================================
-   GLOBAL PRESENCE
-========================================================= */
-
-async function initGlobalPresence() {
-
-    await cleanupGlobalPresence();
-
-
-    if (
-        !currentUser
-    ) {
-
-        return;
-
-    }
-
-
-    try {
-
-        await supabaseClient.realtime.setAuth();
-
-    } catch (error) {
-
-        console.warn(
-            "Realtime auth:",
-            error
-        );
-
-    }
-
-
-    onlinePresenceChannel =
-        supabaseClient.channel(
-            "presence:global",
-            {
-
-                config: {
-
-                    private: true,
-
-                    presence: {
-
-                        key:
-                            presenceKey
-
-                    }
-
-                }
-
-            }
-        );
-
-
-    onlinePresenceChannel.on(
-        "presence",
-        {
-            event:
-                "sync"
-        },
-        () => {
-
-            refreshPresenceList();
+            message.className =
+                "modal-message error";
 
         }
-    );
-
-
-    onlinePresenceChannel.on(
-        "presence",
-        {
-            event:
-                "join"
-        },
-        () => {
-
-            refreshPresenceList();
-
-        }
-    );
-
-
-    onlinePresenceChannel.on(
-        "presence",
-        {
-            event:
-                "leave"
-        },
-        () => {
-
-            refreshPresenceList();
-
-        }
-    );
-
-
-    onlinePresenceChannel.subscribe(
-        async (
-            status,
-            error
-        ) => {
-
-            console.log(
-                "Global Presence:",
-                status,
-                error
-            );
-
-
-            if (
-                status ===
-                "SUBSCRIBED"
-            ) {
-
-                await updateGlobalPresence();
-
-            }
-
-        }
-    );
-
-}
-
-
-async function updateGlobalPresence() {
-
-    if (
-        !onlinePresenceChannel ||
-        !currentUser
-    ) {
-
-        return;
 
     }
-
-
-    try {
-
-        await onlinePresenceChannel.track({
-
-            user_id:
-                currentUser.id,
-
-            nickname:
-                getUserNickname(),
-
-            status:
-                getUserStatus(),
-
-            page:
-                currentPage,
-
-            online_at:
-                new Date().toISOString()
-
-        });
-
-    } catch (error) {
-
-        console.error(
-            "Presence track:",
-            error
-        );
-
-    }
-
-}
-
-
-function refreshPresenceList() {
-
-    if (
-        !onlinePresenceChannel
-    ) {
-
-        return;
-
-    }
-
-
-    const state =
-        onlinePresenceChannel.presenceState();
-
-
-    const users =
-        new Map();
-
-
-    Object.values(
-        state
-    ).forEach(
-        entries => {
-
-            entries.forEach(
-                entry => {
-
-                    if (
-                        !entry.user_id
-                    ) {
-
-                        return;
-
-                    }
-
-
-                    users.set(
-                        entry.user_id,
-                        entry
-                    );
-
-                }
-            );
-
-        }
-    );
-
-
-    onlinePlayers =
-        Array.from(
-            users.values()
-        );
-
-
-    const count =
-        onlinePlayers.length;
-
-
-    const headerCount =
-        document.getElementById(
-            "online-header-count"
-        );
-
-
-    const sideCount =
-        document.getElementById(
-            "online-side-count"
-        );
-
-
-    const heroCount =
-        document.getElementById(
-            "hero-online-count"
-        );
-
-
-    const modalCount =
-        document.getElementById(
-            "online-modal-count"
-        );
-
-
-    if (headerCount) {
-
-        headerCount.textContent =
-            count;
-
-    }
-
-
-    if (sideCount) {
-
-        sideCount.textContent =
-            count;
-
-    }
-
-
-    if (heroCount) {
-
-        heroCount.textContent =
-            count;
-
-    }
-
-
-    if (modalCount) {
-
-        modalCount.textContent =
-            count;
-
-    }
-
-
-    renderOnlinePlayers();
-
-}
-
-
-function renderOnlinePlayers() {
-
-    const list =
-        document.getElementById(
-            "online-player-list"
-        );
-
-
-    if (!list) {
-
-        return;
-
-    }
-
-
-    if (!onlinePlayers.length) {
-
-        list.innerHTML = `
-
-            <div class="chat-empty">
-                Сейчас никто не онлайн.
-            </div>
-
-        `;
-
-        return;
-
-    }
-
-
-    list.innerHTML =
-        onlinePlayers
-            .map(
-                player => {
-
-                    const nickname =
-                        player.nickname ||
-                        "Player";
-
-
-                    const letter =
-                        nickname
-                            .charAt(0)
-                            .toUpperCase() ||
-                        "?";
-
-
-                    return `
-
-                        <div class="online-player">
-
-                            <div class="online-player-avatar">
-                                ${escapeHtml(letter)}
-                            </div>
-
-                            <div class="online-player-copy">
-
-                                <strong>
-                                    ${escapeHtml(
-                                        nickname
-                                    )}
-                                </strong>
-
-                                <span>
-                                    ${escapeHtml(
-                                        player.status ||
-                                        "Онлайн"
-                                    )}
-                                </span>
-
-                            </div>
-
-                            <div class="online-player-status">
-
-                                <span class="status-dot"></span>
-
-                                ONLINE
-
-                            </div>
-
-                        </div>
-
-                    `;
-
-                }
-            )
-            .join("");
-
-}
-
-
-async function openOnlinePlayers() {
-
-    refreshPresenceList();
-
-    openModal(
-        "online-modal"
-    );
 
 }
 
@@ -1829,15 +1353,215 @@ function initNavigation() {
         .querySelectorAll(
             ".side-tile[data-page]"
         )
+        .forEach(function (button) {
+
+            button.addEventListener(
+                "click",
+                function () {
+
+                    const page =
+                        button.dataset.page;
+
+                    if (!page) {
+                        return;
+                    }
+
+
+                    currentPage =
+                        page;
+
+
+                    document
+                        .querySelectorAll(
+                            ".side-tile[data-page]"
+                        )
+                        .forEach(
+                            function (item) {
+
+                                item.classList.toggle(
+                                    "active",
+                                    item === button
+                                );
+
+                            }
+                        );
+
+
+                    renderPage(page);
+
+                }
+            );
+
+        });
+
+}
+
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+function initButtons() {
+
+    const heroGamesButton =
+        document.getElementById(
+            "hero-games-button"
+        );
+
+
+    if (heroGamesButton) {
+
+        heroGamesButton.addEventListener(
+            "click",
+            function () {
+
+                currentPage = "games";
+
+                activatePageButton("games");
+
+                renderPage("games");
+
+            }
+        );
+
+    }
+
+
+    const heroOnlineButton =
+        document.getElementById(
+            "hero-online-button"
+        );
+
+
+    if (heroOnlineButton) {
+
+        heroOnlineButton.addEventListener(
+            "click",
+            function () {
+
+                showModal(
+                    "online-modal"
+                );
+
+            }
+        );
+
+    }
+
+
+    const headerOnlineButton =
+        document.getElementById(
+            "header-online-button"
+        );
+
+
+    if (headerOnlineButton) {
+
+        headerOnlineButton.addEventListener(
+            "click",
+            function () {
+
+                showModal(
+                    "online-modal"
+                );
+
+            }
+        );
+
+    }
+
+
+    const youtubeButtons = [
+        document.getElementById(
+            "youtube-button"
+        ),
+        document.getElementById(
+            "right-youtube-button"
+        )
+    ];
+
+
+    youtubeButtons.forEach(
+        function (button) {
+
+            if (!button) {
+                return;
+            }
+
+            button.addEventListener(
+                "click",
+                function () {
+
+                    window.open(
+                        "https://www.youtube.com/",
+                        "_blank",
+                        "noopener,noreferrer"
+                    );
+
+                }
+            );
+
+        }
+    );
+
+
+    const twitchButtons = [
+        document.getElementById(
+            "twitch-button"
+        ),
+        document.getElementById(
+            "right-twitch-button"
+        )
+    ];
+
+
+    twitchButtons.forEach(
+        function (button) {
+
+            if (!button) {
+                return;
+            }
+
+            button.addEventListener(
+                "click",
+                function () {
+
+                    window.open(
+                        "https://www.twitch.tv/",
+                        "_blank",
+                        "noopener,noreferrer"
+                    );
+
+                }
+            );
+
+        }
+    );
+
+
+    if (logoutButton) {
+
+        logoutButton.addEventListener(
+            "click",
+            logoutUser
+        );
+
+    }
+
+
+    document
+        .querySelectorAll(
+            "[data-close-modal]"
+        )
         .forEach(
-            tile => {
+            function (button) {
 
-                tile.addEventListener(
+                button.addEventListener(
                     "click",
-                    async () => {
+                    function () {
 
-                        await openPage(
-                            tile.dataset.page
+                        hideModal(
+                            button.dataset.closeModal
                         );
 
                     }
@@ -1846,39 +1570,160 @@ function initNavigation() {
             }
         );
 
-}
-
-
-async function openPage(
-    page
-) {
-
-    currentPage =
-        page;
-
 
     document
         .querySelectorAll(
-            ".side-tile[data-page]"
+            ".modal-overlay"
         )
         .forEach(
-            tile => {
+            function (overlay) {
 
-                tile.classList.toggle(
-                    "active",
-                    tile.dataset.page === page
+                overlay.addEventListener(
+                    "click",
+                    function (event) {
+
+                        if (
+                            event.target ===
+                            overlay
+                        ) {
+
+                            overlay.classList.remove(
+                                "open"
+                            );
+
+                        }
+
+                    }
                 );
 
             }
         );
 
 
-    renderPage(
-        page
-    );
+    const callClose =
+        document.getElementById(
+            "call-close-x"
+        );
 
 
-    await updateGlobalPresence();
+    if (callClose) {
+
+        callClose.addEventListener(
+            "click",
+            leaveCall
+        );
+
+    }
+
+
+    const callLeave =
+        document.getElementById(
+            "call-leave-button"
+        );
+
+
+    if (callLeave) {
+
+        callLeave.addEventListener(
+            "click",
+            leaveCall
+        );
+
+    }
+
+
+    const micButton =
+        document.getElementById(
+            "call-mic-button"
+        );
+
+
+    if (micButton) {
+
+        micButton.addEventListener(
+            "click",
+            toggleMicrophone
+        );
+
+    }
+
+
+    const cameraButton =
+        document.getElementById(
+            "call-camera-button"
+        );
+
+
+    if (cameraButton) {
+
+        cameraButton.addEventListener(
+            "click",
+            toggleCamera
+        );
+
+    }
+
+
+    const screenButton =
+        document.getElementById(
+            "call-screen-button"
+        );
+
+
+    if (screenButton) {
+
+        screenButton.addEventListener(
+            "click",
+            toggleScreenShare
+        );
+
+    }
+
+
+    const profileButton =
+        document.getElementById(
+            "profile-edit-button"
+        );
+
+
+    if (profileButton) {
+
+        profileButton.addEventListener(
+            "click",
+            function () {
+
+                showModal(
+                    "profile-modal"
+                );
+
+            }
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   ACTIVATE PAGE BUTTON
+========================================================= */
+
+function activatePageButton(page) {
+
+    document
+        .querySelectorAll(
+            ".side-tile[data-page]"
+        )
+        .forEach(
+            function (button) {
+
+                button.classList.toggle(
+                    "active",
+                    button.dataset.page === page
+                );
+
+            }
+        );
 
 }
 
@@ -1887,24 +1732,45 @@ async function openPage(
    PAGE RENDER
 ========================================================= */
 
-function renderPage(
-    page
-) {
+function renderPage(page) {
+
+    const content =
+        document.getElementById(
+            "page-content"
+        );
+
+    const title =
+        document.getElementById(
+            "page-title"
+        );
+
+    const kicker =
+        document.getElementById(
+            "page-kicker"
+        );
+
+    const badge =
+        document.getElementById(
+            "page-badge"
+        );
+
+
+    if (!content) {
+        return;
+    }
+
 
     const pages = {
 
         home: {
 
-            kicker:
-                "PLATFORM",
+            title: "Главная",
 
-            title:
-                "Главная",
+            kicker: "PLATFORM",
 
-            badge:
-                "HOME",
+            badge: "HOME",
 
-            content: `
+            html: `
 
                 <div class="welcome-grid">
 
@@ -1922,7 +1788,7 @@ function renderPage(
 
                             <p>
                                 Каждая игра получает
-                                отдельную комнату чата.
+                                отдельный чат.
                             </p>
 
                         </div>
@@ -1944,7 +1810,7 @@ function renderPage(
 
                             <p>
                                 Для каждой гильдии
-                                создаётся отдельный чат.
+                                существует свой чат.
                             </p>
 
                         </div>
@@ -1982,23 +1848,17 @@ function renderPage(
 
         games: {
 
-            kicker:
-                "LIBRARY",
+            title: "Игры",
 
-            title:
-                "Игры",
+            kicker: "GAMES",
 
-            badge:
-                "GAMES",
+            badge: "02",
 
-            content: `
+            html: `
 
-                <div
-                    class="games-list"
-                    id="games-list"
-                >
+                <div class="welcome-grid">
 
-                    <div class="info-card">
+                    <article class="info-card">
 
                         <div class="info-card-icon">
                             ◈
@@ -2007,16 +1867,47 @@ function renderPage(
                         <div>
 
                             <strong>
-                                Загружаем игры...
+                                World of Sea Battle
                             </strong>
 
                             <p>
-                                Формируем каталог.
+                                Игровое сообщество,
+                                гильдии и чат.
+                            </p>
+
+                            <button
+                                type="button"
+                                class="modal-primary-button"
+                                data-chat-game="world-of-sea-battle"
+                            >
+                                Открыть игру
+                            </button>
+
+                        </div>
+
+                    </article>
+
+
+                    <article class="info-card">
+
+                        <div class="info-card-icon">
+                            +
+                        </div>
+
+                        <div>
+
+                            <strong>
+                                Добавить игру
+                            </strong>
+
+                            <p>
+                                Каталог платформы
+                                рассчитан на разные игры.
                             </p>
 
                         </div>
 
-                    </div>
+                    </article>
 
                 </div>
 
@@ -2027,16 +1918,13 @@ function renderPage(
 
         news: {
 
-            kicker:
-                "COMMUNITY",
+            title: "Новости",
 
-            title:
-                "Новости",
+            kicker: "NEWS",
 
-            badge:
-                "NEWS",
+            badge: "03",
 
-            content: `
+            html: `
 
                 <div class="welcome-grid">
 
@@ -2049,12 +1937,12 @@ function renderPage(
                         <div>
 
                             <strong>
-                                Новости
+                                Новости платформы
                             </strong>
 
                             <p>
-                                Здесь появится лента
-                                новостей сообщества.
+                                Здесь будут отображаться
+                                новости игр и сообщества.
                             </p>
 
                         </div>
@@ -2070,40 +1958,33 @@ function renderPage(
 
         online: {
 
-            kicker:
-                "COMMUNITY",
+            title: "Игроки онлайн",
 
-            title:
-                "Онлайн",
+            kicker: "COMMUNITY",
 
-            badge:
-                "LIVE",
+            badge: "04",
 
-            content: `
+            html: `
 
-                <div class="welcome-grid">
+                <div>
 
-                    <article class="info-card">
+                    <div class="online-modal-status">
 
-                        <div class="info-card-icon">
-                            ◉
-                        </div>
+                        Сейчас онлайн:
 
-                        <div>
+                        <strong
+                            id="page-online-count"
+                        >
+                            0
+                        </strong>
 
-                            <strong>
-                                ${onlinePlayers.length}
-                                игроков онлайн
-                            </strong>
+                    </div>
 
-                            <p>
-                                Список обновляется
-                                через Realtime Presence.
-                            </p>
 
-                        </div>
-
-                    </article>
+                    <div
+                        class="online-player-list"
+                        id="page-online-list"
+                    ></div>
 
                 </div>
 
@@ -2114,16 +1995,13 @@ function renderPage(
 
         profile: {
 
-            kicker:
-                "ACCOUNT",
+            title: "Профиль",
 
-            title:
-                "Профиль",
+            kicker: "PROFILE",
 
-            badge:
-                "PROFILE",
+            badge: "05",
 
-            content: `
+            html: `
 
                 <div class="welcome-grid">
 
@@ -2137,15 +2015,25 @@ function renderPage(
 
                             <strong>
                                 ${escapeHtml(
-                                    getUserNickname()
+                                    profileData.nickname ||
+                                    "Player"
                                 )}
                             </strong>
 
                             <p>
                                 ${escapeHtml(
-                                    getUserStatus()
+                                    profileData.status ||
+                                    "Онлайн"
                                 )}
                             </p>
+
+                            <button
+                                type="button"
+                                class="modal-primary-button"
+                                id="page-profile-edit"
+                            >
+                                Редактировать профиль
+                            </button>
 
                         </div>
 
@@ -2160,98 +2048,171 @@ function renderPage(
 
         chat: {
 
-            kicker:
-                "COMMUNITY",
+            title: "Чат",
 
-            title:
-                "Чат",
+            kicker: "REALTIME",
 
-            badge:
-                "REALTIME",
+            badge: "06",
 
-            content:
-                getChatPageHtml()
+            html: `
+
+                <div class="chat-page">
+
+                    <div class="chat-room-tabs">
+
+                        <button
+                            type="button"
+                            class="chat-room-button active"
+                            data-chat-room="global"
+                        >
+                            Общий
+                        </button>
+
+                        <button
+                            type="button"
+                            class="chat-room-button"
+                            data-chat-room="game"
+                        >
+                            Игра
+                        </button>
+
+                        <button
+                            type="button"
+                            class="chat-room-button"
+                            data-chat-room="guild"
+                        >
+                            Гильдия
+                        </button>
+
+                    </div>
+
+
+                    <div
+                        class="chat-messages"
+                        id="chat-messages"
+                    ></div>
+
+
+                    <form
+                        class="chat-form"
+                        id="chat-form"
+                    >
+
+                        <input
+                            type="text"
+                            id="chat-input"
+                            placeholder="Введите сообщение..."
+                            autocomplete="off"
+                            maxlength="2000"
+                            required
+                        >
+
+                        <button
+                            type="submit"
+                        >
+                            Отправить
+                        </button>
+
+                    </form>
+
+                </div>
+
+            `
 
         }
 
     };
 
 
-    const config =
+    const page =
         pages[page] ||
         pages.home;
 
 
-    const pageKicker =
-        document.getElementById(
-            "page-kicker"
-        );
+    if (title) {
+        title.textContent =
+            page.title;
+    }
 
 
-    const pageTitle =
-        document.getElementById(
-            "page-title"
-        );
+    if (kicker) {
+        kicker.textContent =
+            page.kicker;
+    }
 
 
-    const pageBadge =
-        document.getElementById(
-            "page-badge"
-        );
+    if (badge) {
+        badge.textContent =
+            page.badge;
+    }
 
 
-    const pageContent =
-        document.getElementById(
-            "page-content"
-        );
+    content.innerHTML =
+        page.html;
 
 
-    if (pageKicker) {
+    if (page === pages.online) {
 
-        pageKicker.textContent =
-            config.kicker;
+        renderOnlinePlayers();
 
     }
 
 
-    if (pageTitle) {
+    if (page === pages.profile) {
 
-        pageTitle.textContent =
-            config.title;
+        const edit =
+            document.getElementById(
+                "page-profile-edit"
+            );
+
+
+        if (edit) {
+
+            edit.addEventListener(
+                "click",
+                function () {
+
+                    showModal(
+                        "profile-modal"
+                    );
+
+                }
+            );
+
+        }
 
     }
 
 
-    if (pageBadge) {
-
-        pageBadge.textContent =
-            config.badge;
-
-    }
-
-
-    if (pageContent) {
-
-        pageContent.innerHTML =
-            config.content;
-
-    }
-
-
-    if (
-        page === "chat"
-    ) {
+    if (page === pages.chat) {
 
         initChatPage();
 
     }
 
+}
 
-    if (
-        page === "games"
-    ) {
 
-        loadGames();
+/* =========================================================
+   LOGOUT
+========================================================= */
+
+async function logoutUser() {
+
+    try {
+
+        if (supabaseClient) {
+
+            await supabaseClient.auth.signOut();
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Logout error:",
+            error
+        );
 
     }
 
@@ -2259,333 +2220,325 @@ function renderPage(
 
 
 /* =========================================================
-   GAMES
+   PRESENCE
 ========================================================= */
 
-async function loadGames() {
+async function initGlobalPresence() {
 
-    const container =
-        document.getElementById(
-            "games-list"
+    if (!supabaseClient || !currentUser) {
+        return;
+    }
+
+
+    cleanupPresence();
+
+
+    presenceChannel =
+        supabaseClient.channel(
+            "global-presence",
+            {
+                config: {
+                    presence: {
+                        key: currentUser.id
+                    }
+                }
+            }
         );
 
 
-    if (!container) {
+    presenceChannel
+        .on(
+            "presence",
+            {
+                event: "sync"
+            },
+            function () {
 
-        return;
+                const state =
+                    presenceChannel.presenceState();
 
-    }
-
-
-    const {
-        data,
-        error
-    } =
-        await supabaseClient
-            .from("games")
-            .select(
-                `
-                    id,
-                    name,
-                    slug,
-                    description
-                `
-            )
-            .order(
-                "name",
-                {
-                    ascending:
-                        true
-                }
-            );
+                presenceUsers =
+                    {};
 
 
-    if (error) {
+                Object.keys(state)
+                    .forEach(
+                        function (key) {
 
-        container.innerHTML = `
-
-            <article class="info-card">
-
-                <div class="info-card-icon">
-                    !
-                </div>
-
-                <div>
-
-                    <strong>
-                        Не удалось загрузить игры
-                    </strong>
-
-                    <p>
-                        ${escapeHtml(
-                            error.message
-                        )}
-                    </p>
-
-                </div>
-
-            </article>
-
-        `;
-
-        return;
-
-    }
+                            const entries =
+                                state[key] || [];
 
 
-    if (!data.length) {
+                            if (entries.length > 0) {
 
-        container.innerHTML = `
+                                presenceUsers[key] =
+                                    entries[0];
 
-            <article class="info-card">
+                            }
 
-                <div class="info-card-icon">
-                    ◈
-                </div>
-
-                <div>
-
-                    <strong>
-                        Игр пока нет
-                    </strong>
-
-                    <p>
-                        После добавления игры её
-                        чат создастся автоматически.
-                    </p>
-
-                </div>
-
-            </article>
-
-        `;
-
-        return;
-
-    }
+                        }
+                    );
 
 
-    container.innerHTML =
-        data
-            .map(
-                game => {
+                updateOnlineCount();
 
-                    return `
+                renderOnlinePlayers();
 
-                        <article class="game-card">
-
-                            <div class="game-card-title">
-                                ${escapeHtml(
-                                    game.name
-                                )}
-                            </div>
-
-
-                            <div class="game-card-description">
-                                ${escapeHtml(
-                                    game.description ||
-                                    "Игровое сообщество"
-                                )}
-                            </div>
-
-
-                            <button
-                                type="button"
-                                class="game-chat-link"
-                                data-game-id="${game.id}"
-                            >
-                                Открыть чат игры
-                            </button>
-
-                        </article>
-
-                    `;
-
-                }
-            )
-            .join("");
-
-
-    container
-        .querySelectorAll(
-            ".game-chat-link"
+            }
         )
-        .forEach(
-            button => {
+        .on(
+            "presence",
+            {
+                event: "join"
+            },
+            function () {
 
-                button.addEventListener(
-                    "click",
-                    async () => {
+                updateOnlineCount();
 
-                        await openGameChat(
-                            button.dataset.gameId
-                        );
+                renderOnlinePlayers();
 
-                    }
-                );
+            }
+        )
+        .on(
+            "presence",
+            {
+                event: "leave"
+            },
+            function () {
+
+                updateOnlineCount();
+
+                renderOnlinePlayers();
 
             }
         );
 
+
+    const result =
+        await presenceChannel.subscribe(
+            async function (status) {
+
+                if (
+                    status ===
+                    "SUBSCRIBED"
+                ) {
+
+                    presenceReady =
+                        true;
+
+
+                    await presenceChannel.track({
+
+                        user_id:
+                            currentUser.id,
+
+                        nickname:
+                            profileData.nickname ||
+                            "Player",
+
+                        status:
+                            profileData.status ||
+                            "Онлайн",
+
+                        online_at:
+                            new Date().toISOString()
+
+                    });
+
+                }
+
+            }
+        );
+
+
+    return result;
+
 }
 
 
 /* =========================================================
-   OPEN GAME CHAT
+   CLEANUP PRESENCE
 ========================================================= */
 
-async function openGameChat(
-    gameId
-) {
+function cleanupPresence() {
 
-    await loadChatRooms();
+    presenceReady = false;
 
-
-    const room =
-        chatRooms.find(
-            item =>
-                item.type ===
-                    "game"
-                &&
-                item.game_id ===
-                    gameId
-        );
-
-
-    if (!room) {
-
-        alert(
-            "Чат этой игры ещё не создан."
-        );
-
-        return;
-
-    }
+    presenceUsers = {};
 
 
     if (
-        currentPage !==
-        "chat"
+        presenceChannel &&
+        supabaseClient
     ) {
 
-        await openPage(
-            "chat"
-        );
+        try {
+
+            supabaseClient.removeChannel(
+                presenceChannel
+            );
+
+        } catch (error) {
+
+            console.error(
+                "Presence cleanup error:",
+                error
+            );
+
+        }
 
     }
 
 
-    await selectChatRoom(
-        room.id
+    presenceChannel =
+        null;
+
+
+    updateOnlineCount();
+
+}
+
+
+/* =========================================================
+   ONLINE COUNT
+========================================================= */
+
+function updateOnlineCount() {
+
+    const count =
+        Object.keys(
+            presenceUsers
+        ).length;
+
+
+    setText(
+        "online-header-count",
+        count
+    );
+
+    setText(
+        "online-side-count",
+        count
+    );
+
+    setText(
+        "hero-online-count",
+        count
+    );
+
+    setText(
+        "online-modal-count",
+        count
+    );
+
+    setText(
+        "call-participant-count",
+        Object.keys(callParticipants).length + 1
+    );
+
+    setText(
+        "page-online-count",
+        count
     );
 
 }
 
 
 /* =========================================================
-   CHAT HTML
+   ONLINE PLAYERS
 ========================================================= */
 
-function getChatPageHtml() {
+function renderOnlinePlayers() {
 
-    return `
+    const containers = [
 
-        <div class="chat-layout">
+        document.getElementById(
+            "online-player-list"
+        ),
 
+        document.getElementById(
+            "page-online-list"
+        )
 
-            <aside class="chat-rooms-panel">
-
-                <input
-                    type="text"
-                    class="chat-room-search"
-                    id="chat-room-search"
-                    placeholder="Поиск комнаты..."
-                >
+    ];
 
 
-                <div class="chat-rooms-title">
-                    ROOMS
-                </div>
+    containers.forEach(
+        function (container) {
+
+            if (!container) {
+                return;
+            }
 
 
-                <div
-                    class="chat-room-list"
-                    id="chat-room-list"
-                ></div>
-
-            </aside>
+            const users =
+                Object.values(
+                    presenceUsers
+                );
 
 
-            <section class="chat-main">
+            if (!users.length) {
 
-
-                <header class="chat-header">
-
-                    <div class="chat-header-copy">
-
-                        <strong id="chat-room-title">
-                            Выберите комнату
-                        </strong>
-
-                        <span id="chat-room-subtitle">
-                            Realtime
-                        </span>
-
+                container.innerHTML = `
+                    <div class="info-card">
+                        <div class="info-card-icon">◉</div>
+                        <div>
+                            <strong>Пока никого нет</strong>
+                            <p>Будьте первым игроком онлайн.</p>
+                        </div>
                     </div>
+                `;
+
+                return;
+
+            }
 
 
-                    <button
-                        type="button"
-                        class="chat-call-button"
-                        id="chat-call-button"
-                    >
-                        ◉
-                        Видеоконференция
-                    </button>
+            container.innerHTML =
+                users
+                    .map(
+                        function (user) {
 
-                </header>
+                            return `
 
+                                <div class="online-player">
 
-                <div
-                    class="chat-message-list"
-                    id="chat-message-list"
-                >
+                                    <div class="mini-avatar">
+                                        ${escapeHtml(
+                                            getInitials(
+                                                user.nickname
+                                            )
+                                        )}
+                                    </div>
 
-                    <div class="chat-empty">
-                        Выберите комнату слева.
-                    </div>
+                                    <div>
 
-                </div>
+                                        <strong>
+                                            ${escapeHtml(
+                                                user.nickname ||
+                                                "Player"
+                                            )}
+                                        </strong>
 
+                                        <span>
+                                            ${escapeHtml(
+                                                user.status ||
+                                                "Онлайн"
+                                            )}
+                                        </span>
 
-                <form
-                    class="chat-form"
-                    id="chat-form"
-                >
+                                    </div>
 
-                    <textarea
-                        class="chat-input"
-                        id="chat-input"
-                        maxlength="4000"
-                        rows="1"
-                        placeholder="Напишите сообщение..."
-                    ></textarea>
+                                </div>
 
+                            `;
 
-                    <button
-                        type="submit"
-                        class="chat-send-button"
-                    >
-                        Отправить
-                    </button>
+                        }
+                    )
+                    .join("");
 
-                </form>
-
-            </section>
-
-        </div>
-
-    `;
+        }
+    );
 
 }
 
@@ -2602,153 +2555,456 @@ function initChatPage() {
         );
 
 
-    const input =
-        document.getElementById(
-            "chat-input"
-        );
+    if (form) {
 
-
-    const search =
-        document.getElementById(
-            "chat-room-search"
-        );
-
-
-    const callButton =
-        document.getElementById(
-            "chat-call-button"
-        );
-
-
-    form?.addEventListener(
-        "submit",
-        async event => {
-
-            event.preventDefault();
-
-            await sendChatMessage();
-
-        }
-    );
-
-
-    input?.addEventListener(
-        "keydown",
-        event => {
-
-            if (
-                event.key ===
-                    "Enter"
-                &&
-                !event.shiftKey
-            ) {
+        form.addEventListener(
+            "submit",
+            async function (event) {
 
                 event.preventDefault();
 
-                form.requestSubmit();
+                await sendChatMessage();
 
             }
+        );
 
-        }
-    );
-
-
-    search?.addEventListener(
-        "input",
-        () => {
-
-            renderChatRooms(
-                search.value
-            );
-
-        }
-    );
+    }
 
 
-    callButton?.addEventListener(
-        "click",
-        async () => {
+    document
+        .querySelectorAll(
+            "[data-chat-room]"
+        )
+        .forEach(
+            function (button) {
 
-            if (
-                !activeChatRoom
-            ) {
+                button.addEventListener(
+                    "click",
+                    function () {
 
-                return;
+                        document
+                            .querySelectorAll(
+                                "[data-chat-room]"
+                            )
+                            .forEach(
+                                function (item) {
+
+                                    item.classList.toggle(
+                                        "active",
+                                        item === button
+                                    );
+
+                                }
+                            );
+
+
+                        const room =
+                            button.dataset.chatRoom;
+
+
+                        if (room === "global") {
+
+                            switchChatRoom(
+                                "global"
+                            );
+
+                        }
+
+                        if (room === "game") {
+
+                            switchChatRoom(
+                                "game"
+                            );
+
+                        }
+
+                        if (room === "guild") {
+
+                            switchChatRoom(
+                                "guild"
+                            );
+
+                        }
+
+                    }
+                );
 
             }
+        );
 
 
-            await openVideoCall(
-                activeChatRoom
-            );
-
-        }
+    switchChatRoom(
+        "global"
     );
-
-
-    loadChatRooms();
 
 }
 
 
 /* =========================================================
-   LOAD ROOMS
+   CHAT ROOM
 ========================================================= */
 
-async function loadChatRooms() {
+async function switchChatRoom(
+    type,
+    gameId = null,
+    guildId = null
+) {
 
-    const {
-        data,
-        error
-    } =
-        await supabaseClient
-            .from("chat_rooms")
-            .select(
-                `
-                    id,
-                    type,
-                    name,
-                    game_id,
-                    guild_id,
-                    created_at
-                `
-            )
-            .order(
-                "created_at",
-                {
-                    ascending:
-                        true
-                }
-            );
+    currentChatRoom = {
+
+        type,
+
+        gameId,
+
+        guildId
+
+    };
 
 
-    if (error) {
+    cleanupChat();
 
-        console.error(
-            "Chat room loading:",
-            error
+
+    chatMessages = [];
+
+
+    renderChatMessages();
+
+
+    if (!supabaseClient || !currentUser) {
+        return;
+    }
+
+
+    await loadChatMessages();
+
+
+    const channelName =
+        getChatChannelName();
+
+
+    chatChannel =
+        supabaseClient.channel(
+            channelName
         );
 
 
-        const list =
-            document.getElementById(
-                "chat-room-list"
+    chatChannel.on(
+        "postgres_changes",
+        {
+            event: "INSERT",
+            schema: "public",
+            table: "chat_messages"
+        },
+        function (payload) {
+
+            const message =
+                payload.new;
+
+
+            if (
+                !message ||
+                !message.id
+            ) {
+                return;
+            }
+
+
+            if (
+                !isMessageForCurrentRoom(
+                    message
+                )
+            ) {
+                return;
+            }
+
+
+            if (
+                chatMessages.some(
+                    function (item) {
+                        return item.id === message.id;
+                    }
+                )
+            ) {
+                return;
+            }
+
+
+            chatMessages.push(
+                message
             );
 
 
-        if (list) {
+            renderChatMessages();
 
-            list.innerHTML = `
+        }
+    );
 
-                <div class="chat-empty">
 
-                    Ошибка загрузки комнат.
+    chatChannel.subscribe(
+        function (status) {
 
-                    <br><br>
+            if (
+                status ===
+                "SUBSCRIBED"
+            ) {
 
-                    ${escapeHtml(
-                        error.message
-                    )}
+                chatSubscriptionReady =
+                    true;
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   CHAT CHANNEL NAME
+========================================================= */
+
+function getChatChannelName() {
+
+    if (
+        currentChatRoom.type ===
+        "game"
+    ) {
+
+        return (
+            "chat-game-" +
+            (
+                currentChatRoom.gameId ||
+                "default"
+            )
+        );
+
+    }
+
+
+    if (
+        currentChatRoom.type ===
+        "guild"
+    ) {
+
+        return (
+            "chat-guild-" +
+            (
+                currentChatRoom.guildId ||
+                "default"
+            )
+        );
+
+    }
+
+
+    return "chat-global";
+
+}
+
+
+/* =========================================================
+   CHAT MESSAGE FILTER
+========================================================= */
+
+function isMessageForCurrentRoom(
+    message
+) {
+
+    if (!message) {
+        return false;
+    }
+
+
+    if (
+        currentChatRoom.type ===
+        "global"
+    ) {
+
+        return (
+            message.room_type ===
+            "global"
+        );
+
+    }
+
+
+    if (
+        currentChatRoom.type ===
+        "game"
+    ) {
+
+        return (
+            message.room_type ===
+            "game" &&
+            String(
+                message.game_id || ""
+            ) ===
+            String(
+                currentChatRoom.gameId || ""
+            )
+        );
+
+    }
+
+
+    if (
+        currentChatRoom.type ===
+        "guild"
+    ) {
+
+        return (
+            message.room_type ===
+            "guild" &&
+            String(
+                message.guild_id || ""
+            ) ===
+            String(
+                currentChatRoom.guildId || ""
+            )
+        );
+
+    }
+
+
+    return false;
+
+}
+
+
+/* =========================================================
+   LOAD CHAT
+========================================================= */
+
+async function loadChatMessages() {
+
+    if (!supabaseClient) {
+        return;
+    }
+
+
+    try {
+
+        let query =
+            supabaseClient
+                .from("chat_messages")
+                .select("*")
+                .order(
+                    "created_at",
+                    {
+                        ascending: true
+                    }
+                )
+                .limit(100);
+
+
+        if (
+            currentChatRoom.type ===
+            "global"
+        ) {
+
+            query =
+                query.eq(
+                    "room_type",
+                    "global"
+                );
+
+        }
+
+
+        if (
+            currentChatRoom.type ===
+            "game"
+        ) {
+
+            query =
+                query
+                    .eq(
+                        "room_type",
+                        "game"
+                    )
+                    .eq(
+                        "game_id",
+                        currentChatRoom.gameId
+                    );
+
+        }
+
+
+        if (
+            currentChatRoom.type ===
+            "guild"
+        ) {
+
+            query =
+                query
+                    .eq(
+                        "room_type",
+                        "guild"
+                    )
+                    .eq(
+                        "guild_id",
+                        currentChatRoom.guildId
+                    );
+
+        }
+
+
+        const {
+            data,
+            error
+        } =
+            await query;
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        chatMessages =
+            data || [];
+
+
+        renderChatMessages();
+
+
+    } catch (error) {
+
+        console.error(
+            "Load chat error:",
+            error
+        );
+
+        const container =
+            document.getElementById(
+                "chat-messages"
+            );
+
+
+        if (container) {
+
+            container.innerHTML = `
+
+                <div class="info-card">
+
+                    <div class="info-card-icon">
+                        !
+                    </div>
+
+                    <div>
+
+                        <strong>
+                            Не удалось загрузить чат
+                        </strong>
+
+                        <p>
+                            ${escapeHtml(
+                                error.message ||
+                                "Ошибка Supabase"
+                            )}
+                        </p>
+
+                    </div>
 
                 </div>
 
@@ -2756,844 +3012,19 @@ async function loadChatRooms() {
 
         }
 
-
-        return false;
-
-    }
-
-
-    chatRooms =
-        data || [];
-
-
-    renderChatRooms();
-
-
-    if (
-        activeChatRoom
-    ) {
-
-        const exists =
-            chatRooms.some(
-                room =>
-                    room.id ===
-                    activeChatRoom.id
-            );
-
-
-        if (!exists) {
-
-            activeChatRoom =
-                null;
-
-        }
-
-    }
-
-
-    if (
-        !activeChatRoom &&
-        chatRooms.length
-    ) {
-
-        const globalRoom =
-            chatRooms.find(
-                room =>
-                    room.type ===
-                    "global"
-            );
-
-
-        await selectChatRoom(
-            globalRoom
-                ? globalRoom.id
-                : chatRooms[0].id
-        );
-
-    }
-
-
-    return true;
-
-}
-
-
-/* =========================================================
-   RENDER ROOMS
-========================================================= */
-
-function renderChatRooms(
-    searchText = ""
-) {
-
-    const list =
-        document.getElementById(
-            "chat-room-list"
-        );
-
-
-    if (!list) {
-
-        return;
-
-    }
-
-
-    const query =
-        searchText
-            .trim()
-            .toLowerCase();
-
-
-    const rooms =
-        chatRooms.filter(
-            room => {
-
-                if (!query) {
-
-                    return true;
-
-                }
-
-
-                return (
-                    String(room.name || "")
-                        .toLowerCase()
-                        .includes(
-                            query
-                        )
-
-                    ||
-
-                    String(room.type || "")
-                        .toLowerCase()
-                        .includes(
-                            query
-                        )
-                );
-
-            }
-        );
-
-
-    if (!rooms.length) {
-
-        list.innerHTML = `
-
-            <div class="chat-empty">
-
-                Нет доступных комнат.
-
-            </div>
-
-        `;
-
-        return;
-
-    }
-
-
-    list.innerHTML =
-        rooms
-            .map(
-                room => {
-
-                    const icon =
-                        room.type ===
-                        "global"
-                            ? "◎"
-                            :
-                        room.type ===
-                        "game"
-                            ? "◈"
-                            :
-                        "♜";
-
-
-                    const type =
-                        room.type ===
-                        "global"
-                            ? "GLOBAL"
-                            :
-                        room.type ===
-                        "game"
-                            ? "GAME"
-                            :
-                        "GUILD";
-
-
-                    return `
-
-                        <button
-                            type="button"
-                            class="chat-room-button ${
-                                activeChatRoom &&
-                                activeChatRoom.id ===
-                                    room.id
-                                    ? "active"
-                                    : ""
-                            }"
-                            data-room-id="${escapeHtml(room.id)}"
-                        >
-
-                            <span class="chat-room-icon">
-                                ${icon}
-                            </span>
-
-
-                            <span class="chat-room-copy">
-
-                                <strong>
-                                    ${escapeHtml(
-                                        room.name
-                                    )}
-                                </strong>
-
-                                <span>
-                                    ${type}
-                                </span>
-
-                            </span>
-
-
-                            <span class="chat-room-type">
-                                #
-                            </span>
-
-                        </button>
-
-                    `;
-
-                }
-            )
-            .join("");
-
-
-    list
-        .querySelectorAll(
-            ".chat-room-button"
-        )
-        .forEach(
-            button => {
-
-                button.addEventListener(
-                    "click",
-                    async () => {
-
-                        await selectChatRoom(
-                            button.dataset.roomId
-                        );
-
-                    }
-                );
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   SELECT ROOM
-========================================================= */
-
-async function selectChatRoom(
-    roomId
-) {
-
-    const room =
-        chatRooms.find(
-            item =>
-                item.id ===
-                roomId
-        );
-
-
-    if (!room) {
-
-        return;
-
-    }
-
-
-    activeChatRoom =
-        room;
-
-
-    renderChatRooms();
-
-
-    const title =
-        document.getElementById(
-            "chat-room-title"
-        );
-
-
-    const subtitle =
-        document.getElementById(
-            "chat-room-subtitle"
-        );
-
-
-    if (title) {
-
-        title.textContent =
-            room.name;
-
-    }
-
-
-    if (subtitle) {
-
-        subtitle.textContent =
-
-            room.type ===
-                "global"
-
-                ? "Все пользователи платформы"
-
-                :
-
-            room.type ===
-                "game"
-
-                ? "Игровое сообщество"
-
-                :
-
-            "Закрытый чат гильдии";
-
-    }
-
-
-    await subscribeChatRoom(
-        room
-    );
-
-
-    await loadChatHistory(
-        room.id
-    );
-
-
-    document
-        .getElementById(
-            "chat-input"
-        )
-        ?.focus();
-
-}
-
-
-/* =========================================================
-   CHAT REALTIME
-========================================================= */
-
-async function subscribeChatRoom(
-    room
-) {
-
-    await removeChatChannel();
-
-
-    try {
-
-        await supabaseClient.realtime.setAuth();
-
-    } catch (error) {
-
-        console.warn(
-            "Realtime setAuth:",
-            error
-        );
-
-    }
-
-
-    chatChannel =
-        supabaseClient.channel(
-            `chat:${room.id}`,
-            {
-
-                config: {
-
-                    private:
-                        true,
-
-                    broadcast: {
-
-                        self:
-                            false,
-
-                        ack:
-                            true
-
-                    }
-
-                }
-
-            }
-        );
-
-
-    chatChannel.on(
-        "broadcast",
-        {
-            event:
-                "INSERT"
-        },
-        async payload => {
-
-            const record =
-                payload?.payload?.record;
-
-
-            if (!record) {
-
-                return;
-
-            }
-
-
-            if (
-                record.room_id !==
-                room.id
-            ) {
-
-                return;
-
-            }
-
-
-            await receiveLiveMessage(
-                record
-            );
-
-        }
-    );
-
-
-    chatChannel.subscribe(
-        (
-            status,
-            error
-        ) => {
-
-            console.log(
-                "Chat channel:",
-                status,
-                error
-            );
-
-
-            if (error) {
-
-                console.error(
-                    "Chat channel error:",
-                    error
-                );
-
-            }
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   HISTORY
-========================================================= */
-
-async function loadChatHistory(
-    roomId
-) {
-
-    const list =
-        document.getElementById(
-            "chat-message-list"
-        );
-
-
-    if (!list) {
-
-        return;
-
-    }
-
-
-    list.innerHTML = `
-
-        <div class="chat-empty">
-            Загружаем сообщения...
-        </div>
-
-    `;
-
-
-    const {
-        data,
-        error
-    } =
-        await supabaseClient
-            .from("chat_messages")
-            .select(
-                `
-                    id,
-                    room_id,
-                    user_id,
-                    body,
-                    created_at,
-                    profiles (
-                        nickname,
-                        status
-                    )
-                `
-            )
-            .eq(
-                "room_id",
-                roomId
-            )
-            .order(
-                "created_at",
-                {
-                    ascending:
-                        true
-                }
-            )
-            .limit(
-                300
-            );
-
-
-    if (error) {
-
-        list.innerHTML = `
-
-            <div class="chat-empty">
-
-                Ошибка загрузки сообщений.
-
-                <br><br>
-
-                ${escapeHtml(
-                    error.message
-                )}
-
-            </div>
-
-        `;
-
-        return;
-
-    }
-
-
-    list.innerHTML = "";
-
-
-    if (!data.length) {
-
-        list.innerHTML = `
-
-            <div class="chat-empty">
-                Это начало истории чата.
-            </div>
-
-        `;
-
-        return;
-
-    }
-
-
-    data.forEach(
-        message => {
-
-            appendChatMessage(
-                message
-            );
-
-        }
-    );
-
-
-    scrollChatToBottom();
-
-}
-
-
-/* =========================================================
-   RECEIVE LIVE MESSAGE
-========================================================= */
-
-async function receiveLiveMessage(
-    record
-) {
-
-    const exists =
-        document.querySelector(
-            `[data-message-id="${record.id}"]`
-        );
-
-
-    if (exists) {
-
-        return;
-
-    }
-
-
-    const {
-        data,
-        error
-    } =
-        await supabaseClient
-            .from("chat_messages")
-            .select(
-                `
-                    id,
-                    room_id,
-                    user_id,
-                    body,
-                    created_at,
-                    profiles (
-                        nickname,
-                        status
-                    )
-                `
-            )
-            .eq(
-                "id",
-                record.id
-            )
-            .maybeSingle();
-
-
-    if (error || !data) {
-
-        console.warn(
-            "Live message loading:",
-            error
-        );
-
-        return;
-
-    }
-
-
-    appendChatMessage(
-        data,
-        true
-    );
-
-
-    scrollChatToBottom();
-
-}
-
-
-/* =========================================================
-   APPEND MESSAGE
-========================================================= */
-
-function appendChatMessage(
-    message,
-    animate = false
-) {
-
-    const list =
-        document.getElementById(
-            "chat-message-list"
-        );
-
-
-    if (!list) {
-
-        return;
-
-    }
-
-
-    if (
-        document.querySelector(
-            `[data-message-id="${message.id}"]`
-        )
-    ) {
-
-        return;
-
-    }
-
-
-    const empty =
-        list.querySelector(
-            ".chat-empty"
-        );
-
-
-    if (empty) {
-
-        empty.remove();
-
-    }
-
-
-    const profile =
-        Array.isArray(
-            message.profiles
-        )
-
-            ? message.profiles[0]
-
-            : message.profiles;
-
-
-    const nickname =
-        profile?.nickname ||
-        "Player";
-
-
-    const own =
-        currentUser &&
-        message.user_id ===
-            currentUser.id;
-
-
-    const letter =
-        nickname
-            .trim()
-            .charAt(0)
-            .toUpperCase() ||
-        "?";
-
-
-    const element =
-        document.createElement(
-            "div"
-        );
-
-
-    element.className =
-        own
-            ? "chat-message own"
-            : "chat-message";
-
-
-    element.dataset.messageId =
-        message.id;
-
-
-    element.innerHTML = `
-
-        ${
-            own
-                ? ""
-
-                : `
-
-                    <div class="chat-message-avatar">
-                        ${escapeHtml(letter)}
-                    </div>
-
-                `
-        }
-
-
-        <div class="chat-message-body">
-
-            <div class="chat-message-author">
-                ${escapeHtml(
-                    nickname
-                )}
-            </div>
-
-
-            <div class="chat-message-text">
-                ${escapeHtml(
-                    message.body
-                )}
-            </div>
-
-
-            <div class="chat-message-meta">
-                ${formatTime(
-                    message.created_at
-                )}
-            </div>
-
-        </div>
-
-
-        ${
-            own
-
-                ? `
-
-                    <div class="chat-message-avatar">
-                        ${escapeHtml(letter)}
-                    </div>
-
-                `
-
-                : ""
-
-        }
-
-    `;
-
-
-    list.appendChild(
-        element
-    );
-
-
-    if (animate) {
-
-        element.animate(
-            [
-                {
-                    opacity: 0,
-
-                    transform:
-                        "translateY(8px)"
-                },
-
-                {
-                    opacity: 1,
-
-                    transform:
-                        "translateY(0)"
-                }
-
-            ],
-            {
-                duration:
-                    220,
-
-                easing:
-                    "ease-out"
-            }
-        );
-
     }
 
 }
 
 
 /* =========================================================
-   SEND MESSAGE
+   SEND CHAT
 ========================================================= */
 
 async function sendChatMessage() {
 
-    if (
-        !currentUser ||
-        !activeChatRoom
-    ) {
-
+    if (!supabaseClient || !currentUser) {
         return;
-
     }
 
 
@@ -3604,177 +3035,377 @@ async function sendChatMessage() {
 
 
     if (!input) {
-
         return;
-
     }
 
 
-    const body =
+    const text =
         input.value.trim();
 
 
-    if (!body) {
-
+    if (!text) {
         return;
-
     }
 
 
-    if (
-        body.length > 4000
-    ) {
+    try {
 
-        return;
+        const payload = {
 
-    }
+            user_id:
+                currentUser.id,
+
+            nickname:
+                profileData.nickname ||
+                "Player",
+
+            message:
+                text,
+
+            room_type:
+                currentChatRoom.type
+
+        };
 
 
-    input.disabled =
-        true;
+        if (
+            currentChatRoom.type ===
+            "game"
+        ) {
+
+            payload.game_id =
+                currentChatRoom.gameId;
+
+        }
 
 
-    const {
-        error
-    } =
-        await supabaseClient
-            .from(
-                "chat_messages"
-            )
-            .insert(
-                {
+        if (
+            currentChatRoom.type ===
+            "guild"
+        ) {
 
-                    room_id:
-                        activeChatRoom.id,
+            payload.guild_id =
+                currentChatRoom.guildId;
 
-                    user_id:
-                        currentUser.id,
+        }
 
-                    body
 
+        const {
+            data,
+            error
+        } =
+            await supabaseClient
+                .from("chat_messages")
+                .insert(payload)
+                .select()
+                .single();
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        if (
+            data &&
+            !chatMessages.some(
+                function (item) {
+                    return item.id === data.id;
                 }
+            )
+        ) {
+
+            chatMessages.push(
+                data
             );
 
-
-    input.disabled =
-        false;
+        }
 
 
-    if (error) {
+        input.value = "";
 
-        alert(
-            `Не удалось отправить сообщение:\n${error.message}`
+        renderChatMessages();
+
+
+    } catch (error) {
+
+        console.error(
+            "Send chat error:",
+            error
         );
 
-        return;
+        alert(
+            error.message ||
+            "Не удалось отправить сообщение."
+        );
 
     }
-
-
-    input.value =
-        "";
-
-    input.focus();
 
 }
 
 
 /* =========================================================
-   VIDEO CALL OPEN
+   RENDER CHAT
 ========================================================= */
 
-async function openVideoCall(
-    room
-) {
+function renderChatMessages() {
 
-    if (
-        callChannel
-    ) {
+    const container =
+        document.getElementById(
+            "chat-messages"
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    if (!chatMessages.length) {
+
+        container.innerHTML = `
+
+            <div class="info-card">
+
+                <div class="info-card-icon">
+                    ◌
+                </div>
+
+                <div>
+
+                    <strong>
+                        Чат пуст
+                    </strong>
+
+                    <p>
+                        Отправьте первое сообщение.
+                    </p>
+
+                </div>
+
+            </div>
+
+        `;
 
         return;
 
     }
 
 
-    callRoom =
-        room;
+    container.innerHTML =
+        chatMessages
+            .map(
+                function (message) {
+
+                    return `
+
+                        <div class="chat-message">
+
+                            <div class="chat-message-avatar">
+                                ${escapeHtml(
+                                    getInitials(
+                                        message.nickname
+                                    )
+                                )}
+                            </div>
+
+                            <div class="chat-message-body">
+
+                                <div class="chat-message-top">
+
+                                    <strong>
+                                        ${escapeHtml(
+                                            message.nickname ||
+                                            "Player"
+                                        )}
+                                    </strong>
+
+                                    <span>
+                                        ${formatDate(
+                                            message.created_at
+                                        )}
+                                    </span>
+
+                                </div>
+
+                                <div class="chat-message-text">
+                                    ${escapeHtml(
+                                        message.message ||
+                                        ""
+                                    )}
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    `;
+
+                }
+            )
+            .join("");
 
 
-    callSessionId =
-        typeof crypto !== "undefined" &&
-        typeof crypto.randomUUID === "function"
+    container.scrollTop =
+        container.scrollHeight;
 
-            ? crypto.randomUUID()
+}
 
-            : (
-                Date.now().toString(36) +
-                "-" +
-                Math.random().toString(36).slice(2)
+
+/* =========================================================
+   CLEANUP CHAT
+========================================================= */
+
+function cleanupChat() {
+
+    chatSubscriptionReady =
+        false;
+
+
+    if (
+        chatChannel &&
+        supabaseClient
+    ) {
+
+        try {
+
+            supabaseClient.removeChannel(
+                chatChannel
             );
 
+        } catch (error) {
 
-    const callRoomTitle =
-        document.getElementById(
-            "call-room-title"
+            console.error(
+                "Chat cleanup error:",
+                error
+            );
+
+        }
+
+    }
+
+
+    chatChannel =
+        null;
+
+}
+
+
+/* =========================================================
+   DATE
+========================================================= */
+
+function formatDate(value) {
+
+    if (!value) {
+        return "";
+    }
+
+
+    try {
+
+        return new Date(
+            value
+        ).toLocaleString(
+            "ru-RU",
+            {
+                day: "2-digit",
+                month: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit"
+            }
         );
 
+    } catch (error) {
 
-    const callStatus =
+        return "";
+
+    }
+
+}
+
+
+/* =========================================================
+   WEBRTC
+========================================================= */
+
+const RTC_CONFIGURATION = {
+
+    iceServers: [
+
+        {
+            urls:
+                "stun:stun.l.google.com:19302"
+        }
+
+    ]
+
+};
+
+
+/* =========================================================
+   OPEN CALL
+========================================================= */
+
+async function openCall(
+    roomId
+) {
+
+    if (!currentUser) {
+
+        alert(
+            "Сначала войдите в аккаунт."
+        );
+
+        return;
+
+    }
+
+
+    callRoomId =
+        roomId ||
+        "global";
+
+
+    showModal(
+        "call-modal"
+    );
+
+
+    const status =
         document.getElementById(
             "call-status"
         );
 
 
-    const callModal =
-        document.getElementById(
-            "call-modal"
-        );
-
-
-    if (callRoomTitle) {
-
-        callRoomTitle.textContent =
-            room.name;
-
+    if (status) {
+        status.textContent =
+            "Подключение...";
     }
-
-
-    if (callStatus) {
-
-        callStatus.textContent =
-            "Запрашиваем камеру и микрофон...";
-
-    }
-
-
-    callModal?.classList.add(
-        "open"
-    );
 
 
     try {
 
-        await prepareLocalMedia();
+        await startLocalMedia();
 
         await initCallChannel();
 
 
-        setCallStatus(
-            "Вы подключены к видеоконференции."
-        );
-
     } catch (error) {
 
         console.error(
-            "Video call error:",
+            "Call error:",
             error
         );
 
 
-        setCallStatus(
-            error.message ||
-            "Не удалось запустить видеоконференцию."
-        );
+        if (status) {
+
+            status.textContent =
+                error.message ||
+                "Ошибка видеосвязи.";
+
+        }
 
     }
 
@@ -3785,124 +3416,38 @@ async function openVideoCall(
    LOCAL MEDIA
 ========================================================= */
 
-async function prepareLocalMedia() {
+async function startLocalMedia() {
 
-    if (
-        !navigator.mediaDevices ||
-        !navigator.mediaDevices.getUserMedia
-    ) {
-
-        throw new Error(
-            "Браузер не поддерживает камеру и микрофон."
-        );
-
+    if (localStream) {
+        return localStream;
     }
 
 
-    try {
+    localStream =
+        await navigator.mediaDevices.getUserMedia({
 
-        localMediaStream =
-            await navigator.mediaDevices.getUserMedia(
-                {
+            video: true,
 
-                    video:
-                        true,
+            audio: true
 
-                    audio:
-                        true
-
-                }
-            );
-
-    } catch (firstError) {
-
-        console.warn(
-            "Camera+microphone:",
-            firstError
-        );
+        });
 
 
-        try {
-
-            localMediaStream =
-                await navigator.mediaDevices.getUserMedia(
-                    {
-
-                        video:
-                            false,
-
-                        audio:
-                            true
-
-                    }
-                );
-
-        } catch (secondError) {
-
-            console.warn(
-                "Microphone:",
-                secondError
-            );
-
-
-            localMediaStream =
-                new MediaStream();
-
-        }
-
-    }
-
-
-    const localVideo =
+    const video =
         document.getElementById(
             "local-video"
         );
 
 
-    if (localVideo) {
+    if (video) {
 
-        localVideo.srcObject =
-            localMediaStream;
-
-    }
-
-
-    const micButton =
-        document.getElementById(
-            "call-mic-button"
-        );
-
-
-    const cameraButton =
-        document.getElementById(
-            "call-camera-button"
-        );
-
-
-    if (
-        localMediaStream
-            .getAudioTracks()
-            .length
-    ) {
-
-        micButton?.classList.add(
-            "active"
-        );
+        video.srcObject =
+            localStream;
 
     }
 
 
-    if (
-        localMediaStream
-            .getVideoTracks()
-            .length
-    ) {
-
-        cameraButton?.classList.add(
-            "active"
-        );
-
-    }
+    return localStream;
 
 }
 
@@ -3913,274 +3458,151 @@ async function prepareLocalMedia() {
 
 async function initCallChannel() {
 
-    try {
-
-        await supabaseClient.realtime.setAuth();
-
-    } catch (error) {
-
-        console.warn(
-            "Call setAuth:",
-            error
-        );
-
-    }
-
-
-    callChannel =
-        supabaseClient.channel(
-            `call:${callRoom.id}`,
-            {
-
-                config: {
-
-                    private:
-                        true,
-
-                    presence: {
-
-                        key:
-                            callSessionId
-
-                    },
-
-                    broadcast: {
-
-                        self:
-                            false,
-
-                        ack:
-                            false
-
-                    }
-
-                }
-
-            }
-        );
-
-
-    callChannel.on(
-        "broadcast",
-        {
-            event:
-                "signal"
-        },
-        async payload => {
-
-            await handleWebRTCSignal(
-                payload?.payload
-            );
-
-        }
-    );
-
-
-    callChannel.on(
-        "presence",
-        {
-            event:
-                "sync"
-        },
-        () => {
-
-            rebuildCallPresence();
-
-        }
-    );
-
-
-    callChannel.on(
-        "presence",
-        {
-            event:
-                "join"
-        },
-        () => {
-
-            rebuildCallPresence();
-
-        }
-    );
-
-
-    callChannel.on(
-        "presence",
-        {
-            event:
-                "leave"
-        },
-        payload => {
-
-            if (
-                payload?.key
-            ) {
-
-                removeCallPeer(
-                    payload.key
-                );
-
-            }
-
-
-            rebuildCallPresence();
-
-        }
-    );
-
-
-    callChannel.subscribe(
-        async (
-            status,
-            error
-        ) => {
-
-            console.log(
-                "Call channel:",
-                status,
-                error
-            );
-
-
-            if (
-                status ===
-                "SUBSCRIBED"
-            ) {
-
-                await callChannel.track(
-                    {
-
-                        user_id:
-                            currentUser.id,
-
-                        nickname:
-                            getUserNickname(),
-
-                        session_id:
-                            callSessionId,
-
-                        joined_at:
-                            new Date().toISOString()
-
-                    }
-                );
-
-
-                rebuildCallPresence();
-
-            }
-
-
-            if (error) {
-
-                console.error(
-                    "Call channel error:",
-                    error
-                );
-
-            }
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   CALL PRESENCE
-========================================================= */
-
-function rebuildCallPresence() {
-
-    if (!callChannel) {
+    if (
+        !supabaseClient ||
+        !currentUser ||
+        !callRoomId
+    ) {
 
         return;
 
     }
 
 
-    const state =
-        callChannel.presenceState();
+    if (callChannel) {
 
+        try {
 
-    callPresenceUsers.clear();
+            supabaseClient.removeChannel(
+                callChannel
+            );
 
+        } catch (error) {
 
-    Object.entries(
-        state
-    ).forEach(
-        (
-            [
-                key,
-                entries
-            ]
-        ) => {
-
-            const entry =
-                entries?.[0];
-
-
-            if (
-                !entry ||
-                entry.session_id ===
-                    callSessionId
-            ) {
-
-                return;
-
-            }
-
-
-            callPresenceUsers.set(
-                entry.session_id,
-                {
-
-                    ...entry,
-
-                    presence_key:
-                        key
-
-                }
+            console.error(
+                error
             );
 
         }
-    );
+
+    }
 
 
-    updateCallParticipantCount();
+    callParticipants = {};
 
 
-    callPresenceUsers.forEach(
-        async peer => {
-
-            const shouldOffer =
-                callSessionId <
-                peer.session_id;
+    const channelName =
+        "video-room-" +
+        callRoomId;
 
 
-            const pc =
-                await getOrCreatePeerConnection(
-                    peer
+    callChannel =
+        supabaseClient.channel(
+            channelName
+        );
+
+
+    callChannel
+        .on(
+            "broadcast",
+            {
+                event: "signal"
+            },
+            async function (payload) {
+
+                const data =
+                    payload.payload;
+
+
+                if (!data) {
+                    return;
+                }
+
+
+                if (
+                    data.from ===
+                    currentUser.id
+                ) {
+
+                    return;
+
+                }
+
+
+                await handleSignal(
+                    data
                 );
 
+            }
+        )
+        .on(
+            "presence",
+            {
+                event: "sync"
+            },
+            function () {
+
+                const state =
+                    callChannel.presenceState();
+
+
+                Object.keys(state)
+                    .forEach(
+                        function (key) {
+
+                            if (
+                                key !==
+                                currentUser.id
+                            ) {
+
+                                callParticipants[key] =
+                                    state[key][0] ||
+                                    {};
+
+                            }
+
+                        }
+                    );
+
+
+                updateCallParticipantCount();
+
+            }
+        );
+
+
+    await callChannel.subscribe(
+        async function (status) {
 
             if (
-                shouldOffer
-                &&
-                !sentOffers.has(
-                    peer.session_id
-                )
+                status ===
+                "SUBSCRIBED"
             ) {
 
-                sentOffers.add(
-                    peer.session_id
-                );
+                await callChannel.track({
+
+                    user_id:
+                        currentUser.id,
+
+                    nickname:
+                        profileData.nickname ||
+                        "Player"
+
+                });
 
 
-                await createPeerOffer(
-                    peer,
-                    pc
-                );
+                const statusElement =
+                    document.getElementById(
+                        "call-status"
+                    );
+
+
+                if (statusElement) {
+
+                    statusElement.textContent =
+                        "Комната подключена";
+
+                }
 
             }
 
@@ -4191,47 +3613,168 @@ function rebuildCallPresence() {
 
 
 /* =========================================================
-   PEER CONNECTION
+   SIGNAL HANDLER
 ========================================================= */
 
-async function getOrCreatePeerConnection(
-    peer
+async function handleSignal(
+    data
+) {
+
+    const from =
+        data.from;
+
+
+    if (!from) {
+        return;
+    }
+
+
+    if (
+        data.type ===
+        "offer"
+    ) {
+
+        const pc =
+            await createPeerConnection(
+                from
+            );
+
+
+        await pc.setRemoteDescription(
+            new RTCSessionDescription(
+                data.offer
+            )
+        );
+
+
+        const answer =
+            await pc.createAnswer();
+
+
+        await pc.setLocalDescription(
+            answer
+        );
+
+
+        sendSignal(
+            from,
+            {
+                type: "answer",
+                answer
+            }
+        );
+
+
+        return;
+
+    }
+
+
+    if (
+        data.type ===
+        "answer"
+    ) {
+
+        const pc =
+            peerConnections[from];
+
+
+        if (!pc) {
+            return;
+        }
+
+
+        await pc.setRemoteDescription(
+            new RTCSessionDescription(
+                data.answer
+            )
+        );
+
+
+        return;
+
+    }
+
+
+    if (
+        data.type ===
+        "candidate"
+    ) {
+
+        const pc =
+            peerConnections[from];
+
+
+        if (!pc) {
+            return;
+        }
+
+
+        try {
+
+            await pc.addIceCandidate(
+                new RTCIceCandidate(
+                    data.candidate
+                )
+            );
+
+        } catch (error) {
+
+            console.error(
+                "ICE candidate error:",
+                error
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   CREATE PEER CONNECTION
+========================================================= */
+
+async function createPeerConnection(
+    remoteUserId
 ) {
 
     if (
-        callPeers.has(
-            peer.session_id
-        )
+        peerConnections[
+            remoteUserId
+        ]
     ) {
 
-        return callPeers.get(
-            peer.session_id
-        );
+        return peerConnections[
+            remoteUserId
+        ];
 
     }
 
 
     const pc =
         new RTCPeerConnection(
-            {
-
-                iceServers:
-                    ICE_SERVERS
-
-            }
+            RTC_CONFIGURATION
         );
 
 
-    if (localMediaStream) {
+    peerConnections[
+        remoteUserId
+    ] =
+        pc;
 
-        localMediaStream
+
+    if (localStream) {
+
+        localStream
             .getTracks()
             .forEach(
-                track => {
+                function (track) {
 
                     pc.addTrack(
                         track,
-                        localMediaStream
+                        localStream
                     );
 
                 }
@@ -4241,81 +3784,68 @@ async function getOrCreatePeerConnection(
 
 
     pc.onicecandidate =
-        async event => {
+        function (event) {
 
             if (
-                !event.candidate
+                event.candidate
             ) {
 
-                return;
+                sendSignal(
+                    remoteUserId,
+                    {
+                        type:
+                            "candidate",
+
+                        candidate:
+                            event.candidate
+                    }
+                );
 
             }
-
-
-            await sendCallSignal(
-                {
-
-                    type:
-                        "ice",
-
-                    to:
-                        peer.session_id,
-
-                    from:
-                        callSessionId,
-
-                    candidate:
-                        event.candidate
-
-                }
-            );
 
         };
 
 
     pc.ontrack =
-        event => {
+        function (event) {
 
             const stream =
                 event.streams[0];
 
 
-            if (stream) {
-
-                attachRemoteVideo(
-                    peer,
-                    stream
-                );
-
+            if (!stream) {
+                return;
             }
+
+
+            addRemoteVideo(
+                remoteUserId,
+                stream
+            );
 
         };
 
 
     pc.onconnectionstatechange =
-        () => {
+        function () {
 
             if (
-                pc.connectionState ===
-                    "failed"
-                ||
-                pc.connectionState ===
-                    "closed"
+                [
+                    "failed",
+                    "closed",
+                    "disconnected"
+                ].includes(
+                    pc.connectionState
+                )
             ) {
 
-                removeCallPeer(
-                    peer.session_id
+                removeRemoteVideo(
+                    remoteUserId
                 );
 
             }
 
         };
-
-
-    callPeers.set(
-        peer.session_id,
-        pc
-    );
 
 
     return pc;
@@ -4324,344 +3854,47 @@ async function getOrCreatePeerConnection(
 
 
 /* =========================================================
-   CREATE OFFER
+   SEND SIGNAL
 ========================================================= */
 
-async function createPeerOffer(
-    peer,
-    pc
-) {
-
-    try {
-
-        const offer =
-            await pc.createOffer();
-
-
-        await pc.setLocalDescription(
-            offer
-        );
-
-
-        await sendCallSignal(
-            {
-
-                type:
-                    "offer",
-
-                to:
-                    peer.session_id,
-
-                from:
-                    callSessionId,
-
-                nickname:
-                    getUserNickname(),
-
-                description:
-                    pc.localDescription
-
-            }
-        );
-
-    } catch (error) {
-
-        console.error(
-            "Offer:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   SIGNAL
-========================================================= */
-
-async function handleWebRTCSignal(
-    signal
-) {
-
-    if (
-        !signal ||
-        signal.to !==
-            callSessionId
-    ) {
-
-        return;
-
-    }
-
-
-    let peer =
-        callPresenceUsers.get(
-            signal.from
-        );
-
-
-    if (!peer) {
-
-        peer = {
-
-            session_id:
-                signal.from,
-
-            nickname:
-                signal.nickname ||
-                "Player"
-
-        };
-
-
-        callPresenceUsers.set(
-            signal.from,
-            peer
-        );
-
-    }
-
-
-    const pc =
-        await getOrCreatePeerConnection(
-            peer
-        );
-
-
-    try {
-
-        if (
-            signal.type ===
-            "offer"
-        ) {
-
-            await pc.setRemoteDescription(
-                new RTCSessionDescription(
-                    signal.description
-                )
-            );
-
-
-            await flushPendingIce(
-                signal.from,
-                pc
-            );
-
-
-            const answer =
-                await pc.createAnswer();
-
-
-            await pc.setLocalDescription(
-                answer
-            );
-
-
-            await sendCallSignal(
-                {
-
-                    type:
-                        "answer",
-
-                    to:
-                        signal.from,
-
-                    from:
-                        callSessionId,
-
-                    nickname:
-                        getUserNickname(),
-
-                    description:
-                        pc.localDescription
-
-                }
-            );
-
-
-            return;
-
-        }
-
-
-        if (
-            signal.type ===
-            "answer"
-        ) {
-
-            await pc.setRemoteDescription(
-                new RTCSessionDescription(
-                    signal.description
-                )
-            );
-
-
-            await flushPendingIce(
-                signal.from,
-                pc
-            );
-
-
-            return;
-
-        }
-
-
-        if (
-            signal.type ===
-            "ice"
-        ) {
-
-            if (
-                pc.remoteDescription
-            ) {
-
-                await pc.addIceCandidate(
-                    signal.candidate
-                );
-
-            } else {
-
-                if (
-                    !pendingIceCandidates.has(
-                        signal.from
-                    )
-                ) {
-
-                    pendingIceCandidates.set(
-                        signal.from,
-                        []
-                    );
-
-                }
-
-
-                pendingIceCandidates
-                    .get(
-                        signal.from
-                    )
-                    .push(
-                        signal.candidate
-                    );
-
-            }
-
-        }
-
-    } catch (error) {
-
-        console.error(
-            "WebRTC signal:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   ICE
-========================================================= */
-
-async function flushPendingIce(
-    peerId,
-    pc
-) {
-
-    const queue =
-        pendingIceCandidates.get(
-            peerId
-        );
-
-
-    if (!queue) {
-
-        return;
-
-    }
-
-
-    for (
-        const candidate
-        of queue
-    ) {
-
-        try {
-
-            await pc.addIceCandidate(
-                candidate
-            );
-
-        } catch (error) {
-
-            console.warn(
-                "ICE:",
-                error
-            );
-
-        }
-
-    }
-
-
-    pendingIceCandidates.delete(
-        peerId
-    );
-
-}
-
-
-/* =========================================================
-   SEND CALL SIGNAL
-========================================================= */
-
-async function sendCallSignal(
+function sendSignal(
+    target,
     payload
 ) {
 
     if (!callChannel) {
-
         return;
-
     }
 
 
-    try {
+    callChannel.send({
 
-        await callChannel.send(
-            {
+        type: "broadcast",
 
-                type:
-                    "broadcast",
+        event: "signal",
 
-                event:
-                    "signal",
+        payload: {
 
-                payload
+            ...payload,
 
-            }
-        );
+            from:
+                currentUser.id,
 
-    } catch (error) {
+            target
 
-        console.error(
-            "Call signal:",
-            error
-        );
+        }
 
-    }
+    });
 
 }
 
 
 /* =========================================================
-   REMOTE VIDEO
+   ADD REMOTE VIDEO
 ========================================================= */
 
-function attachRemoteVideo(
-    peer,
+function addRemoteVideo(
+    userId,
     stream
 ) {
 
@@ -4672,15 +3905,14 @@ function attachRemoteVideo(
 
 
     if (!grid) {
-
         return;
-
     }
 
 
     let tile =
-        grid.querySelector(
-            `[data-peer-id="${peer.session_id}"]`
+        document.getElementById(
+            "remote-video-" +
+            userId
         );
 
 
@@ -4696,45 +3928,237 @@ function attachRemoteVideo(
             "call-video-tile";
 
 
-        tile.dataset.peerId =
-            peer.session_id;
+        tile.id =
+            "remote-video-" +
+            userId;
 
 
-        tile.innerHTML = `
-
-            <video
-                autoplay
-                playsinline
-            ></video>
+        const video =
+            document.createElement(
+                "video"
+            );
 
 
-            <div class="call-video-label">
-                ${escapeHtml(
-                    peer.nickname ||
-                    "Player"
-                )}
-            </div>
+        video.autoplay = true;
 
-        `;
+        video.playsInline = true;
+
+        video.srcObject =
+            stream;
+
+
+        tile.appendChild(
+            video
+        );
+
+
+        const label =
+            document.createElement(
+                "div"
+            );
+
+
+        label.className =
+            "call-video-label";
+
+
+        label.textContent =
+            callParticipants[
+                userId
+            ]?.nickname ||
+            "Игрок";
+
+
+        tile.appendChild(
+            label
+        );
 
 
         grid.appendChild(
             tile
         );
 
+    } else {
+
+        const video =
+            tile.querySelector(
+                "video"
+            );
+
+
+        if (video) {
+
+            video.srcObject =
+                stream;
+
+        }
+
     }
 
 
-    const video =
-        tile.querySelector(
-            "video"
+    updateCallParticipantCount();
+
+}
+
+
+/* =========================================================
+   REMOVE REMOTE VIDEO
+========================================================= */
+
+function removeRemoteVideo(
+    userId
+) {
+
+    const tile =
+        document.getElementById(
+            "remote-video-" +
+            userId
         );
 
 
-    if (video) {
+    if (tile) {
 
-        video.srcObject =
-            stream;
+        tile.remove();
+
+    }
+
+
+    const pc =
+        peerConnections[
+            userId
+        ];
+
+
+    if (pc) {
+
+        try {
+            pc.close();
+        } catch (error) {
+            console.error(error);
+        }
+
+    }
+
+
+    delete peerConnections[
+        userId
+    ];
+
+
+    delete callParticipants[
+        userId
+    ];
+
+
+    updateCallParticipantCount();
+
+}
+
+
+/* =========================================================
+   CALL PARTICIPANT COUNT
+========================================================= */
+
+function updateCallParticipantCount() {
+
+    const count =
+        Object.keys(
+            callParticipants
+        ).length + 1;
+
+
+    setText(
+        "call-participant-count",
+        count
+    );
+
+}
+
+
+/* =========================================================
+   MICROPHONE
+========================================================= */
+
+function toggleMicrophone() {
+
+    if (!localStream) {
+        return;
+    }
+
+
+    microphoneEnabled =
+        !microphoneEnabled;
+
+
+    localStream
+        .getAudioTracks()
+        .forEach(
+            function (track) {
+
+                track.enabled =
+                    microphoneEnabled;
+
+            }
+        );
+
+
+    const button =
+        document.getElementById(
+            "call-mic-button"
+        );
+
+
+    if (button) {
+
+        button.classList.toggle(
+            "active",
+            microphoneEnabled
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   CAMERA
+========================================================= */
+
+function toggleCamera() {
+
+    if (!localStream) {
+        return;
+    }
+
+
+    cameraEnabled =
+        !cameraEnabled;
+
+
+    localStream
+        .getVideoTracks()
+        .forEach(
+            function (track) {
+
+                track.enabled =
+                    cameraEnabled;
+
+            }
+        );
+
+
+    const button =
+        document.getElementById(
+            "call-camera-button"
+        );
+
+
+    if (button) {
+
+        button.classList.toggle(
+            "active",
+            cameraEnabled
+        );
 
     }
 
@@ -4747,9 +4171,12 @@ function attachRemoteVideo(
 
 async function toggleScreenShare() {
 
-    if (
-        screenMediaStream
-    ) {
+    if (!localStream) {
+        return;
+    }
+
+
+    if (screenSharing) {
 
         await stopScreenShare();
 
@@ -4758,130 +4185,100 @@ async function toggleScreenShare() {
     }
 
 
-    if (
-        !navigator.mediaDevices ||
-        typeof navigator.mediaDevices.getDisplayMedia !==
-            "function"
-    ) {
-
-        setCallMessage(
-            "Браузер не поддерживает демонстрацию экрана."
-        );
-
-        return;
-
-    }
-
-
     try {
 
-        screenMediaStream =
-            await navigator.mediaDevices.getDisplayMedia(
-                {
+        screenStream =
+            await navigator.mediaDevices.getDisplayMedia({
 
-                    video: {
+                video: true,
 
-                        frameRate:
-                            30
+                audio: false
 
-                    },
+            });
 
-                    audio:
-                        true
+
+        const screenTrack =
+            screenStream.getVideoTracks()[0];
+
+
+        const senderPromises =
+            Object.values(
+                peerConnections
+            )
+            .map(
+                function (pc) {
+
+                    const sender =
+                        pc
+                            .getSenders()
+                            .find(
+                                function (item) {
+
+                                    return (
+                                        item.track &&
+                                        item.track.kind ===
+                                        "video"
+                                    );
+
+                                }
+                            );
+
+
+                    if (
+                        sender &&
+                        screenTrack
+                    ) {
+
+                        return sender.replaceTrack(
+                            screenTrack
+                        );
+
+                    }
+
+
+                    return Promise.resolve();
 
                 }
             );
 
 
-        const screenTrack =
-            screenMediaStream.getVideoTracks()[0];
+        await Promise.all(
+            senderPromises
+        );
 
 
-        if (!screenTrack) {
-
-            throw new Error(
-                "Не удалось получить экран."
-            );
-
-        }
+        screenSharing =
+            true;
 
 
-        const localVideo =
+        const button =
             document.getElementById(
-                "local-video"
+                "call-screen-button"
             );
 
 
-        if (localVideo) {
+        if (button) {
 
-            localVideo.srcObject =
-                screenMediaStream;
-
-        }
-
-
-        for (
-            const pc
-            of callPeers.values()
-        ) {
-
-            const sender =
-                pc
-                    .getSenders()
-                    .find(
-                        item =>
-                            item.track &&
-                            item.track.kind ===
-                            "video"
-                    );
-
-
-            if (sender) {
-
-                await sender.replaceTrack(
-                    screenTrack
-                );
-
-            }
+            button.classList.add(
+                "active"
+            );
 
         }
 
 
         screenTrack.onended =
-            () => {
+            function () {
 
                 stopScreenShare();
 
             };
 
 
-        document
-            .getElementById(
-                "call-screen-button"
-            )
-            ?.classList.add(
-                "active"
-            );
-
-
-        setCallMessage(
-            "Демонстрация экрана включена."
-        );
-
     } catch (error) {
 
-        console.warn(
-            "Screen sharing:",
+        console.error(
+            "Screen share error:",
             error
-        );
-
-
-        screenMediaStream =
-            null;
-
-
-        setCallMessage(
-            "Демонстрация экрана отменена."
         );
 
     }
@@ -4895,86 +4292,183 @@ async function toggleScreenShare() {
 
 async function stopScreenShare() {
 
-    if (
-        !screenMediaStream
-    ) {
-
+    if (!screenSharing) {
         return;
+    }
+
+
+    const cameraTrack =
+        localStream
+            ? localStream.getVideoTracks()[0]
+            : null;
+
+
+    if (cameraTrack) {
+
+        const senderPromises =
+            Object.values(
+                peerConnections
+            )
+            .map(
+                function (pc) {
+
+                    const sender =
+                        pc
+                            .getSenders()
+                            .find(
+                                function (item) {
+
+                                    return (
+                                        item.track &&
+                                        item.track.kind ===
+                                        "video"
+                                    );
+
+                                }
+                            );
+
+
+                    if (sender) {
+
+                        return sender.replaceTrack(
+                            cameraTrack
+                        );
+
+                    }
+
+
+                    return Promise.resolve();
+
+                }
+            );
+
+
+        await Promise.all(
+            senderPromises
+        );
 
     }
 
 
-    screenMediaStream
-        .getTracks()
-        .forEach(
-            track => {
+    if (screenStream) {
 
-                try {
+        screenStream
+            .getTracks()
+            .forEach(
+                function (track) {
 
                     track.stop();
 
-                } catch {}
+                }
+            );
+
+    }
+
+
+    screenStream =
+        null;
+
+
+    screenSharing =
+        false;
+
+
+    const button =
+        document.getElementById(
+            "call-screen-button"
+        );
+
+
+    if (button) {
+
+        button.classList.remove(
+            "active"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   LEAVE CALL
+========================================================= */
+
+async function leaveCall() {
+
+    try {
+
+        if (screenSharing) {
+
+            await stopScreenShare();
+
+        }
+
+
+        if (localStream) {
+
+            localStream
+                .getTracks()
+                .forEach(
+                    function (track) {
+
+                        track.stop();
+
+                    }
+                );
+
+        }
+
+
+        localStream =
+            null;
+
+
+        Object.keys(
+            peerConnections
+        )
+        .forEach(
+            function (userId) {
+
+                const pc =
+                    peerConnections[
+                        userId
+                    ];
+
+
+                if (pc) {
+
+                    try {
+                        pc.close();
+                    } catch (error) {
+                        console.error(error);
+                    }
+
+                }
 
             }
         );
 
 
-    screenMediaStream =
-        null;
+        peerConnections = {};
+
+        callParticipants = {};
 
 
-    const cameraTrack =
-        localMediaStream
-            ?.getVideoTracks()[0]
-        ||
-        null;
-
-
-    const localVideo =
-        document.getElementById(
-            "local-video"
-        );
-
-
-    if (
-        localVideo &&
-        localMediaStream
-    ) {
-
-        localVideo.srcObject =
-            localMediaStream;
-
-    }
-
-
-    for (
-        const pc
-        of callPeers.values()
-    ) {
-
-        const sender =
-            pc
-                .getSenders()
-                .find(
-                    item =>
-                        item.track &&
-                        item.track.kind ===
-                            "video"
-                );
-
-
-        if (sender) {
+        if (
+            callChannel &&
+            supabaseClient
+        ) {
 
             try {
 
-                await sender.replaceTrack(
-                    cameraTrack
+                await supabaseClient.removeChannel(
+                    callChannel
                 );
 
             } catch (error) {
 
-                console.warn(
-                    "replaceTrack:",
+                console.error(
                     error
                 );
 
@@ -4982,141 +4476,42 @@ async function stopScreenShare() {
 
         }
 
-    }
+
+        callChannel =
+            null;
+
+        callRoomId =
+            null;
 
 
-    document
-        .getElementById(
-            "call-screen-button"
-        )
-        ?.classList.remove(
-            "active"
-        );
+        const video =
+            document.getElementById(
+                "local-video"
+            );
 
 
-    setCallMessage(
-        "Демонстрация экрана остановлена."
-    );
+        if (video) {
 
-}
-
-
-/* =========================================================
-   MIC
-========================================================= */
-
-function toggleMicrophone() {
-
-    const tracks =
-        localMediaStream
-            ?.getAudioTracks()
-        ||
-        [];
-
-
-    if (!tracks.length) {
-
-        setCallMessage(
-            "Микрофон недоступен."
-        );
-
-        return;
-
-    }
-
-
-    const enabled =
-        !tracks[0].enabled;
-
-
-    tracks.forEach(
-        track => {
-
-            track.enabled =
-                enabled;
+            video.srcObject =
+                null;
 
         }
-    );
 
 
-    document
-        .getElementById(
-            "call-mic-button"
-        )
-        ?.classList.toggle(
-            "active",
-            enabled
-        );
-
-}
-
-
-/* =========================================================
-   CAMERA
-========================================================= */
-
-function toggleCamera() {
-
-    const tracks =
-        localMediaStream
-            ?.getVideoTracks()
-        ||
-        [];
-
-
-    if (!tracks.length) {
-
-        setCallMessage(
-            "Камера недоступна."
-        );
-
-        return;
-
-    }
-
-
-    const enabled =
-        !tracks[0].enabled;
-
-
-    tracks.forEach(
-        track => {
-
-            track.enabled =
-                enabled;
-
-        }
-    );
-
-
-    document
-        .getElementById(
-            "call-camera-button"
-        )
-        ?.classList.toggle(
-            "active",
-            enabled
-        );
-
-}
-
-
-/* =========================================================
-   CALL COUNT
-========================================================= */
-
-function updateCallParticipantCount() {
-
-    const element =
-        document.getElementById(
-            "call-participant-count"
+        hideModal(
+            "call-modal"
         );
 
 
-    if (element) {
+        updateCallParticipantCount();
 
-        element.textContent =
-            callPresenceUsers.size + 1;
+
+    } catch (error) {
+
+        console.error(
+            "Leave call error:",
+            error
+        );
 
     }
 
@@ -5124,83 +4519,19 @@ function updateCallParticipantCount() {
 
 
 /* =========================================================
-   REMOVE PEER
+   CLEANUP CALL
 ========================================================= */
 
-function removeCallPeer(
-    peerId
-) {
+function cleanupCall() {
 
-    const pc =
-        callPeers.get(
-            peerId
-        );
+    if (localStream) {
 
-
-    if (pc) {
-
-        try {
-
-            pc.close();
-
-        } catch {}
-
-
-        callPeers.delete(
-            peerId
-        );
-
-    }
-
-
-    const tile =
-        document.querySelector(
-            `[data-peer-id="${peerId}"]`
-        );
-
-
-    if (tile) {
-
-        tile.remove();
-
-    }
-
-
-    sentOffers.delete(
-        peerId
-    );
-
-
-    pendingIceCandidates.delete(
-        peerId
-    );
-
-
-    updateCallParticipantCount();
-
-}
-
-
-/* =========================================================
-   CLOSE CALL
-========================================================= */
-
-async function closeVideoCall() {
-
-    if (
-        screenMediaStream
-    ) {
-
-        screenMediaStream
+        localStream
             .getTracks()
             .forEach(
-                track => {
+                function (track) {
 
-                    try {
-
-                        track.stop();
-
-                    } catch {}
+                    track.stop();
 
                 }
             );
@@ -5208,64 +4539,45 @@ async function closeVideoCall() {
     }
 
 
-    if (
-        localMediaStream
-    ) {
-
-        localMediaStream
-            .getTracks()
-            .forEach(
-                track => {
-
-                    try {
-
-                        track.stop();
-
-                    } catch {}
-
-                }
-            );
-
-    }
+    localStream =
+        null;
 
 
-    callPeers.forEach(
-        pc => {
+    Object.values(
+        peerConnections
+    )
+    .forEach(
+        function (pc) {
 
             try {
-
                 pc.close();
-
-            } catch {}
+            } catch (error) {
+                console.error(error);
+            }
 
         }
     );
 
 
-    callPeers.clear();
+    peerConnections = {};
 
-    callPresenceUsers.clear();
-
-    pendingIceCandidates.clear();
-
-    sentOffers.clear();
+    callParticipants = {};
 
 
     if (
-        callChannel
+        callChannel &&
+        supabaseClient
     ) {
 
         try {
 
-            await supabaseClient
-                .removeChannel(
-                    callChannel
-                );
+            supabaseClient.removeChannel(
+                callChannel
+            );
 
         } catch (error) {
 
-            console.warn(
-                "remove call channel:",
+            console.error(
                 error
             );
 
@@ -5277,1004 +4589,140 @@ async function closeVideoCall() {
     callChannel =
         null;
 
-
-    callRoom =
+    callRoomId =
         null;
-
-
-    callSessionId =
-        null;
-
-
-    localMediaStream =
-        null;
-
-
-    screenMediaStream =
-        null;
-
-
-    const localVideo =
-        document.getElementById(
-            "local-video"
-        );
-
-
-    if (localVideo) {
-
-        localVideo.srcObject =
-            null;
-
-    }
-
-
-    document
-        .getElementById(
-            "call-video-grid"
-        )
-        ?.querySelectorAll(
-            "[data-peer-id]"
-        )
-        .forEach(
-            element => {
-
-                element.remove();
-
-            }
-        );
-
-
-    document
-        .getElementById(
-            "call-modal"
-        )
-        ?.classList.remove(
-            "open"
-        );
-
-
-    updateCallParticipantCount();
 
 }
 
 
 /* =========================================================
-   MODALS
+   GLOBAL EXPORTS
 ========================================================= */
 
-function initModals() {
-
-    document
-        .querySelectorAll(
-            "[data-close-modal]"
-        )
-        .forEach(
-            button => {
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        closeModal(
-                            button.dataset.closeModal
-                        );
-
-                    }
-                );
-
-            }
-        );
+window.gamePlatformSupabase =
+    null;
 
 
-    document
-        .querySelectorAll(
-            ".modal-overlay"
-        )
-        .forEach(
-            overlay => {
+window.openGameCall =
+    openCall;
 
-                overlay.addEventListener(
-                    "click",
-                    event => {
 
-                        if (
-                            event.target !==
-                            overlay
-                        ) {
+window.gamePlatformOpenCall =
+    openCall;
 
-                            return;
+
+/* =========================================================
+   DOM READY
+========================================================= */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    async function () {
+
+        updateVersion();
+
+        initAuthTabs();
+
+        initForms();
+
+        initNavigation();
+
+        initButtons();
+
+
+        /*
+         * Проверяем библиотеку Supabase.
+         */
+
+        if (
+            !window.supabase ||
+            typeof window.supabase.createClient !==
+            "function"
+        ) {
+
+            console.error(
+                "Supabase JS library is not loaded."
+            );
+
+
+            showAuthMessage(
+                "Не удалось загрузить Supabase."
+            );
+
+
+            return;
+
+        }
+
+
+        /*
+         * Единственное место создания клиента.
+         */
+
+        try {
+
+            supabaseClient =
+                window.supabase.createClient(
+
+                    SUPABASE_URL,
+
+                    SUPABASE_PUBLISHABLE_KEY,
+
+                    {
+
+                        auth: {
+
+                            persistSession: true,
+
+                            autoRefreshToken: true,
+
+                            detectSessionInUrl: true
 
                         }
 
-
-                        if (
-                            overlay.id ===
-                            "call-modal"
-                        ) {
-
-                            closeVideoCall();
-
-                        } else {
-
-                            closeModal(
-                                overlay.id
-                            );
-
-                        }
-
                     }
-                );
 
-            }
-        );
-
-
-    document.addEventListener(
-        "keydown",
-        event => {
-
-            if (
-                event.key !==
-                "Escape"
-            ) {
-
-                return;
-
-            }
-
-
-            const callModal =
-                document.getElementById(
-                    "call-modal"
                 );
 
 
-            if (
-                callModal?.classList.contains(
-                    "open"
+            window.gamePlatformSupabase =
+                supabaseClient;
+
+
+            /*
+             * Совместимость с profile-vip.js.
+             */
+
+            window.supabaseClient =
+                supabaseClient;
+
+
+        } catch (error) {
+
+            console.error(
+                "Supabase initialization error:",
+                error
+            );
+
+
+            showAuthMessage(
+                "Ошибка подключения к Supabase: " +
+                (
+                    error.message ||
+                    "неизвестная ошибка"
                 )
-            ) {
-
-                closeVideoCall();
-
-            }
-
-
-            closeModal(
-                "online-modal"
             );
 
 
-            closeModal(
-                "profile-modal"
-            );
+            return;
 
         }
-    );
-
-}
 
 
-function openModal(
-    id
-) {
+        subscribeAuthState();
 
-    document
-        .getElementById(
-            id
-        )
-        ?.classList.add(
-            "open"
-        );
-
-}
-
-
-function closeModal(
-    id
-) {
-
-    document
-        .getElementById(
-            id
-        )
-        ?.classList.remove(
-            "open"
-        );
-
-}
-
-
-/* =========================================================
-   BUTTONS
-========================================================= */
-
-function initButtons() {
-
-    document
-        .getElementById(
-            "header-online-button"
-        )
-        ?.addEventListener(
-            "click",
-            openOnlinePlayers
-        );
-
-
-    document
-        .getElementById(
-            "hero-online-button"
-        )
-        ?.addEventListener(
-            "click",
-            openOnlinePlayers
-        );
-
-
-    document
-        .getElementById(
-            "hero-games-button"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                openPage(
-                    "games"
-                );
-
-            }
-        );
-
-
-    document
-        .getElementById(
-            "header-profile-button"
-        )
-        ?.addEventListener(
-            "click",
-            openProfile
-        );
-
-
-    document
-        .getElementById(
-            "profile-edit-button"
-        )
-        ?.addEventListener(
-            "click",
-            openProfile
-        );
-
-
-    document
-        .getElementById(
-            "youtube-button"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                window.open(
-                    "https://www.youtube.com/",
-                    "_blank",
-                    "noopener,noreferrer"
-                );
-
-            }
-        );
-
-
-    document
-        .getElementById(
-            "twitch-button"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                window.open(
-                    "https://www.twitch.tv/",
-                    "_blank",
-                    "noopener,noreferrer"
-                );
-
-            }
-        );
-
-
-    document
-        .getElementById(
-            "right-youtube-button"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                window.open(
-                    "https://www.youtube.com/",
-                    "_blank",
-                    "noopener,noreferrer"
-                );
-
-            }
-        );
-
-
-    document
-        .getElementById(
-            "right-twitch-button"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                window.open(
-                    "https://www.twitch.tv/",
-                    "_blank",
-                    "noopener,noreferrer"
-                );
-
-            }
-        );
-
-
-    document
-        .getElementById(
-            "logout-button"
-        )
-        ?.addEventListener(
-            "click",
-            logoutUser
-        );
-
-
-    document
-        .getElementById(
-            "call-mic-button"
-        )
-        ?.addEventListener(
-            "click",
-            toggleMicrophone
-        );
-
-
-    document
-        .getElementById(
-            "call-camera-button"
-        )
-        ?.addEventListener(
-            "click",
-            toggleCamera
-        );
-
-
-    document
-        .getElementById(
-            "call-screen-button"
-        )
-        ?.addEventListener(
-            "click",
-            toggleScreenShare
-        );
-
-
-    document
-        .getElementById(
-            "call-leave-button"
-        )
-        ?.addEventListener(
-            "click",
-            closeVideoCall
-        );
-
-
-    document
-        .getElementById(
-            "call-close-x"
-        )
-        ?.addEventListener(
-            "click",
-            closeVideoCall
-        );
-
-}
-
-
-/* =========================================================
-   CLEANUP
-========================================================= */
-
-async function cleanupGlobalPresence() {
-
-    if (
-        !onlinePresenceChannel
-    ) {
-
-        return;
+        await loadInitialSession();
 
     }
-
-
-    try {
-
-        await supabaseClient
-            .removeChannel(
-                onlinePresenceChannel
-            );
-
-    } catch (error) {
-
-        console.warn(
-            "Presence cleanup:",
-            error
-        );
-
-    }
-
-
-    onlinePresenceChannel =
-        null;
-
-
-    onlinePlayers =
-        [];
-
-}
-
-
-async function removeChatChannel() {
-
-    if (!chatChannel) {
-
-        return;
-
-    }
-
-
-    try {
-
-        await supabaseClient
-            .removeChannel(
-                chatChannel
-            );
-
-    } catch (error) {
-
-        console.warn(
-            "Chat cleanup:",
-            error
-        );
-
-    }
-
-
-    chatChannel =
-        null;
-
-}
-
-
-async function cleanupRealtime() {
-
-    await closeVideoCall();
-
-    await removeChatChannel();
-
-    await cleanupGlobalPresence();
-
-}
-
-
-/* =========================================================
-   LOGOUT
-========================================================= */
-
-async function logoutUser() {
-
-    await cleanupRealtime();
-
-
-    const {
-        error
-    } =
-        await supabaseClient
-            .auth
-            .signOut();
-
-
-    if (error) {
-
-        console.error(
-            "Logout:",
-            error
-        );
-
-    }
-
-
-    currentUser =
-        null;
-
-
-    currentSession =
-        null;
-
-
-    profileData = {
-
-        nickname:
-            "Player",
-
-        status:
-            "Онлайн"
-
-    };
-
-
-    showAuthScreen();
-
-}
-
-
-/* =========================================================
-   AUTH UI
-========================================================= */
-
-function showAuthScreen() {
-
-    appShell?.classList.remove(
-        "visible"
-    );
-
-
-    if (authScreen) {
-
-        authScreen.style.display =
-            "flex";
-
-    }
-
-}
-
-
-function showAuthMessage(
-    message,
-    type = ""
-) {
-
-    if (!authMessage) {
-
-        console.error(
-            message
-        );
-
-        return;
-
-    }
-
-
-    authMessage.textContent =
-        message;
-
-
-    authMessage.className =
-        "auth-message";
-
-
-    if (type) {
-
-        authMessage.classList.add(
-            type
-        );
-
-    }
-
-}
-
-
-function clearAuthMessage() {
-
-    if (!authMessage) {
-
-        return;
-
-    }
-
-
-    authMessage.textContent =
-        "";
-
-
-    authMessage.className =
-        "auth-message";
-
-}
-
-
-function setAuthLoading(
-    form,
-    loading
-) {
-
-    if (!form) {
-
-        return;
-
-    }
-
-
-    const button =
-        form.querySelector(
-            "button[type='submit']"
-        );
-
-
-    if (!button) {
-
-        return;
-
-    }
-
-
-    if (loading) {
-
-        button.disabled =
-            true;
-
-
-        button.dataset.originalText =
-            button.innerHTML;
-
-
-        button.innerHTML =
-            "Подождите...";
-
-    } else {
-
-        button.disabled =
-            false;
-
-
-        button.innerHTML =
-            button.dataset.originalText ||
-            "Продолжить";
-
-    }
-
-}
-
-
-/* =========================================================
-   MODAL MESSAGE
-========================================================= */
-
-function showModalMessage(
-    message,
-    type = ""
-) {
-
-    const element =
-        document.getElementById(
-            "profile-message"
-        );
-
-
-    if (!element) {
-
-        return;
-
-    }
-
-
-    element.textContent =
-        message;
-
-
-    element.className =
-        "modal-message";
-
-
-    if (type) {
-
-        element.classList.add(
-            type
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   CALL MESSAGE
-========================================================= */
-
-function setCallStatus(
-    message
-) {
-
-    const element =
-        document.getElementById(
-            "call-status"
-        );
-
-
-    if (element) {
-
-        element.textContent =
-            message;
-
-    }
-
-}
-
-
-function setCallMessage(
-    message
-) {
-
-    const element =
-        document.getElementById(
-            "call-message"
-        );
-
-
-    if (element) {
-
-        element.textContent =
-            message;
-
-    }
-
-}
-
-
-/* =========================================================
-   ERROR
-========================================================= */
-
-function translateSupabaseError(
-    error
-) {
-
-    const raw =
-        String(
-            error?.message ||
-            ""
-        );
-
-
-    const text =
-        raw.toLowerCase();
-
-
-    if (
-        text.includes(
-            "invalid login credentials"
-        )
-    ) {
-
-        return (
-            "Неверный email или пароль."
-        );
-
-    }
-
-
-    if (
-        text.includes(
-            "email not confirmed"
-        )
-    ) {
-
-        return (
-            "Email ещё не подтверждён."
-        );
-
-    }
-
-
-    if (
-        text.includes(
-            "user already registered"
-        )
-    ) {
-
-        return (
-            "Пользователь с таким email уже зарегистрирован."
-        );
-
-    }
-
-
-    if (
-        text.includes(
-            "rate limit"
-        )
-    ) {
-
-        return (
-            "Слишком много запросов. Попробуйте позже."
-        );
-
-    }
-
-
-    if (
-        text.includes(
-            "infinite recursion"
-        )
-    ) {
-
-        return (
-            "Ошибка политики безопасности профиля Supabase. Выполните исправление RLS для profiles."
-        );
-
-    }
-
-
-    if (
-        text.includes(
-            "row-level security"
-        )
-    ) {
-
-        return (
-            "Supabase заблокировал операцию с профилем. Проверьте RLS таблицы profiles."
-        );
-
-    }
-
-
-    return (
-        raw ||
-        "Произошла ошибка."
-    );
-
-}
-
-
-/* =========================================================
-   HELPERS
-========================================================= */
-
-function formatTime(
-    value
-) {
-
-    if (!value) {
-
-        return "";
-
-    }
-
-
-    return new Date(
-        value
-    ).toLocaleTimeString(
-        "ru-RU",
-        {
-
-            hour:
-                "2-digit",
-
-            minute:
-                "2-digit"
-
-        }
-    );
-
-}
-
-
-function scrollChatToBottom() {
-
-    const list =
-        document.getElementById(
-            "chat-message-list"
-        );
-
-
-    if (list) {
-
-        list.scrollTop =
-            list.scrollHeight;
-
-    }
-
-}
-
-
-function escapeHtml(
-    value
-) {
-
-    return String(
-        value ?? ""
-    )
-
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-
-        .replace(
-            /</g,
-            "&lt;"
-        )
-
-        .replace(
-            />/g,
-            "&gt;"
-        )
-
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-
-}
-
-
-/* =========================================================
-   VERSION
-========================================================= */
-
-function updateVersion() {
-
-    document
-        .querySelectorAll(
-            ".site-version"
-        )
-        .forEach(
-            element => {
-
-                element.textContent =
-                    `v${APP_VERSION}`;
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   PUBLIC API
-========================================================= */
-
-window.GamePlatform = {
-
-    getUser() {
-
-        return currentUser;
-
-    },
-
-
-    getSession() {
-
-        return currentSession;
-
-    },
-
-
-    openProfile,
-
-
-    openOnlinePlayers,
-
-
-    openVideoCall,
-
-
-    logout:
-        logoutUser
-
-};
+);
 ```
