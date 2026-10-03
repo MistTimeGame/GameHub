@@ -1,3 +1,4 @@
+```javascript
 /* =========================================================
    GAME PLATFORM
    SUPABASE AUTH
@@ -296,6 +297,7 @@ async function loadInitialSession() {
     if (error) {
 
         console.error(
+            "Session error:",
             error
         );
 
@@ -340,6 +342,12 @@ function subscribeAuthState() {
             event,
             session
         ) => {
+
+            console.log(
+                "Auth state:",
+                event
+            );
+
 
             currentSession =
                 session || null;
@@ -389,7 +397,7 @@ function subscribeAuthState() {
 
 function initAuthTabs() {
 
-    loginTab.addEventListener(
+    loginTab?.addEventListener(
         "click",
         () => {
 
@@ -425,7 +433,7 @@ function initAuthTabs() {
     );
 
 
-    registerTab.addEventListener(
+    registerTab?.addEventListener(
         "click",
         () => {
 
@@ -469,7 +477,7 @@ function initAuthTabs() {
 
 function initForms() {
 
-    loginForm.addEventListener(
+    loginForm?.addEventListener(
         "submit",
         async event => {
 
@@ -481,7 +489,7 @@ function initForms() {
     );
 
 
-    registerForm.addEventListener(
+    registerForm?.addEventListener(
         "submit",
         async event => {
 
@@ -497,7 +505,7 @@ function initForms() {
         .getElementById(
             "profile-form"
         )
-        .addEventListener(
+        ?.addEventListener(
             "submit",
             async event => {
 
@@ -522,7 +530,7 @@ async function loginUser() {
             .getElementById(
                 "login-email"
             )
-            .value
+            ?.value
             .trim();
 
 
@@ -531,7 +539,7 @@ async function loginUser() {
             .getElementById(
                 "login-password"
             )
-            .value;
+            ?.value || "";
 
 
     if (!email || !password) {
@@ -554,47 +562,82 @@ async function loginUser() {
     clearAuthMessage();
 
 
-    const {
-        data,
-        error
-    } =
-        await supabaseClient
-            .auth
-            .signInWithPassword({
+    try {
 
-                email,
+        const {
+            data,
+            error
+        } =
+            await supabaseClient
+                .auth
+                .signInWithPassword({
 
-                password
+                    email,
 
-            });
+                    password
 
-
-    setAuthLoading(
-        loginForm,
-        false
-    );
+                });
 
 
-    if (error) {
+        if (error) {
+
+            showAuthMessage(
+                translateSupabaseError(error),
+                "error"
+            );
+
+            return;
+        }
+
+
+        if (!data || !data.user) {
+
+            showAuthMessage(
+                "Supabase не вернул пользователя после входа.",
+                "error"
+            );
+
+            return;
+        }
+
+
+        currentSession =
+            data.session || null;
+
+
+        currentUser =
+            data.user;
+
+
+        console.log(
+            "Login successful:",
+            currentUser.id
+        );
+
+
+        await enterApplication();
+
+    } catch (error) {
+
+        console.error(
+            "Login error:",
+            error
+        );
+
 
         showAuthMessage(
             translateSupabaseError(error),
             "error"
         );
 
-        return;
+    } finally {
+
+        setAuthLoading(
+            loginForm,
+            false
+        );
+
     }
-
-
-    currentSession =
-        data.session;
-
-
-    currentUser =
-        data.user;
-
-
-    await enterApplication();
 
 }
 
@@ -610,8 +653,8 @@ async function registerUser() {
             .getElementById(
                 "register-nickname"
             )
-            .value
-            .trim();
+            ?.value
+            .trim() || "";
 
 
     const email =
@@ -619,8 +662,8 @@ async function registerUser() {
             .getElementById(
                 "register-email"
             )
-            .value
-            .trim();
+            ?.value
+            .trim() || "";
 
 
     const password =
@@ -628,7 +671,7 @@ async function registerUser() {
             .getElementById(
                 "register-password"
             )
-            .value;
+            ?.value || "";
 
 
     const passwordConfirm =
@@ -636,7 +679,7 @@ async function registerUser() {
             .getElementById(
                 "register-password-confirm"
             )
-            .value;
+            ?.value || "";
 
 
     if (
@@ -658,6 +701,17 @@ async function registerUser() {
 
         showAuthMessage(
             "Никнейм не должен быть длиннее 24 символов.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    if (!email) {
+
+        showAuthMessage(
+            "Введите email.",
             "error"
         );
 
@@ -706,80 +760,109 @@ async function registerUser() {
         window.location.pathname;
 
 
-    const {
-        data,
-        error
-    } =
-        await supabaseClient
-            .auth
-            .signUp({
+    try {
 
-                email,
+        const {
+            data,
+            error
+        } =
+            await supabaseClient
+                .auth
+                .signUp({
 
-                password,
+                    email,
 
-                options: {
+                    password,
 
-                    data: {
+                    options: {
 
-                        nickname,
+                        data: {
 
-                        status:
-                            "Онлайн"
+                            nickname,
 
-                    },
+                            status:
+                                "Онлайн"
 
-                    emailRedirectTo:
-                        redirectUrl
+                        },
 
-                }
+                        emailRedirectTo:
+                            redirectUrl
 
-            });
+                    }
 
-
-    setAuthLoading(
-        registerForm,
-        false
-    );
+                });
 
 
-    if (error) {
+        if (error) {
+
+            showAuthMessage(
+                translateSupabaseError(error),
+                "error"
+            );
+
+            return;
+        }
+
+
+        if (
+            data.user &&
+            !data.session
+        ) {
+
+            registerForm.reset();
+
+
+            showAuthMessage(
+                "Аккаунт создан. Проверьте почту и подтвердите email.",
+                "success"
+            );
+
+            return;
+        }
+
+
+        currentSession =
+            data.session || null;
+
+
+        currentUser =
+            data.user || null;
+
+
+        if (!currentUser) {
+
+            showAuthMessage(
+                "Регистрация выполнена, но пользователь не был возвращён.",
+                "error"
+            );
+
+            return;
+        }
+
+
+        await enterApplication();
+
+    } catch (error) {
+
+        console.error(
+            "Registration error:",
+            error
+        );
+
 
         showAuthMessage(
             translateSupabaseError(error),
             "error"
         );
 
-        return;
-    }
+    } finally {
 
-
-    if (
-        data.user &&
-        !data.session
-    ) {
-
-        registerForm.reset();
-
-
-        showAuthMessage(
-            "Аккаунт создан. Проверьте почту и подтвердите email.",
-            "success"
+        setAuthLoading(
+            registerForm,
+            false
         );
 
-        return;
     }
-
-
-    currentSession =
-        data.session;
-
-
-    currentUser =
-        data.user;
-
-
-    await enterApplication();
 
 }
 
@@ -795,28 +878,73 @@ async function enterApplication() {
         showAuthScreen();
 
         return;
+
     }
 
 
-    authScreen.style.display =
-        "none";
-
-
-    appShell.classList.add(
-        "visible"
+    console.log(
+        "Entering application:",
+        currentUser.id
     );
 
 
-    await ensureProfile();
+    if (authScreen) {
+
+        authScreen.style.display =
+            "none";
+
+    }
+
+
+    if (appShell) {
+
+        appShell.classList.add(
+            "visible"
+        );
+
+    }
+
+
+    /*
+       ВАЖНО:
+       Ошибка profiles больше НЕ должна
+       блокировать вход в приложение.
+    */
+
+    try {
+
+        await ensureProfile();
+
+    } catch (error) {
+
+        console.error(
+            "ensureProfile failed:",
+            error
+        );
+
+    }
+
 
     applyProfile();
+
 
     renderPage(
         currentPage
     );
 
 
-    await initGlobalPresence();
+    try {
+
+        await initGlobalPresence();
+
+    } catch (error) {
+
+        console.error(
+            "Presence initialization failed:",
+            error
+        );
+
+    }
 
 }
 
@@ -828,7 +956,9 @@ async function enterApplication() {
 async function ensureProfile() {
 
     if (!currentUser) {
+
         return;
+
     }
 
 
@@ -850,38 +980,136 @@ async function ensureProfile() {
         "Онлайн";
 
 
-    const {
-        data,
-        error
-    } =
-        await supabaseClient
-            .from("profiles")
-            .upsert(
-                {
+    /*
+       Сначала пытаемся прочитать существующий профиль.
+
+       Это безопаснее, чем делать upsert сразу:
+       если RLS на UPDATE настроен неправильно,
+       обычный вход пользователя всё равно не ломается.
+    */
+
+    try {
+
+        const {
+            data: existingProfile,
+            error: selectError
+        } =
+            await supabaseClient
+                .from("profiles")
+                .select("*")
+                .eq(
+                    "id",
+                    currentUser.id
+                )
+                .maybeSingle();
+
+
+        if (selectError) {
+
+            console.error(
+                "Profile select error:",
+                selectError
+            );
+
+
+            profileData = {
+
+                nickname,
+
+                status
+
+            };
+
+
+            return;
+
+        }
+
+
+        if (existingProfile) {
+
+            profileData =
+                existingProfile;
+
+
+            return;
+
+        }
+
+
+        /*
+           Профиля ещё нет.
+           Создаём его только один раз.
+        */
+
+        const {
+            data: newProfile,
+            error: insertError
+        } =
+            await supabaseClient
+                .from("profiles")
+                .insert({
 
                     id:
                         currentUser.id,
 
                     nickname,
 
-                    status
+                    status,
 
-                },
-                {
-                    onConflict:
-                        "id"
-                }
-            )
-            .select()
-            .single();
+                    vip_level:
+                        0
+
+                })
+                .select()
+                .single();
 
 
-    if (error) {
+        if (insertError) {
 
-        console.warn(
-            "Profile loading:",
+            console.error(
+                "Profile insert error:",
+                insertError
+            );
+
+
+            /*
+               Даже если создание профиля
+               запрещено RLS, приложение
+               продолжает работу.
+            */
+
+            profileData = {
+
+                nickname,
+
+                status
+
+            };
+
+
+            return;
+
+        }
+
+
+        profileData =
+            newProfile || {
+
+                nickname,
+
+                status
+
+            };
+
+
+    } catch (error) {
+
+        console.error(
+            "Profile error:",
             error
         );
+
 
         profileData = {
 
@@ -891,18 +1119,7 @@ async function ensureProfile() {
 
         };
 
-        return;
     }
-
-
-    profileData =
-        data || {
-
-            nickname,
-
-            status
-
-        };
 
 }
 
@@ -945,62 +1162,134 @@ function applyProfile() {
         "?";
 
 
-    document.getElementById(
-        "header-nickname"
-    ).textContent =
-        nickname;
+    const headerNickname =
+        document.getElementById(
+            "header-nickname"
+        );
 
 
-    document.getElementById(
-        "profile-nickname"
-    ).textContent =
-        nickname;
+    const profileNickname =
+        document.getElementById(
+            "profile-nickname"
+        );
 
 
-    document.getElementById(
-        "header-status"
-    ).textContent =
-        status;
+    const headerStatus =
+        document.getElementById(
+            "header-status"
+        );
 
 
-    document.getElementById(
-        "profile-status"
-    ).textContent =
-        status;
+    const profileStatus =
+        document.getElementById(
+            "profile-status"
+        );
 
 
-    document.getElementById(
-        "header-avatar"
-    ).textContent =
-        letter;
+    const headerAvatar =
+        document.getElementById(
+            "header-avatar"
+        );
 
 
-    document.getElementById(
-        "profile-avatar"
-    ).textContent =
-        letter;
+    const profileAvatar =
+        document.getElementById(
+            "profile-avatar"
+        );
+
+
+    if (headerNickname) {
+
+        headerNickname.textContent =
+            nickname;
+
+    }
+
+
+    if (profileNickname) {
+
+        profileNickname.textContent =
+            nickname;
+
+    }
+
+
+    if (headerStatus) {
+
+        headerStatus.textContent =
+            status;
+
+    }
+
+
+    if (profileStatus) {
+
+        profileStatus.textContent =
+            status;
+
+    }
+
+
+    if (headerAvatar) {
+
+        headerAvatar.textContent =
+            letter;
+
+    }
+
+
+    if (profileAvatar) {
+
+        profileAvatar.textContent =
+            letter;
+
+    }
 
 }
 
 
 function openProfile() {
 
-    document.getElementById(
-        "profile-nickname-input"
-    ).value =
-        getUserNickname();
+    const nicknameInput =
+        document.getElementById(
+            "profile-nickname-input"
+        );
 
 
-    document.getElementById(
-        "profile-status-input"
-    ).value =
-        getUserStatus();
+    const statusInput =
+        document.getElementById(
+            "profile-status-input"
+        );
 
 
-    document.getElementById(
-        "profile-message"
-    ).textContent =
-        "";
+    const message =
+        document.getElementById(
+            "profile-message"
+        );
+
+
+    if (nicknameInput) {
+
+        nicknameInput.value =
+            getUserNickname();
+
+    }
+
+
+    if (statusInput) {
+
+        statusInput.value =
+            getUserStatus();
+
+    }
+
+
+    if (message) {
+
+        message.textContent =
+            "";
+
+    }
 
 
     openModal(
@@ -1017,8 +1306,8 @@ async function saveProfile() {
             .getElementById(
                 "profile-nickname-input"
             )
-            .value
-            .trim();
+            ?.value
+            .trim() || "";
 
 
     const status =
@@ -1026,7 +1315,7 @@ async function saveProfile() {
             .getElementById(
                 "profile-status-input"
             )
-            .value
+            ?.value
             .trim() ||
         "Онлайн";
 
@@ -1044,29 +1333,12 @@ async function saveProfile() {
     }
 
 
-    const {
-        data,
-        error
-    } =
-        await supabaseClient
-            .auth
-            .updateUser(
-                {
-                    data: {
-
-                        nickname,
-
-                        status
-
-                    }
-                }
-            );
-
-
-    if (error) {
+    if (
+        nickname.length > 24
+    ) {
 
         showModalMessage(
-            translateSupabaseError(error),
+            "Никнейм не должен быть длиннее 24 символов.",
             "error"
         );
 
@@ -1074,35 +1346,85 @@ async function saveProfile() {
     }
 
 
-    currentUser =
-        data.user;
+    try {
+
+        const {
+            data,
+            error
+        } =
+            await supabaseClient
+                .auth
+                .updateUser(
+                    {
+                        data: {
+
+                            nickname,
+
+                            status
+
+                        }
+                    }
+                );
 
 
-    await ensureProfile();
+        if (error) {
 
-    applyProfile();
-
-    await updateGlobalPresence();
-
-    renderOnlinePlayers();
-
-
-    showModalMessage(
-        "Профиль сохранён.",
-        "success"
-    );
-
-
-    setTimeout(
-        () => {
-
-            closeModal(
-                "profile-modal"
+            showModalMessage(
+                translateSupabaseError(error),
+                "error"
             );
 
-        },
-        700
-    );
+            return;
+        }
+
+
+        currentUser =
+            data.user;
+
+
+        await ensureProfile();
+
+
+        applyProfile();
+
+
+        await updateGlobalPresence();
+
+
+        renderOnlinePlayers();
+
+
+        showModalMessage(
+            "Профиль сохранён.",
+            "success"
+        );
+
+
+        setTimeout(
+            () => {
+
+                closeModal(
+                    "profile-modal"
+                );
+
+            },
+            700
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Save profile error:",
+            error
+        );
+
+
+        showModalMessage(
+            translateSupabaseError(error),
+            "error"
+        );
+
+    }
 
 }
 
@@ -1119,7 +1441,9 @@ async function initGlobalPresence() {
     if (
         !currentUser
     ) {
+
         return;
+
     }
 
 
@@ -1235,7 +1559,9 @@ async function updateGlobalPresence() {
         !onlinePresenceChannel ||
         !currentUser
     ) {
+
         return;
+
     }
 
 
@@ -1277,7 +1603,9 @@ function refreshPresenceList() {
     if (
         !onlinePresenceChannel
     ) {
+
         return;
+
     }
 
 
@@ -1300,7 +1628,9 @@ function refreshPresenceList() {
                     if (
                         !entry.user_id
                     ) {
+
                         return;
+
                     }
 
 
@@ -1326,28 +1656,60 @@ function refreshPresenceList() {
         onlinePlayers.length;
 
 
-    document.getElementById(
-        "online-header-count"
-    ).textContent =
-        count;
+    const headerCount =
+        document.getElementById(
+            "online-header-count"
+        );
 
 
-    document.getElementById(
-        "online-side-count"
-    ).textContent =
-        count;
+    const sideCount =
+        document.getElementById(
+            "online-side-count"
+        );
 
 
-    document.getElementById(
-        "hero-online-count"
-    ).textContent =
-        count;
+    const heroCount =
+        document.getElementById(
+            "hero-online-count"
+        );
 
 
-    document.getElementById(
-        "online-modal-count"
-    ).textContent =
-        count;
+    const modalCount =
+        document.getElementById(
+            "online-modal-count"
+        );
+
+
+    if (headerCount) {
+
+        headerCount.textContent =
+            count;
+
+    }
+
+
+    if (sideCount) {
+
+        sideCount.textContent =
+            count;
+
+    }
+
+
+    if (heroCount) {
+
+        heroCount.textContent =
+            count;
+
+    }
+
+
+    if (modalCount) {
+
+        modalCount.textContent =
+            count;
+
+    }
 
 
     renderOnlinePlayers();
@@ -1364,7 +1726,9 @@ function renderOnlinePlayers() {
 
 
     if (!list) {
+
         return;
+
     }
 
 
@@ -1379,6 +1743,7 @@ function renderOnlinePlayers() {
         `;
 
         return;
+
     }
 
 
@@ -1817,28 +2182,60 @@ function renderPage(
         pages.home;
 
 
-    document.getElementById(
-        "page-kicker"
-    ).textContent =
-        config.kicker;
+    const pageKicker =
+        document.getElementById(
+            "page-kicker"
+        );
 
 
-    document.getElementById(
-        "page-title"
-    ).textContent =
-        config.title;
+    const pageTitle =
+        document.getElementById(
+            "page-title"
+        );
 
 
-    document.getElementById(
-        "page-badge"
-    ).textContent =
-        config.badge;
+    const pageBadge =
+        document.getElementById(
+            "page-badge"
+        );
 
 
-    document.getElementById(
-        "page-content"
-    ).innerHTML =
-        config.content;
+    const pageContent =
+        document.getElementById(
+            "page-content"
+        );
+
+
+    if (pageKicker) {
+
+        pageKicker.textContent =
+            config.kicker;
+
+    }
+
+
+    if (pageTitle) {
+
+        pageTitle.textContent =
+            config.title;
+
+    }
+
+
+    if (pageBadge) {
+
+        pageBadge.textContent =
+            config.badge;
+
+    }
+
+
+    if (pageContent) {
+
+        pageContent.innerHTML =
+            config.content;
+
+    }
 
 
     if (
@@ -1874,7 +2271,9 @@ async function loadGames() {
 
 
     if (!container) {
+
         return;
+
     }
 
 
@@ -1930,6 +2329,7 @@ async function loadGames() {
         `;
 
         return;
+
     }
 
 
@@ -1961,6 +2361,7 @@ async function loadGames() {
         `;
 
         return;
+
     }
 
 
@@ -2039,6 +2440,7 @@ async function openGameChat(
 
     await loadChatRooms();
 
+
     const room =
         chatRooms.find(
             item =>
@@ -2057,6 +2459,7 @@ async function openGameChat(
         );
 
         return;
+
     }
 
 
@@ -2271,6 +2674,7 @@ function initChatPage() {
             ) {
 
                 return;
+
             }
 
 
@@ -2325,6 +2729,7 @@ async function loadChatRooms() {
             error
         );
 
+
         const list =
             document.getElementById(
                 "chat-room-list"
@@ -2351,7 +2756,9 @@ async function loadChatRooms() {
 
         }
 
+
         return false;
+
     }
 
 
@@ -2426,7 +2833,9 @@ function renderChatRooms(
 
 
     if (!list) {
+
         return;
+
     }
 
 
@@ -2441,12 +2850,14 @@ function renderChatRooms(
             room => {
 
                 if (!query) {
+
                     return true;
+
                 }
 
 
                 return (
-                    room.name
+                    String(room.name || "")
                         .toLowerCase()
                         .includes(
                             query
@@ -2454,7 +2865,7 @@ function renderChatRooms(
 
                     ||
 
-                    room.type
+                    String(room.type || "")
                         .toLowerCase()
                         .includes(
                             query
@@ -2478,6 +2889,7 @@ function renderChatRooms(
         `;
 
         return;
+
     }
 
 
@@ -2521,7 +2933,7 @@ function renderChatRooms(
                                     ? "active"
                                     : ""
                             }"
-                            data-room-id="${room.id}"
+                            data-room-id="${escapeHtml(room.id)}"
                         >
 
                             <span class="chat-room-icon">
@@ -2598,7 +3010,9 @@ async function selectChatRoom(
 
 
     if (!room) {
+
         return;
+
     }
 
 
@@ -2735,7 +3149,9 @@ async function subscribeChatRoom(
 
 
             if (!record) {
+
                 return;
+
             }
 
 
@@ -2743,7 +3159,9 @@ async function subscribeChatRoom(
                 record.room_id !==
                 room.id
             ) {
+
                 return;
+
             }
 
 
@@ -2798,7 +3216,9 @@ async function loadChatHistory(
 
 
     if (!list) {
+
         return;
+
     }
 
 
@@ -2865,6 +3285,7 @@ async function loadChatHistory(
         `;
 
         return;
+
     }
 
 
@@ -2882,6 +3303,7 @@ async function loadChatHistory(
         `;
 
         return;
+
     }
 
 
@@ -2916,7 +3338,9 @@ async function receiveLiveMessage(
 
 
     if (exists) {
+
         return;
+
     }
 
 
@@ -2954,6 +3378,7 @@ async function receiveLiveMessage(
         );
 
         return;
+
     }
 
 
@@ -2984,7 +3409,9 @@ function appendChatMessage(
 
 
     if (!list) {
+
         return;
+
     }
 
 
@@ -3164,7 +3591,9 @@ async function sendChatMessage() {
         !currentUser ||
         !activeChatRoom
     ) {
+
         return;
+
     }
 
 
@@ -3175,7 +3604,9 @@ async function sendChatMessage() {
 
 
     if (!input) {
+
         return;
+
     }
 
 
@@ -3184,7 +3615,9 @@ async function sendChatMessage() {
 
 
     if (!body) {
+
         return;
+
     }
 
 
@@ -3193,6 +3626,7 @@ async function sendChatMessage() {
     ) {
 
         return;
+
     }
 
 
@@ -3233,6 +3667,7 @@ async function sendChatMessage() {
         );
 
         return;
+
     }
 
 
@@ -3278,21 +3713,41 @@ async function openVideoCall(
             );
 
 
-    document.getElementById(
-        "call-room-title"
-    ).textContent =
-        room.name;
+    const callRoomTitle =
+        document.getElementById(
+            "call-room-title"
+        );
 
 
-    document.getElementById(
-        "call-status"
-    ).textContent =
-        "Запрашиваем камеру и микрофон...";
+    const callStatus =
+        document.getElementById(
+            "call-status"
+        );
 
 
-    document.getElementById(
-        "call-modal"
-    ).classList.add(
+    const callModal =
+        document.getElementById(
+            "call-modal"
+        );
+
+
+    if (callRoomTitle) {
+
+        callRoomTitle.textContent =
+            room.name;
+
+    }
+
+
+    if (callStatus) {
+
+        callStatus.textContent =
+            "Запрашиваем камеру и микрофон...";
+
+    }
+
+
+    callModal?.classList.add(
         "open"
     );
 
@@ -3638,7 +4093,9 @@ async function initCallChannel() {
 function rebuildCallPresence() {
 
     if (!callChannel) {
+
         return;
+
     }
 
 
@@ -3668,7 +4125,9 @@ function rebuildCallPresence() {
                 entry.session_id ===
                     callSessionId
             ) {
+
                 return;
+
             }
 
 
@@ -3787,7 +4246,9 @@ async function getOrCreatePeerConnection(
             if (
                 !event.candidate
             ) {
+
                 return;
+
             }
 
 
@@ -4020,6 +4481,7 @@ async function handleWebRTCSignal(
 
 
             return;
+
         }
 
 
@@ -4042,6 +4504,7 @@ async function handleWebRTCSignal(
 
 
             return;
+
         }
 
 
@@ -4114,7 +4577,9 @@ async function flushPendingIce(
 
 
     if (!queue) {
+
         return;
+
     }
 
 
@@ -4157,7 +4622,9 @@ async function sendCallSignal(
 ) {
 
     if (!callChannel) {
+
         return;
+
     }
 
 
@@ -4205,7 +4672,9 @@ function attachRemoteVideo(
 
 
     if (!grid) {
+
         return;
+
     }
 
 
@@ -4285,6 +4754,7 @@ async function toggleScreenShare() {
         await stopScreenShare();
 
         return;
+
     }
 
 
@@ -4299,6 +4769,7 @@ async function toggleScreenShare() {
         );
 
         return;
+
     }
 
 
@@ -4388,7 +4859,7 @@ async function toggleScreenShare() {
             .getElementById(
                 "call-screen-button"
             )
-            .classList.add(
+            ?.classList.add(
                 "active"
             );
 
@@ -4518,7 +4989,7 @@ async function stopScreenShare() {
         .getElementById(
             "call-screen-button"
         )
-        .classList.remove(
+        ?.classList.remove(
             "active"
         );
 
@@ -4550,6 +5021,7 @@ function toggleMicrophone() {
         );
 
         return;
+
     }
 
 
@@ -4571,7 +5043,7 @@ function toggleMicrophone() {
         .getElementById(
             "call-mic-button"
         )
-        .classList.toggle(
+        ?.classList.toggle(
             "active",
             enabled
         );
@@ -4599,6 +5071,7 @@ function toggleCamera() {
         );
 
         return;
+
     }
 
 
@@ -4620,7 +5093,7 @@ function toggleCamera() {
         .getElementById(
             "call-camera-button"
         )
-        .classList.toggle(
+        ?.classList.toggle(
             "active",
             enabled
         );
@@ -4671,6 +5144,7 @@ function removeCallPeer(
             pc.close();
 
         } catch {}
+
 
         callPeers.delete(
             peerId
@@ -4838,7 +5312,7 @@ async function closeVideoCall() {
         .getElementById(
             "call-video-grid"
         )
-        .querySelectorAll(
+        ?.querySelectorAll(
             "[data-peer-id]"
         )
         .forEach(
@@ -4854,7 +5328,7 @@ async function closeVideoCall() {
         .getElementById(
             "call-modal"
         )
-        .classList.remove(
+        ?.classList.remove(
             "open"
         );
 
@@ -4949,14 +5423,16 @@ function initModals() {
             }
 
 
+            const callModal =
+                document.getElementById(
+                    "call-modal"
+                );
+
+
             if (
-                document
-                    .getElementById(
-                        "call-modal"
-                    )
-                    .classList.contains(
-                        "open"
-                    )
+                callModal?.classList.contains(
+                    "open"
+                )
             ) {
 
                 closeVideoCall();
@@ -5019,7 +5495,7 @@ function initButtons() {
         .getElementById(
             "header-online-button"
         )
-        .addEventListener(
+        ?.addEventListener(
             "click",
             openOnlinePlayers
         );
@@ -5029,7 +5505,7 @@ function initButtons() {
         .getElementById(
             "hero-online-button"
         )
-        .addEventListener(
+        ?.addEventListener(
             "click",
             openOnlinePlayers
         );
@@ -5039,7 +5515,7 @@ function initButtons() {
         .getElementById(
             "hero-games-button"
         )
-        .addEventListener(
+        ?.addEventListener(
             "click",
             () => {
 
@@ -5055,7 +5531,7 @@ function initButtons() {
         .getElementById(
             "header-profile-button"
         )
-        .addEventListener(
+        ?.addEventListener(
             "click",
             openProfile
         );
@@ -5065,7 +5541,7 @@ function initButtons() {
         .getElementById(
             "profile-edit-button"
         )
-        .addEventListener(
+        ?.addEventListener(
             "click",
             openProfile
         );
@@ -5075,7 +5551,7 @@ function initButtons() {
         .getElementById(
             "youtube-button"
         )
-        .addEventListener(
+        ?.addEventListener(
             "click",
             () => {
 
@@ -5093,7 +5569,7 @@ function initButtons() {
         .getElementById(
             "twitch-button"
         )
-        .addEventListener(
+        ?.addEventListener(
             "click",
             () => {
 
@@ -5111,7 +5587,7 @@ function initButtons() {
         .getElementById(
             "right-youtube-button"
         )
-        .addEventListener(
+        ?.addEventListener(
             "click",
             () => {
 
@@ -5129,7 +5605,7 @@ function initButtons() {
         .getElementById(
             "right-twitch-button"
         )
-        .addEventListener(
+        ?.addEventListener(
             "click",
             () => {
 
@@ -5147,7 +5623,7 @@ function initButtons() {
         .getElementById(
             "logout-button"
         )
-        .addEventListener(
+        ?.addEventListener(
             "click",
             logoutUser
         );
@@ -5157,7 +5633,7 @@ function initButtons() {
         .getElementById(
             "call-mic-button"
         )
-        .addEventListener(
+        ?.addEventListener(
             "click",
             toggleMicrophone
         );
@@ -5167,7 +5643,7 @@ function initButtons() {
         .getElementById(
             "call-camera-button"
         )
-        .addEventListener(
+        ?.addEventListener(
             "click",
             toggleCamera
         );
@@ -5177,7 +5653,7 @@ function initButtons() {
         .getElementById(
             "call-screen-button"
         )
-        .addEventListener(
+        ?.addEventListener(
             "click",
             toggleScreenShare
         );
@@ -5187,7 +5663,7 @@ function initButtons() {
         .getElementById(
             "call-leave-button"
         )
-        .addEventListener(
+        ?.addEventListener(
             "click",
             closeVideoCall
         );
@@ -5197,7 +5673,7 @@ function initButtons() {
         .getElementById(
             "call-close-x"
         )
-        .addEventListener(
+        ?.addEventListener(
             "click",
             closeVideoCall
         );
@@ -5250,7 +5726,9 @@ async function cleanupGlobalPresence() {
 async function removeChatChannel() {
 
     if (!chatChannel) {
+
         return;
+
     }
 
 
@@ -5323,6 +5801,17 @@ async function logoutUser() {
         null;
 
 
+    profileData = {
+
+        nickname:
+            "Player",
+
+        status:
+            "Онлайн"
+
+    };
+
+
     showAuthScreen();
 
 }
@@ -5334,13 +5823,17 @@ async function logoutUser() {
 
 function showAuthScreen() {
 
-    appShell.classList.remove(
+    appShell?.classList.remove(
         "visible"
     );
 
 
-    authScreen.style.display =
-        "flex";
+    if (authScreen) {
+
+        authScreen.style.display =
+            "flex";
+
+    }
 
 }
 
@@ -5349,6 +5842,17 @@ function showAuthMessage(
     message,
     type = ""
 ) {
+
+    if (!authMessage) {
+
+        console.error(
+            message
+        );
+
+        return;
+
+    }
+
 
     authMessage.textContent =
         message;
@@ -5371,6 +5875,13 @@ function showAuthMessage(
 
 function clearAuthMessage() {
 
+    if (!authMessage) {
+
+        return;
+
+    }
+
+
     authMessage.textContent =
         "";
 
@@ -5386,6 +5897,13 @@ function setAuthLoading(
     loading
 ) {
 
+    if (!form) {
+
+        return;
+
+    }
+
+
     const button =
         form.querySelector(
             "button[type='submit']"
@@ -5393,7 +5911,9 @@ function setAuthLoading(
 
 
     if (!button) {
+
         return;
+
     }
 
 
@@ -5441,7 +5961,9 @@ function showModalMessage(
 
 
     if (!element) {
+
         return;
+
     }
 
 
@@ -5579,6 +6101,32 @@ function translateSupabaseError(
     }
 
 
+    if (
+        text.includes(
+            "infinite recursion"
+        )
+    ) {
+
+        return (
+            "Ошибка политики безопасности профиля Supabase. Выполните исправление RLS для profiles."
+        );
+
+    }
+
+
+    if (
+        text.includes(
+            "row-level security"
+        )
+    ) {
+
+        return (
+            "Supabase заблокировал операцию с профилем. Проверьте RLS таблицы profiles."
+        );
+
+    }
+
+
     return (
         raw ||
         "Произошла ошибка."
@@ -5596,7 +6144,9 @@ function formatTime(
 ) {
 
     if (!value) {
+
         return "";
+
     }
 
 
@@ -5727,3 +6277,4 @@ window.GamePlatform = {
         logoutUser
 
 };
+```
