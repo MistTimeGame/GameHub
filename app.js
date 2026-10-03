@@ -1,55 +1,16 @@
 "use strict";
 
 
-/*
-====================================================
-GAME PLATFORM
-HOME HUB
-VERSION 1.4.0
-====================================================
-
-Главная страница:
-
-- компактная навигация слева;
-- центральная заставка;
-- профиль;
-- онлайн;
-- новости;
-- YouTube;
-- Twitch.
-
-Сейчас данные профиля и онлайн локальные.
-
-Позже онлайн будет подключён к Supabase Realtime,
-а профиль — к Supabase Auth/Profiles.
-
-====================================================
-*/
-
-
-const APP_VERSION = "1.4.0";
+const APP_VERSION = "1.5.0";
 
 
 const DEFAULT_PROFILE = {
-
-    nickname:
-        "Player",
-
-    status:
-        "Добро пожаловать на Game Platform"
-
+    nickname: "Player",
+    status: "Добро пожаловать на Game Platform"
 };
 
 
-let profile =
-    loadProfile();
-
-
-/*
-====================================================
-INITIALIZATION
-====================================================
-*/
+let profile = loadProfile();
 
 
 document.addEventListener(
@@ -111,7 +72,7 @@ function loadProfile() {
     } catch (error) {
 
         console.error(
-            "Не удалось загрузить профиль:",
+            "Ошибка загрузки профиля:",
             error
         );
 
@@ -121,18 +82,14 @@ function loadProfile() {
         };
 
     }
-
 }
 
 
 function saveProfileToStorage() {
 
     localStorage.setItem(
-
         "game_platform_profile",
-
         JSON.stringify(profile)
-
     );
 
 }
@@ -150,7 +107,7 @@ function renderProfile() {
         DEFAULT_PROFILE.status;
 
 
-    const firstLetter =
+    const letter =
         nickname
             .trim()
             .charAt(0)
@@ -158,72 +115,72 @@ function renderProfile() {
         "P";
 
 
-    const profileName =
-        document.getElementById(
-            "profile-name"
-        );
+    const elements = {
+
+        profileName:
+            document.getElementById(
+                "profile-name"
+            ),
+
+        profileStatus:
+            document.getElementById(
+                "profile-status"
+            ),
+
+        profileAvatar:
+            document.getElementById(
+                "profile-avatar"
+            ),
+
+        headerNickname:
+            document.getElementById(
+                "header-nickname"
+            ),
+
+        headerAvatar:
+            document.getElementById(
+                "header-avatar"
+            )
+
+    };
 
 
-    const profileStatus =
-        document.getElementById(
-            "profile-status"
-        );
+    if (elements.profileName) {
 
-
-    const profileAvatar =
-        document.getElementById(
-            "profile-avatar"
-        );
-
-
-    const headerNickname =
-        document.getElementById(
-            "header-nickname"
-        );
-
-
-    const headerAvatar =
-        document.getElementById(
-            "header-avatar"
-        );
-
-
-    if (profileName) {
-
-        profileName.textContent =
+        elements.profileName.textContent =
             nickname;
 
     }
 
 
-    if (profileStatus) {
+    if (elements.profileStatus) {
 
-        profileStatus.textContent =
+        elements.profileStatus.textContent =
             status;
 
     }
 
 
-    if (profileAvatar) {
+    if (elements.profileAvatar) {
 
-        profileAvatar.textContent =
-            firstLetter;
+        elements.profileAvatar.textContent =
+            letter;
 
     }
 
 
-    if (headerNickname) {
+    if (elements.headerNickname) {
 
-        headerNickname.textContent =
+        elements.headerNickname.textContent =
             nickname;
 
     }
 
 
-    if (headerAvatar) {
+    if (elements.headerAvatar) {
 
-        headerAvatar.textContent =
-            firstLetter;
+        elements.headerAvatar.textContent =
+            letter;
 
     }
 
@@ -232,7 +189,7 @@ function renderProfile() {
 
 /*
 ====================================================
-PROFILE WINDOW
+PROFILE MODAL
 ====================================================
 */
 
@@ -364,15 +321,6 @@ function saveProfile() {
 ====================================================
 ONLINE
 ====================================================
-
-Пока настоящая межпользовательская синхронизация
-не подключена, список содержит текущий локальный
-профиль.
-
-После подключения Supabase Realtime здесь будет
-единый список всех пользователей онлайн.
-
-====================================================
 */
 
 
@@ -381,7 +329,6 @@ function getOnlinePlayers() {
     return [
 
         {
-
             nickname:
                 profile.nickname ||
                 "Player",
@@ -468,7 +415,7 @@ function renderOnline() {
 
 /*
 ====================================================
-ONLINE PLAYERS WINDOW
+ONLINE WINDOW
 ====================================================
 */
 
@@ -583,7 +530,6 @@ function openOnlinePlayers() {
                 nickname
             );
 
-
             details.appendChild(
                 status
             );
@@ -593,11 +539,9 @@ function openOnlinePlayers() {
                 avatar
             );
 
-
             row.appendChild(
                 details
             );
-
 
             row.appendChild(
                 indicator
@@ -655,63 +599,67 @@ NAVIGATION
 
 function openPage(page) {
 
-    document.body.animate(
+    const animation =
+        document.body.animate(
 
-        [
+            [
+
+                {
+                    opacity:
+                        1,
+
+                    transform:
+                        "scale(1)"
+
+                },
+
+                {
+
+                    opacity:
+                        0,
+
+                    transform:
+                        "scale(1.015)"
+
+                }
+
+            ],
 
             {
-                opacity:
-                    1,
 
-                transform:
-                    "scale(1)"
+                duration:
+                    260,
 
-            },
+                easing:
+                    "cubic-bezier(.4,0,.2,1)",
 
-            {
-
-                opacity:
-                    0,
-
-                transform:
-                    "scale(1.015)"
+                fill:
+                    "forwards"
 
             }
 
-        ],
-
-        {
-
-            duration:
-                260,
-
-            easing:
-                "cubic-bezier(.4,0,.2,1)",
-
-            fill:
-                "forwards"
-
-        }
-
-    );
+        );
 
 
-    setTimeout(
-        () => {
+    animation.finished
+        .catch(
+            () => {}
+        )
+        .finally(
+            () => {
 
-            window.location.href =
-                page;
+                window.location.href =
+                    page;
 
-        },
-        240
-    );
+            }
+        );
 
 }
 
 
 /*
 ====================================================
-SOCIAL LINKS
+SOCIAL
 ====================================================
 */
 
@@ -722,9 +670,7 @@ function openSocial(type) {
         "";
 
 
-    if (
-        type === "youtube"
-    ) {
+    if (type === "youtube") {
 
         url =
             "https://www.youtube.com/";
@@ -732,9 +678,7 @@ function openSocial(type) {
     }
 
 
-    if (
-        type === "twitch"
-    ) {
+    if (type === "twitch") {
 
         url =
             "https://www.twitch.tv/";
@@ -765,17 +709,16 @@ VERSION
 
 function updatePageVersion() {
 
-    const versionElement =
+    const element =
         document.querySelector(
             ".site-version"
         );
 
 
-    if (versionElement) {
+    if (element) {
 
-        versionElement.textContent =
-            "v" +
-            APP_VERSION;
+        element.textContent =
+            `v${APP_VERSION}`;
 
     }
 
@@ -784,7 +727,7 @@ function updatePageVersion() {
 
 /*
 ====================================================
-ESCAPE
+ESC
 ====================================================
 */
 
