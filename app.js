@@ -1,16 +1,19 @@
 /* =========================================================
    GAME PLATFORM
-   SUPABASE AUTH
+   SUPABASE
+   AUTH
    PROFILE
+   VIP
    PRESENCE
-   GLOBAL CHAT
-   WEBRTC BASIC
+   CHAT
+   WEBRTC
 ========================================================= */
 
 "use strict";
 
+
 /* =========================================================
-   SUPABASE
+   CONFIG
 ========================================================= */
 
 const SUPABASE_URL =
@@ -23,11 +26,19 @@ const APP_VERSION =
     "1.7.2";
 
 
+/* =========================================================
+   STATE
+========================================================= */
+
 let supabaseClient = null;
 
 let currentUser = null;
+
 let currentSession = null;
+
 let currentPage = "home";
+
+let applicationStarted = false;
 
 let profileData = {
     nickname: "Player",
@@ -40,19 +51,25 @@ let profileData = {
 };
 
 let presenceChannel = null;
+
 let presenceUsers = [];
 
 let chatChannel = null;
 
 let localStream = null;
+
 let screenStream = null;
 
 let callChannel = null;
+
 let peerConnections = {};
+
 let callRoom = null;
 
 let micEnabled = true;
+
 let cameraEnabled = true;
+
 let screenSharing = false;
 
 
@@ -61,52 +78,66 @@ let screenSharing = false;
 ========================================================= */
 
 let authScreen = null;
+
 let appShell = null;
 
 let authTitle = null;
+
 let authSubtitle = null;
 
 let loginTab = null;
+
 let registerTab = null;
 
 let loginForm = null;
+
 let registerForm = null;
 
 let authMessage = null;
 
 let loginEmail = null;
+
 let loginPassword = null;
 
 let registerNickname = null;
+
 let registerEmail = null;
+
 let registerPassword = null;
+
 let registerPasswordConfirm = null;
 
 let logoutButton = null;
 
 let profileForm = null;
+
 let profileNicknameInput = null;
+
 let profileStatusInput = null;
+
 let profileMessage = null;
 
 
 /* =========================================================
-   DOM HELPER
+   HELPERS
 ========================================================= */
 
 function $(id) {
+
     return document.getElementById(id);
+
 }
 
 
-/* =========================================================
-   HTML ESCAPE
-========================================================= */
-
 function escapeHtml(value) {
 
-    if (value === null || value === undefined) {
+    if (
+        value === null ||
+        value === undefined
+    ) {
+
         return "";
+
     }
 
     return String(value)
@@ -115,12 +146,9 @@ function escapeHtml(value) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+
 }
 
-
-/* =========================================================
-   HIDDEN
-========================================================= */
 
 function setHidden(element, hidden) {
 
@@ -132,12 +160,9 @@ function setHidden(element, hidden) {
         "hidden",
         Boolean(hidden)
     );
+
 }
 
-
-/* =========================================================
-   AUTH MESSAGE
-========================================================= */
 
 function showAuthMessage(message, type) {
 
@@ -152,14 +177,15 @@ function showAuthMessage(message, type) {
         "auth-message";
 
     if (type) {
-        authMessage.classList.add(type);
+
+        authMessage.classList.add(
+            type
+        );
+
     }
+
 }
 
-
-/* =========================================================
-   PROFILE MESSAGE
-========================================================= */
 
 function showProfileMessage(message, type) {
 
@@ -174,8 +200,13 @@ function showProfileMessage(message, type) {
         "modal-message";
 
     if (type) {
-        profileMessage.classList.add(type);
+
+        profileMessage.classList.add(
+            type
+        );
+
     }
+
 }
 
 
@@ -194,21 +225,11 @@ function updateVersion() {
 
         });
 
-    const footer =
-        document.querySelector(".auth-footer");
-
-    if (footer) {
-
-        footer.innerHTML =
-            "GAME PLATFORM <span>•</span> v" +
-            APP_VERSION;
-
-    }
 }
 
 
 /* =========================================================
-   SUPABASE INIT
+   SUPABASE
 ========================================================= */
 
 function initSupabase() {
@@ -223,6 +244,7 @@ function initSupabase() {
         );
 
         return false;
+
     }
 
     try {
@@ -256,7 +278,9 @@ function initSupabase() {
         );
 
         return false;
+
     }
+
 }
 
 
@@ -272,23 +296,40 @@ function initAuthTabs() {
             "click",
             function () {
 
-                loginTab.classList.add("active");
+                loginTab.classList.add(
+                    "active"
+                );
 
                 if (registerTab) {
-                    registerTab.classList.remove("active");
+
+                    registerTab.classList.remove(
+                        "active"
+                    );
+
                 }
 
-                setHidden(loginForm, false);
-                setHidden(registerForm, true);
+                setHidden(
+                    loginForm,
+                    false
+                );
+
+                setHidden(
+                    registerForm,
+                    true
+                );
 
                 if (authTitle) {
+
                     authTitle.textContent =
                         "Добро пожаловать";
+
                 }
 
                 if (authSubtitle) {
+
                     authSubtitle.textContent =
                         "Войдите в свой игровой профиль";
+
                 }
 
                 showAuthMessage("");
@@ -305,23 +346,40 @@ function initAuthTabs() {
             "click",
             function () {
 
-                registerTab.classList.add("active");
+                registerTab.classList.add(
+                    "active"
+                );
 
                 if (loginTab) {
-                    loginTab.classList.remove("active");
+
+                    loginTab.classList.remove(
+                        "active"
+                    );
+
                 }
 
-                setHidden(loginForm, true);
-                setHidden(registerForm, false);
+                setHidden(
+                    loginForm,
+                    true
+                );
+
+                setHidden(
+                    registerForm,
+                    false
+                );
 
                 if (authTitle) {
+
                     authTitle.textContent =
                         "Создание аккаунта";
+
                 }
 
                 if (authSubtitle) {
+
                     authSubtitle.textContent =
                         "Создайте игровой профиль";
+
                 }
 
                 showAuthMessage("");
@@ -330,6 +388,7 @@ function initAuthTabs() {
         );
 
     }
+
 }
 
 
@@ -385,6 +444,7 @@ function initForms() {
         );
 
     }
+
 }
 
 
@@ -401,17 +461,21 @@ async function loginUser() {
         );
 
         return;
+
     }
+
 
     const email =
         loginEmail
             ? loginEmail.value.trim()
             : "";
 
+
     const password =
         loginPassword
             ? loginPassword.value
             : "";
+
 
     if (!email || !password) {
 
@@ -420,37 +484,47 @@ async function loginUser() {
         );
 
         return;
+
     }
+
 
     showAuthMessage(
         "Выполняется вход...",
         "info"
     );
 
+
     try {
 
         const result =
             await supabaseClient.auth.signInWithPassword({
+
                 email: email,
+
                 password: password
+
             });
+
 
         if (result.error) {
             throw result.error;
         }
 
+
         currentSession =
             result.data.session || null;
+
 
         currentUser =
             result.data.user || null;
 
-        showAuthMessage(
-            "Вход выполнен.",
-            "success"
-        );
 
-        await enterApplication();
+        if (currentUser) {
+
+            await enterApplication();
+
+        }
+
 
     } catch (error) {
 
@@ -459,10 +533,13 @@ async function loginUser() {
             error
         );
 
+
         let message =
-            error && error.message
+            error &&
+            error.message
                 ? error.message
                 : "Не удалось выполнить вход.";
+
 
         if (
             message
@@ -472,12 +549,16 @@ async function loginUser() {
 
             message =
                 "Неверный email или пароль.";
+
         }
+
 
         showAuthMessage(
             message
         );
+
     }
+
 }
 
 
@@ -494,27 +575,33 @@ async function registerUser() {
         );
 
         return;
+
     }
+
 
     const nickname =
         registerNickname
             ? registerNickname.value.trim()
             : "";
 
+
     const email =
         registerEmail
             ? registerEmail.value.trim()
             : "";
+
 
     const password =
         registerPassword
             ? registerPassword.value
             : "";
 
+
     const confirmPassword =
         registerPasswordConfirm
             ? registerPasswordConfirm.value
             : "";
+
 
     if (
         nickname.length < 3 ||
@@ -526,7 +613,9 @@ async function registerUser() {
         );
 
         return;
+
     }
+
 
     if (!email) {
 
@@ -535,7 +624,9 @@ async function registerUser() {
         );
 
         return;
+
     }
+
 
     if (password.length < 6) {
 
@@ -544,7 +635,9 @@ async function registerUser() {
         );
 
         return;
+
     }
+
 
     if (password !== confirmPassword) {
 
@@ -553,12 +646,15 @@ async function registerUser() {
         );
 
         return;
+
     }
+
 
     showAuthMessage(
         "Создание аккаунта...",
         "info"
     );
+
 
     try {
 
@@ -575,17 +671,22 @@ async function registerUser() {
                         status: "Онлайн"
                     }
                 }
+
             });
+
 
         if (result.error) {
             throw result.error;
         }
 
+
         currentSession =
             result.data.session || null;
 
+
         currentUser =
             result.data.user || null;
+
 
         if (!currentSession) {
 
@@ -595,14 +696,12 @@ async function registerUser() {
             );
 
             return;
+
         }
 
-        showAuthMessage(
-            "Аккаунт успешно создан.",
-            "success"
-        );
 
         await enterApplication();
+
 
     } catch (error) {
 
@@ -611,12 +710,16 @@ async function registerUser() {
             error
         );
 
+
         showAuthMessage(
-            error && error.message
+            error &&
+            error.message
                 ? error.message
                 : "Не удалось создать аккаунт."
         );
+
     }
+
 }
 
 
@@ -630,38 +733,55 @@ function subscribeAuthState() {
         return;
     }
 
+
     supabaseClient.auth.onAuthStateChange(
-        async function (event, session) {
+        function (event, session) {
 
             console.log(
                 "Auth event:",
                 event
             );
 
+
             currentSession =
                 session || null;
+
 
             currentUser =
                 session && session.user
                     ? session.user
                     : null;
 
-            if (currentUser) {
 
-                await enterApplication();
+            if (
+                currentUser &&
+                !applicationStarted
+            ) {
 
-            } else {
+                setTimeout(
+                    function () {
+                        enterApplication();
+                    },
+                    0
+                );
+
+            }
+
+
+            if (!currentUser) {
 
                 leaveApplication();
+
             }
 
         }
     );
+
 }
 
 
 /* =========================================================
-   INITIAL SESSION
+   SESSION
 ========================================================= */
 
 async function loadInitialSession() {
@@ -670,22 +790,27 @@ async function loadInitialSession() {
         return;
     }
 
+
     try {
 
         const result =
             await supabaseClient.auth.getSession();
 
+
         if (result.error) {
             throw result.error;
         }
 
+
         currentSession =
             result.data.session || null;
+
 
         currentUser =
             currentSession
                 ? currentSession.user
                 : null;
+
 
         if (currentUser) {
 
@@ -694,6 +819,7 @@ async function loadInitialSession() {
         } else {
 
             leaveApplication();
+
         }
 
     } catch (error) {
@@ -704,7 +830,9 @@ async function loadInitialSession() {
         );
 
         leaveApplication();
+
     }
+
 }
 
 
@@ -718,13 +846,17 @@ async function ensureProfile() {
         !currentUser ||
         !supabaseClient
     ) {
+
         return;
+
     }
+
 
     const metadata =
         currentUser.user_metadata || {};
 
-    const defaultNickname =
+
+    const nickname =
         metadata.nickname ||
         (
             currentUser.email
@@ -732,13 +864,15 @@ async function ensureProfile() {
                 : "Player"
         );
 
-    const defaultStatus =
+
+    const status =
         metadata.status ||
         "Онлайн";
 
+
     try {
 
-        const selectResult =
+        const result =
             await supabaseClient
                 .from("profiles")
                 .select("*")
@@ -748,60 +882,79 @@ async function ensureProfile() {
                 )
                 .maybeSingle();
 
-        if (selectResult.error) {
 
-            console.error(
-                "Profile select error:",
-                selectResult.error
-            );
-
-            profileData = {
-                nickname: defaultNickname,
-                status: defaultStatus,
-                age: null,
-                city: "",
-                about: "",
-                avatar_url: "",
-                vip_level: 0
-            };
-
-            return;
-        }
-
-        if (selectResult.data) {
+        if (
+            !result.error &&
+            result.data
+        ) {
 
             profileData =
                 Object.assign(
                     {
-                        nickname: defaultNickname,
-                        status: defaultStatus,
+                        nickname: nickname,
+                        status: status,
                         age: null,
                         city: "",
                         about: "",
                         avatar_url: "",
                         vip_level: 0
                     },
-                    selectResult.data
+                    result.data
                 );
 
             return;
+
         }
+
+
+        if (result.error) {
+
+            console.error(
+                "Profile select error:",
+                result.error
+            );
+
+        }
+
 
         const insertResult =
             await supabaseClient
                 .from("profiles")
                 .insert({
-                    id: currentUser.id,
-                    nickname: defaultNickname,
-                    status: defaultStatus,
-                    age: null,
-                    city: "",
-                    about: "",
-                    avatar_url: "",
-                    vip_level: 0
+
+                    id:
+                        currentUser.id,
+
+                    nickname:
+                        nickname,
+
+                    status:
+                        status,
+
+                    vip_level:
+                        0
+
                 })
                 .select()
                 .single();
+
+
+        if (
+            !insertResult.error &&
+            insertResult.data
+        ) {
+
+            profileData =
+                Object.assign(
+                    {},
+                    profileData,
+                    insertResult.data
+                );
+
+            return;
+
+        }
+
 
         if (insertResult.error) {
 
@@ -810,29 +963,18 @@ async function ensureProfile() {
                 insertResult.error
             );
 
-            profileData = {
-                nickname: defaultNickname,
-                status: defaultStatus,
-                age: null,
-                city: "",
-                about: "",
-                avatar_url: "",
-                vip_level: 0
-            };
-
-            return;
         }
 
+
         profileData =
-            insertResult.data || {
-                nickname: defaultNickname,
-                status: defaultStatus,
-                age: null,
-                city: "",
-                about: "",
-                avatar_url: "",
-                vip_level: 0
-            };
+            Object.assign(
+                {},
+                profileData,
+                {
+                    nickname: nickname,
+                    status: status
+                }
+            );
 
     } catch (error) {
 
@@ -841,16 +983,8 @@ async function ensureProfile() {
             error
         );
 
-        profileData = {
-            nickname: defaultNickname,
-            status: defaultStatus,
-            age: null,
-            city: "",
-            about: "",
-            avatar_url: "",
-            vip_level: 0
-        };
     }
+
 }
 
 
@@ -864,58 +998,74 @@ function getAvatarLetter(nickname) {
         String(nickname || "P")
             .trim();
 
+
     if (!value) {
         return "P";
     }
 
+
     return value
         .charAt(0)
         .toUpperCase();
+
 }
 
 
-function renderAvatar(element, nickname, avatarUrl) {
+function renderAvatar(
+    element,
+    nickname,
+    avatarUrl
+) {
 
     if (!element) {
         return;
     }
 
-    element.innerHTML = "";
+
+    element.innerHTML =
+        "";
+
 
     if (avatarUrl) {
 
         const image =
             document.createElement("img");
 
+
         image.src =
             avatarUrl;
+
 
         image.alt =
             "Avatar";
 
+
         image.loading =
             "lazy";
+
 
         image.onerror =
             function () {
 
                 element.innerHTML =
-                    "";
-
-                element.textContent =
-                    getAvatarLetter(nickname);
+                    "🤖";
 
             };
+
 
         element.appendChild(
             image
         );
 
+
         return;
+
     }
 
+
     element.textContent =
-        getAvatarLetter(nickname);
+        "🤖";
+
 }
 
 
@@ -941,33 +1091,36 @@ function getRomanVip(level) {
         "XII"
     ];
 
-    const number =
+
+    const value =
         Number(level) || 0;
 
-    return roman[number] || "";
+
+    return roman[value] || "";
+
 }
 
 
 function createVipBadge(level) {
 
-    const numericLevel =
+    const value =
         Number(level) || 0;
 
-    if (numericLevel <= 0) {
+
+    if (value <= 0) {
         return "";
     }
 
+
     return (
-        '<span class="vip-badge" ' +
-        'title="VIP уровень ' +
-        escapeHtml(numericLevel) +
-        '">' +
+        '<span class="vip-badge">' +
         "VIP " +
         escapeHtml(
-            getRomanVip(numericLevel)
+            getRomanVip(value)
         ) +
         "</span>"
     );
+
 }
 
 
@@ -981,118 +1134,158 @@ function applyProfile() {
         profileData.nickname ||
         "Player";
 
+
     const status =
         profileData.status ||
         "Онлайн";
 
 
-    document
-        .querySelectorAll(
-            "[data-profile-nickname]"
-        )
-        .forEach(function (element) {
-
-            element.textContent =
-                nickname;
-
-        });
-
-
-    document
-        .querySelectorAll(
-            "[data-profile-status]"
-        )
-        .forEach(function (element) {
-
-            element.textContent =
-                status;
-
-        });
-
-
     const nicknameElements = [
+
         $("header-nickname"),
+
         $("profile-nickname")
+
     ];
 
-    nicknameElements.forEach(function (element) {
 
-        if (element) {
-            element.textContent =
-                nickname;
+    nicknameElements.forEach(
+        function (element) {
+
+            if (element) {
+
+                element.textContent =
+                    nickname;
+
+            }
+
         }
-
-    });
+    );
 
 
     const statusElements = [
+
         $("header-status"),
+
         $("profile-status")
+
     ];
 
-    statusElements.forEach(function (element) {
 
-        if (element) {
-            element.textContent =
-                status;
+    statusElements.forEach(
+        function (element) {
+
+            if (element) {
+
+                element.textContent =
+                    status;
+
+            }
+
         }
+    );
 
-    });
 
-
-    const avatarElements = [
+    renderAvatar(
         $("header-avatar"),
-        $("profile-avatar")
-    ];
+        nickname,
+        profileData.avatar_url
+    );
 
-    avatarElements.forEach(function (element) {
 
-        renderAvatar(
-            element,
-            nickname,
-            profileData.avatar_url || ""
-        );
+    renderAvatar(
+        $("profile-avatar"),
+        nickname,
+        profileData.avatar_url
+    );
 
-    });
+
+    renderAvatar(
+        $("profile-modal-avatar"),
+        nickname,
+        profileData.avatar_url
+    );
 
 
     if (profileNicknameInput) {
+
         profileNicknameInput.value =
             nickname;
+
     }
 
 
     if (profileStatusInput) {
+
         profileStatusInput.value =
             status;
+
     }
 
 
-    renderVipBadges();
-}
+    const ageInput =
+        $("profile-age-input");
 
 
-/* =========================================================
-   VIP BADGES
-========================================================= */
+    if (ageInput) {
 
-function renderVipBadges() {
+        ageInput.value =
+            profileData.age || "";
 
-    const html =
-        createVipBadge(
-            profileData.vip_level
-        );
+    }
+
+
+    const cityInput =
+        $("profile-city-input");
+
+
+    if (cityInput) {
+
+        cityInput.value =
+            profileData.city || "";
+
+    }
+
+
+    const avatarInput =
+        $("profile-avatar-input");
+
+
+    if (avatarInput) {
+
+        avatarInput.value =
+            profileData.avatar_url || "";
+
+    }
+
+
+    const aboutInput =
+        $("profile-about-input");
+
+
+    if (aboutInput) {
+
+        aboutInput.value =
+            profileData.about || "";
+
+    }
+
 
     document
         .querySelectorAll(
             "[data-vip-badge]"
         )
-        .forEach(function (element) {
+        .forEach(
+            function (element) {
 
-            element.innerHTML =
-                html;
+                element.innerHTML =
+                    createVipBadge(
+                        profileData.vip_level
+                    );
 
-        });
+            }
+        );
+
 }
 
 
@@ -1112,17 +1305,21 @@ async function saveProfile() {
         );
 
         return;
+
     }
+
 
     const nickname =
         profileNicknameInput
             ? profileNicknameInput.value.trim()
             : "";
 
+
     const status =
         profileStatusInput
             ? profileStatusInput.value.trim()
             : "";
+
 
     if (
         nickname.length < 3 ||
@@ -1134,66 +1331,72 @@ async function saveProfile() {
         );
 
         return;
+
     }
+
+
+    const ageInput =
+        $("profile-age-input");
+
+
+    const cityInput =
+        $("profile-city-input");
+
+
+    const avatarInput =
+        $("profile-avatar-input");
+
+
+    const aboutInput =
+        $("profile-about-input");
+
+
+    const age =
+        ageInput &&
+        ageInput.value
+            ? Number(ageInput.value)
+            : null;
+
+
+    const updateData = {
+
+        nickname:
+            nickname,
+
+        status:
+            status || "Онлайн",
+
+        age:
+            age,
+
+        city:
+            cityInput
+                ? cityInput.value.trim()
+                : "",
+
+        avatar_url:
+            avatarInput
+                ? avatarInput.value.trim()
+                : "",
+
+        about:
+            aboutInput
+                ? aboutInput.value.trim()
+                : "",
+
+        updated_at:
+            new Date().toISOString()
+
+    };
+
 
     showProfileMessage(
         "Сохранение...",
         "info"
     );
 
+
     try {
-
-        const updateData = {
-            nickname: nickname,
-            status: status || "Онлайн",
-            updated_at: new Date().toISOString()
-        };
-
-
-        const ageInput =
-            $("profile-age-input");
-
-        if (ageInput) {
-
-            const ageValue =
-                ageInput.value.trim();
-
-            updateData.age =
-                ageValue
-                    ? Number(ageValue)
-                    : null;
-        }
-
-
-        const cityInput =
-            $("profile-city-input");
-
-        if (cityInput) {
-
-            updateData.city =
-                cityInput.value.trim();
-        }
-
-
-        const aboutInput =
-            $("profile-about-input");
-
-        if (aboutInput) {
-
-            updateData.about =
-                aboutInput.value.trim();
-        }
-
-
-        const avatarInput =
-            $("profile-avatar-input");
-
-        if (avatarInput) {
-
-            updateData.avatar_url =
-                avatarInput.value.trim();
-        }
-
 
         const result =
             await supabaseClient
@@ -1228,6 +1431,19 @@ async function saveProfile() {
             "success"
         );
 
+
+        setTimeout(
+            function () {
+
+                closeModal(
+                    "profile-modal"
+                );
+
+            },
+            600
+        );
+
+
     } catch (error) {
 
         console.error(
@@ -1235,20 +1451,22 @@ async function saveProfile() {
             error
         );
 
+
         showProfileMessage(
-            error && error.message
+            error &&
+            error.message
                 ? error.message
                 : "Не удалось сохранить профиль."
         );
+
     }
+
 }
 
 
 /* =========================================================
-   APPLICATION
+   ENTER APPLICATION
 ========================================================= */
-
-let applicationStarted = false;
 
 async function enterApplication() {
 
@@ -1256,36 +1474,112 @@ async function enterApplication() {
         return;
     }
 
-    if (authScreen) {
-        authScreen.style.display =
-            "none";
+
+    if (applicationStarted) {
+
+        return;
+
     }
 
-    if (appShell) {
 
-        appShell.classList.add(
-            "active"
+    console.log(
+        "ENTER APPLICATION:",
+        currentUser.id
+    );
+
+
+    if (authScreen) {
+
+        authScreen.classList.add(
+            "hidden-screen"
         );
 
-        appShell.style.display =
-            "";
+        authScreen.style.setProperty(
+            "display",
+            "none",
+            "important"
+        );
+
     }
+
+
+    if (!appShell) {
+
+        console.error(
+            "app-shell not found."
+        );
+
+        return;
+
+    }
+
+
+    appShell.classList.add(
+        "active"
+    );
+
+
+    appShell.style.setProperty(
+        "display",
+        "flex",
+        "important"
+    );
+
+
+    appShell.style.setProperty(
+        "visibility",
+        "visible",
+        "important"
+    );
+
+
+    appShell.style.setProperty(
+        "opacity",
+        "1",
+        "important"
+    );
+
 
     await ensureProfile();
 
+
     applyProfile();
+
+
+    applicationStarted =
+        true;
+
 
     renderPage(
         currentPage
     );
 
-    initGlobalPresence();
 
-    applicationStarted = true;
+    await initGlobalPresence();
+
+
+    console.log(
+        "APPLICATION READY"
+    );
+
 }
 
 
+/* =========================================================
+   LEAVE APPLICATION
+========================================================= */
+
 function leaveApplication() {
+
+    applicationStarted =
+        false;
+
+
+    stopChatRealtime();
+
+
+    stopPresence();
+
 
     if (appShell) {
 
@@ -1293,23 +1587,43 @@ function leaveApplication() {
             "active"
         );
 
-        appShell.style.display =
-            "none";
+        appShell.style.setProperty(
+            "display",
+            "none",
+            "important"
+        );
+
     }
+
 
     if (authScreen) {
-        authScreen.style.display =
-            "";
+
+        authScreen.classList.remove(
+            "hidden-screen"
+        );
+
+        authScreen.style.setProperty(
+            "display",
+            "flex",
+            "important"
+        );
+
+        authScreen.style.visibility =
+            "visible";
+
+        authScreen.style.opacity =
+            "1";
+
     }
 
-    stopChatRealtime();
 
-    stopPresence();
+    currentUser =
+        null;
 
-    currentUser = null;
-    currentSession = null;
 
-    applicationStarted = false;
+    currentSession =
+        null;
+
 }
 
 
@@ -1323,41 +1637,52 @@ function initNavigation() {
         .querySelectorAll(
             "[data-page]"
         )
-        .forEach(function (button) {
+        .forEach(
+            function (button) {
 
-            button.addEventListener(
-                "click",
-                function () {
+                button.addEventListener(
+                    "click",
+                    function () {
 
-                    const page =
-                        button.dataset.page;
+                        const page =
+                            button.dataset.page;
 
-                    if (!page) {
-                        return;
-                    }
 
-                    currentPage =
-                        page;
+                        if (!page) {
+                            return;
+                        }
 
-                    document
-                        .querySelectorAll(
-                            ".side-tile[data-page]"
-                        )
-                        .forEach(function (item) {
 
-                            item.classList.toggle(
-                                "active",
-                                item.dataset.page === page
+                        currentPage =
+                            page;
+
+
+                        document
+                            .querySelectorAll(
+                                ".side-tile[data-page]"
+                            )
+                            .forEach(
+                                function (item) {
+
+                                    item.classList.toggle(
+                                        "active",
+                                        item.dataset.page === page
+                                    );
+
+                                }
                             );
 
-                        });
 
-                    renderPage(page);
+                        renderPage(
+                            page
+                        );
 
-                }
-            );
+                    }
+                );
 
-        });
+            }
+        );
+
 }
 
 
@@ -1370,22 +1695,34 @@ function renderPage(page) {
     const title =
         $("page-title");
 
+
     const kicker =
         $("page-kicker");
 
+
     const badge =
         $("page-badge");
+
 
     const content =
         $("page-content");
 
 
-    if (!title || !content) {
+    if (
+        !title ||
+        !content
+    ) {
+
         return;
+
     }
 
 
-    stopChatRealtime();
+    if (page !== "chat") {
+
+        stopChatRealtime();
+
+    }
 
 
     if (page === "home") {
@@ -1393,47 +1730,92 @@ function renderPage(page) {
         title.textContent =
             "Главная";
 
-        if (kicker) {
-            kicker.textContent =
-                "PLATFORM";
-        }
 
-        if (badge) {
-            badge.textContent =
-                "HOME";
-        }
+        kicker.textContent =
+            "PLATFORM";
+
+
+        badge.textContent =
+            "HOME";
+
 
         content.innerHTML = `
+
             <div class="welcome-grid">
 
                 <article class="info-card">
-                    <div class="info-card-icon">◈</div>
-                    <div>
-                        <strong>Игры</strong>
-                        <p>Каталог игр платформы.</p>
+
+                    <div class="info-card-icon">
+                        ◈
                     </div>
+
+                    <div>
+
+                        <strong>
+                            Добро пожаловать
+                        </strong>
+
+                        <p>
+                            GAME PLATFORM —
+                            игровая платформа.
+                        </p>
+
+                    </div>
+
                 </article>
 
-                <article class="info-card">
-                    <div class="info-card-icon">♜</div>
-                    <div>
-                        <strong>Гильдии</strong>
-                        <p>Сообщества игроков внутри игр.</p>
-                    </div>
-                </article>
 
                 <article class="info-card">
-                    <div class="info-card-icon">◉</div>
-                    <div>
-                        <strong>Онлайн</strong>
-                        <p>Сейчас игроков онлайн: ${presenceUsers.length}</p>
+
+                    <div class="info-card-icon">
+                        ♜
                     </div>
+
+                    <div>
+
+                        <strong>
+                            Игры
+                        </strong>
+
+                        <p>
+                            Здесь будут ваши игровые проекты.
+                        </p>
+
+                    </div>
+
+                </article>
+
+
+                <article class="info-card">
+
+                    <div class="info-card-icon">
+                        ◉
+                    </div>
+
+                    <div>
+
+                        <strong>
+                            Игроки онлайн
+                        </strong>
+
+                        <p>
+                            Сейчас в сети:
+                            <strong>
+                                ${presenceUsers.length}
+                            </strong>
+                        </p>
+
+                    </div>
+
                 </article>
 
             </div>
+
         `;
 
+
         return;
+
     }
 
 
@@ -1442,39 +1824,55 @@ function renderPage(page) {
         title.textContent =
             "Игры";
 
-        if (kicker) {
-            kicker.textContent =
-                "GAME CATALOG";
-        }
 
-        if (badge) {
-            badge.textContent =
-                "GAMES";
-        }
+        kicker.textContent =
+            "GAME CATALOG";
+
+
+        badge.textContent =
+            "GAMES";
+
 
         content.innerHTML = `
+
             <div class="welcome-grid">
 
                 <article class="info-card">
-                    <div class="info-card-icon">◈</div>
+
+                    <div class="info-card-icon">
+                        ◈
+                    </div>
+
                     <div>
-                        <strong>World of Sea Battle</strong>
-                        <p>Игровой раздел платформы.</p>
+
+                        <strong>
+                            World of Sea Battle
+                        </strong>
+
+                        <p>
+                            Игровой раздел платформы.
+                        </p>
+
                         <button
                             type="button"
                             class="modal-primary-button"
-                            id="wosb-button"
+                            id="open-wosb-button"
                         >
-                            Открыть игру
+                            Открыть
                         </button>
+
                     </div>
+
                 </article>
 
             </div>
+
         `;
 
+
         const gameButton =
-            $("wosb-button");
+            $("open-wosb-button");
+
 
         if (gameButton) {
 
@@ -1483,7 +1881,7 @@ function renderPage(page) {
                 function () {
 
                     alert(
-                        "Игровой раздел будет добавлен следующим этапом."
+                        "Раздел World of Sea Battle готовится."
                     );
 
                 }
@@ -1491,7 +1889,9 @@ function renderPage(page) {
 
         }
 
+
         return;
+
     }
 
 
@@ -1500,31 +1900,47 @@ function renderPage(page) {
         title.textContent =
             "Новости";
 
-        if (kicker) {
-            kicker.textContent =
-                "COMMUNITY";
-        }
 
-        if (badge) {
-            badge.textContent =
-                "NEWS";
-        }
+        kicker.textContent =
+            "COMMUNITY";
+
+
+        badge.textContent =
+            "NEWS";
+
 
         content.innerHTML = `
+
             <div class="welcome-grid">
 
                 <article class="info-card">
-                    <div class="info-card-icon">◫</div>
-                    <div>
-                        <strong>Новости платформы</strong>
-                        <p>Раздел готовится к наполнению.</p>
+
+                    <div class="info-card-icon">
+                        ◫
                     </div>
+
+                    <div>
+
+                        <strong>
+                            Новости
+                        </strong>
+
+                        <p>
+                            Раздел будет использоваться
+                            для новостей платформы.
+                        </p>
+
+                    </div>
+
                 </article>
 
             </div>
+
         `;
 
+
         return;
+
     }
 
 
@@ -1533,39 +1949,49 @@ function renderPage(page) {
         title.textContent =
             "Онлайн";
 
-        if (kicker) {
-            kicker.textContent =
-                "COMMUNITY";
-        }
 
-        if (badge) {
-            badge.textContent =
-                "ONLINE";
-        }
+        kicker.textContent =
+            "COMMUNITY";
+
+
+        badge.textContent =
+            "ONLINE";
+
 
         content.innerHTML = `
+
             <div class="info-card">
-                <div class="info-card-icon">◉</div>
+
+                <div class="info-card-icon">
+                    ◉
+                </div>
 
                 <div>
+
                     <strong>
                         Игроки онлайн:
-                        <span id="online-page-count">
-                            ${presenceUsers.length}
-                        </span>
+                        ${presenceUsers.length}
                     </strong>
 
                     <div
-                        id="online-player-list"
+                        id="online-player-list-page"
                         style="margin-top:16px;"
                     ></div>
+
                 </div>
+
             </div>
+
         `;
 
-        renderOnlinePlayers();
+
+        renderOnlinePlayers(
+            "online-player-list-page"
+        );
+
 
         return;
+
     }
 
 
@@ -1574,17 +2000,17 @@ function renderPage(page) {
         title.textContent =
             "Профиль";
 
-        if (kicker) {
-            kicker.textContent =
-                "PLAYER";
-        }
 
-        if (badge) {
-            badge.textContent =
-                "PROFILE";
-        }
+        kicker.textContent =
+            "PLAYER";
+
+
+        badge.textContent =
+            "PROFILE";
+
 
         content.innerHTML = `
+
             <div class="welcome-grid">
 
                 <article class="info-card">
@@ -1593,11 +2019,7 @@ function renderPage(page) {
                         class="info-card-icon"
                         id="page-profile-avatar"
                     >
-                        ${escapeHtml(
-                            getAvatarLetter(
-                                profileData.nickname
-                            )
-                        )}
+                        🤖
                     </div>
 
                     <div>
@@ -1621,11 +2043,20 @@ function renderPage(page) {
                             style="margin-top:8px;"
                         ></div>
 
+                        <p>
+                            ${
+                                profileData.city
+                                    ? escapeHtml(
+                                        profileData.city
+                                    )
+                                    : "Город не указан"
+                            }
+                        </p>
+
                         <button
                             type="button"
-                            class="modal-primary-button"
                             id="page-profile-edit"
-                            style="margin-top:12px;"
+                            class="modal-primary-button"
                         >
                             Редактировать профиль
                         </button>
@@ -1635,26 +2066,53 @@ function renderPage(page) {
                 </article>
 
             </div>
+
         `;
 
-        renderVipBadges();
 
-        const editButton =
-            $("page-profile-edit");
+        const avatar =
+            $("page-profile-avatar");
 
-        if (editButton) {
 
-            editButton.addEventListener(
-                "click",
-                function () {
+        renderAvatar(
+            avatar,
+            profileData.nickname,
+            profileData.avatar_url
+        );
 
-                    openProfileVip();
+
+        document
+            .querySelectorAll(
+                "[data-vip-badge]"
+            )
+            .forEach(
+                function (element) {
+
+                    element.innerHTML =
+                        createVipBadge(
+                            profileData.vip_level
+                        );
 
                 }
             );
+
+
+        const button =
+            $("page-profile-edit");
+
+
+        if (button) {
+
+            button.addEventListener(
+                "click",
+                openProfileModal
+            );
+
         }
 
+
         return;
+
     }
 
 
@@ -1663,36 +2121,25 @@ function renderPage(page) {
         title.textContent =
             "Чат";
 
-        if (kicker) {
-            kicker.textContent =
-                "COMMUNITY CHAT";
-        }
 
-        if (badge) {
-            badge.textContent =
-                "CHAT";
-        }
+        kicker.textContent =
+            "COMMUNITY CHAT";
 
-        initSimpleChat();
+
+        badge.textContent =
+            "CHAT";
+
+
+        initChat();
+
 
         return;
+
     }
 
 
-    title.textContent =
-        "Главная";
+    renderPage("home");
 
-    if (kicker) {
-        kicker.textContent =
-            "PLATFORM";
-    }
-
-    if (badge) {
-        badge.textContent =
-            "HOME";
-    }
-
-    content.innerHTML = "";
 }
 
 
@@ -1702,55 +2149,13 @@ function renderPage(page) {
 
 function initButtons() {
 
-    const heroGames =
-        $("hero-games-button");
-
-    if (heroGames) {
-
-        heroGames.addEventListener(
-            "click",
-            function () {
-
-                const button =
-                    document.querySelector(
-                        '[data-page="games"]'
-                    );
-
-                if (button) {
-                    button.click();
-                }
-
-            }
-        );
-    }
-
-
-    const heroOnline =
-        $("hero-online-button");
-
-    if (heroOnline) {
-
-        heroOnline.addEventListener(
-            "click",
-            function () {
-
-                openModal(
-                    "online-modal"
-                );
-
-                renderOnlinePlayers();
-
-            }
-        );
-    }
-
-
-    const headerOnline =
+    const heroOnlineButton =
         $("header-online-button");
 
-    if (headerOnline) {
 
-        headerOnline.addEventListener(
+    if (heroOnlineButton) {
+
+        heroOnlineButton.addEventListener(
             "click",
             function () {
 
@@ -1758,16 +2163,22 @@ function initButtons() {
                     "online-modal"
                 );
 
-                renderOnlinePlayers();
+                renderOnlinePlayers(
+                    "online-player-list"
+                );
 
             }
         );
+
     }
 
 
     const youtubeButtons = [
+
         $("youtube-button"),
+
         $("right-youtube-button")
+
     ];
 
 
@@ -1777,6 +2188,7 @@ function initButtons() {
             if (!button) {
                 return;
             }
+
 
             button.addEventListener(
                 "click",
@@ -1796,8 +2208,11 @@ function initButtons() {
 
 
     const twitchButtons = [
+
         $("twitch-button"),
+
         $("right-twitch-button")
+
     ];
 
 
@@ -1807,6 +2222,7 @@ function initButtons() {
             if (!button) {
                 return;
             }
+
 
             button.addEventListener(
                 "click",
@@ -1831,7 +2247,57 @@ function initButtons() {
             "click",
             logoutUser
         );
+
     }
+
+
+    const profileButton =
+        $("profile-edit-button");
+
+
+    if (profileButton) {
+
+        profileButton.addEventListener(
+            "click",
+            openProfileModal
+        );
+
+    }
+
+
+    const headerProfile =
+        $("header-profile-button");
+
+
+    if (headerProfile) {
+
+        headerProfile.addEventListener(
+            "click",
+            openProfileModal
+        );
+
+    }
+
+
+    const callButton =
+        $("start-call-button");
+
+
+    if (callButton) {
+
+        callButton.addEventListener(
+            "click",
+            function () {
+
+                startCall(
+                    "global"
+                );
+
+            }
+        );
+
+    }
+
 }
 
 
@@ -1845,46 +2311,51 @@ function initModals() {
         .querySelectorAll(
             "[data-close-modal]"
         )
-        .forEach(function (button) {
+        .forEach(
+            function (button) {
 
-            button.addEventListener(
-                "click",
-                function () {
+                button.addEventListener(
+                    "click",
+                    function () {
 
-                    closeModal(
-                        button.dataset.closeModal
-                    );
+                        closeModal(
+                            button.dataset.closeModal
+                        );
 
-                }
-            );
+                    }
+                );
 
-        });
+            }
+        );
 
 
     document
         .querySelectorAll(
             ".modal-overlay"
         )
-        .forEach(function (overlay) {
+        .forEach(
+            function (overlay) {
 
-            overlay.addEventListener(
-                "click",
-                function (event) {
+                overlay.addEventListener(
+                    "click",
+                    function (event) {
 
-                    if (
-                        event.target === overlay
-                    ) {
+                        if (
+                            event.target === overlay
+                        ) {
 
-                        overlay.classList.remove(
-                            "active"
-                        );
+                            overlay.classList.remove(
+                                "active"
+                            );
+
+                        }
 
                     }
+                );
 
-                }
-            );
+            }
+        );
 
-        });
 }
 
 
@@ -1893,13 +2364,16 @@ function openModal(id) {
     const modal =
         $(id);
 
+
     if (!modal) {
         return;
     }
 
+
     modal.classList.add(
         "active"
     );
+
 }
 
 
@@ -1908,13 +2382,16 @@ function closeModal(id) {
     const modal =
         $(id);
 
+
     if (!modal) {
         return;
     }
 
+
     modal.classList.remove(
         "active"
     );
+
 }
 
 
@@ -1922,128 +2399,12 @@ function closeModal(id) {
    PROFILE MODAL
 ========================================================= */
 
-function prepareProfileModal() {
+function openProfileModal() {
 
-    const modal =
-        $("profile-modal");
-
-    if (!modal) {
+    if (!currentUser) {
         return;
     }
 
-
-    if (
-        !profileNicknameInput ||
-        !profileStatusInput
-    ) {
-        return;
-    }
-
-
-    if (!$("profile-age-input")) {
-
-        const ageInput =
-            document.createElement("input");
-
-        ageInput.type =
-            "number";
-
-        ageInput.id =
-            "profile-age-input";
-
-        ageInput.min =
-            "1";
-
-        ageInput.max =
-            "120";
-
-        ageInput.placeholder =
-            "Возраст";
-
-        ageInput.className =
-            profileNicknameInput.className ||
-            "modal-input";
-
-        profileStatusInput
-            .parentNode
-            .appendChild(ageInput);
-    }
-
-
-    if (!$("profile-city-input")) {
-
-        const cityInput =
-            document.createElement("input");
-
-        cityInput.type =
-            "text";
-
-        cityInput.id =
-            "profile-city-input";
-
-        cityInput.placeholder =
-            "Город";
-
-        cityInput.className =
-            profileNicknameInput.className ||
-            "modal-input";
-
-        profileStatusInput
-            .parentNode
-            .appendChild(cityInput);
-    }
-
-
-    if (!$("profile-avatar-input")) {
-
-        const avatarInput =
-            document.createElement("input");
-
-        avatarInput.type =
-            "url";
-
-        avatarInput.id =
-            "profile-avatar-input";
-
-        avatarInput.placeholder =
-            "Ссылка на фото";
-
-        avatarInput.className =
-            profileNicknameInput.className ||
-            "modal-input";
-
-        profileStatusInput
-            .parentNode
-            .appendChild(avatarInput);
-    }
-
-
-    if (!$("profile-about-input")) {
-
-        const aboutInput =
-            document.createElement("textarea");
-
-        aboutInput.id =
-            "profile-about-input";
-
-        aboutInput.placeholder =
-            "О себе";
-
-        aboutInput.rows =
-            4;
-
-        aboutInput.className =
-            profileNicknameInput.className ||
-            "modal-input";
-
-        profileStatusInput
-            .parentNode
-            .appendChild(aboutInput);
-    }
-}
-
-
-function fillProfileModal() {
 
     if (profileNicknameInput) {
 
@@ -2061,105 +2422,70 @@ function fillProfileModal() {
     }
 
 
-    const ageInput =
+    const age =
         $("profile-age-input");
 
-    if (ageInput) {
 
-        ageInput.value =
-            profileData.age !== null &&
-            profileData.age !== undefined
-                ? profileData.age
-                : "";
+    if (age) {
+
+        age.value =
+            profileData.age || "";
+
     }
 
 
-    const cityInput =
+    const city =
         $("profile-city-input");
 
-    if (cityInput) {
 
-        cityInput.value =
+    if (city) {
+
+        city.value =
             profileData.city || "";
+
     }
 
 
-    const avatarInput =
+    const avatar =
         $("profile-avatar-input");
 
-    if (avatarInput) {
 
-        avatarInput.value =
+    if (avatar) {
+
+        avatar.value =
             profileData.avatar_url || "";
+
     }
 
 
-    const aboutInput =
+    const about =
         $("profile-about-input");
 
-    if (aboutInput) {
 
-        aboutInput.value =
+    if (about) {
+
+        about.value =
             profileData.about || "";
+
     }
 
 
-    showProfileMessage("");
-}
+    renderAvatar(
+        $("profile-modal-avatar"),
+        profileData.nickname,
+        profileData.avatar_url
+    );
 
 
-function openOldProfileModal() {
+    showProfileMessage(
+        ""
+    );
 
-    if (!currentUser) {
-        return;
-    }
-
-    prepareProfileModal();
-
-    fillProfileModal();
 
     openModal(
         "profile-modal"
     );
-}
 
-
-/* =========================================================
-   PROFILE VIP BRIDGE
-========================================================= */
-
-function openProfileVip() {
-
-    if (!currentUser) {
-        return;
-    }
-
-
-    if (
-        typeof window.openVipProfile ===
-        "function"
-    ) {
-
-        try {
-
-            window.openVipProfile(
-                currentUser.id
-            );
-
-            return;
-
-        } catch (error) {
-
-            console.error(
-                "VIP profile error:",
-                error
-            );
-
-        }
-    }
-
-
-    openOldProfileModal();
 }
 
 
@@ -2173,18 +2499,22 @@ async function logoutUser() {
         return;
     }
 
+
     try {
+
+        await leaveCall();
 
         await stopPresence();
 
-        await leaveCall();
 
         const result =
             await supabaseClient.auth.signOut();
 
+
         if (result.error) {
             throw result.error;
         }
+
 
     } catch (error) {
 
@@ -2192,7 +2522,9 @@ async function logoutUser() {
             "Logout error:",
             error
         );
+
     }
+
 }
 
 
@@ -2206,7 +2538,9 @@ async function initGlobalPresence() {
         !supabaseClient ||
         !currentUser
     ) {
+
         return;
+
     }
 
 
@@ -2220,6 +2554,7 @@ async function initGlobalPresence() {
 
             presenceChannel =
                 null;
+
         }
 
 
@@ -2276,68 +2611,57 @@ async function initGlobalPresence() {
         );
 
 
-        await new Promise(function (resolve) {
+        presenceChannel.subscribe(
+            async function (status) {
 
-            let resolved =
-                false;
+                console.log(
+                    "Presence status:",
+                    status
+                );
 
-            presenceChannel.subscribe(
-                async function (status) {
 
-                    console.log(
-                        "Presence status:",
-                        status
-                    );
+                if (
+                    status === "SUBSCRIBED"
+                ) {
 
-                    if (
-                        status === "SUBSCRIBED" &&
-                        !resolved
-                    ) {
+                    try {
 
-                        resolved = true;
+                        await presenceChannel.track({
 
-                        try {
+                            user_id:
+                                currentUser.id,
 
-                            await presenceChannel.track({
-                                user_id:
-                                    currentUser.id,
+                            nickname:
+                                profileData.nickname ||
+                                "Player",
 
-                                nickname:
-                                    profileData.nickname ||
-                                    "Player",
+                            status:
+                                profileData.status ||
+                                "Онлайн",
 
-                                status:
-                                    profileData.status ||
-                                    "Онлайн",
+                            avatar_url:
+                                profileData.avatar_url ||
+                                "",
 
-                                avatar_url:
-                                    profileData.avatar_url ||
-                                    "",
+                            vip_level:
+                                profileData.vip_level ||
+                                0
 
-                                vip_level:
-                                    profileData.vip_level ||
-                                    0,
+                        });
 
-                                online_at:
-                                    new Date().toISOString()
-                            });
+                    } catch (error) {
 
-                        } catch (error) {
-
-                            console.error(
-                                "Presence track error:",
-                                error
-                            );
-                        }
-
-                        resolve();
+                        console.error(
+                            "Presence track error:",
+                            error
+                        );
 
                     }
 
                 }
-            );
 
-        });
+            }
+        );
 
     } catch (error) {
 
@@ -2345,7 +2669,9 @@ async function initGlobalPresence() {
             "Presence error:",
             error
         );
+
     }
+
 }
 
 
@@ -2361,61 +2687,79 @@ function updatePresenceUsers() {
         const state =
             presenceChannel.presenceState();
 
-        const users = [];
+
+        const unique =
+            {};
 
 
         Object.keys(state)
-            .forEach(function (key) {
+            .forEach(
+                function (key) {
 
-                const entries =
-                    state[key] || [];
-
-                entries.forEach(function (entry) {
-
-                    users.push(entry);
-
-                });
-
-            });
+                    const records =
+                        state[key] || [];
 
 
-        const unique = {};
+                    records.forEach(
+                        function (record) {
 
-        users.forEach(function (user) {
+                            if (
+                                record &&
+                                record.user_id
+                            ) {
 
-            if (
-                user &&
-                user.user_id
-            ) {
+                                unique[
+                                    record.user_id
+                                ] =
+                                    record;
 
-                unique[user.user_id] =
-                    user;
+                            }
 
-            }
+                        }
+                    );
 
-        });
+                }
+            );
 
 
         presenceUsers =
             Object.keys(unique)
-                .map(function (key) {
+                .map(
+                    function (key) {
 
-                    return unique[key];
+                        return unique[key];
 
-                });
+                    }
+                );
 
 
         updateOnlineCounters();
 
-        renderOnlinePlayers();
+
+        renderOnlinePlayers(
+            "online-player-list"
+        );
+
+
+        if (
+            currentPage === "online"
+        ) {
+
+            renderOnlinePlayers(
+                "online-player-list-page"
+            );
+
+        }
 
     } catch (error) {
 
         console.error(
-            "Presence sync error:",
+            "Presence update error:",
             error
         );
+
     }
+
 }
 
 
@@ -2425,16 +2769,27 @@ function updateOnlineCounters() {
         presenceUsers.length;
 
 
-    [
+    const ids = [
+
         "online-header-count",
+
         "online-side-count",
-        "hero-online-count",
-        "online-modal-count"
-    ]
-        .forEach(function (id) {
+
+        "online-side-card-count",
+
+        "online-modal-count",
+
+        "hero-online-count-right"
+
+    ];
+
+
+    ids.forEach(
+        function (id) {
 
             const element =
                 $(id);
+
 
             if (element) {
 
@@ -2443,25 +2798,17 @@ function updateOnlineCounters() {
 
             }
 
-        });
+        }
+    );
 
-
-    const pageCount =
-        $("online-page-count");
-
-    if (pageCount) {
-
-        pageCount.textContent =
-            String(count);
-
-    }
 }
 
 
-function renderOnlinePlayers() {
+function renderOnlinePlayers(targetId) {
 
     const list =
-        $("online-player-list");
+        $(targetId);
+
 
     if (!list) {
         return;
@@ -2471,60 +2818,71 @@ function renderOnlinePlayers() {
     if (!presenceUsers.length) {
 
         list.innerHTML = `
+
             <div class="info-card">
-                <strong>Никого нет онлайн</strong>
+
+                <strong>
+                    Никого нет онлайн
+                </strong>
+
+                <p>
+                    Пользователи появятся здесь
+                    после подключения.
+                </p>
+
             </div>
+
         `;
 
         return;
+
     }
 
 
     list.innerHTML =
         presenceUsers
-            .map(function (user) {
+            .map(
+                function (user) {
 
-                const vip =
-                    createVipBadge(
-                        user.vip_level || 0
-                    );
+                    return `
 
-                return `
-                    <div class="online-player">
+                        <div class="online-player">
 
-                        <div class="mini-avatar">
-                            ${escapeHtml(
-                                getAvatarLetter(
-                                    user.nickname || "P"
-                                )
-                            )}
+                            <div class="mini-avatar">
+                                🤖
+                            </div>
+
+                            <div>
+
+                                <strong>
+                                    ${escapeHtml(
+                                        user.nickname ||
+                                        "Player"
+                                    )}
+                                </strong>
+
+                                <span>
+                                    ${escapeHtml(
+                                        user.status ||
+                                        "Онлайн"
+                                    )}
+                                </span>
+
+                                ${createVipBadge(
+                                    user.vip_level ||
+                                    0
+                                )}
+
+                            </div>
+
                         </div>
 
-                        <div>
+                    `;
 
-                            <strong>
-                                ${escapeHtml(
-                                    user.nickname ||
-                                    "Player"
-                                )}
-                            </strong>
-
-                            <span>
-                                ${escapeHtml(
-                                    user.status ||
-                                    "Онлайн"
-                                )}
-                            </span>
-
-                            ${vip}
-
-                        </div>
-
-                    </div>
-                `;
-
-            })
+                }
+            )
             .join("");
+
 }
 
 
@@ -2534,13 +2892,28 @@ async function stopPresence() {
         !presenceChannel ||
         !supabaseClient
     ) {
+
         return;
+
     }
 
 
     try {
 
         await presenceChannel.untrack();
+
+
+    } catch (error) {
+
+        console.error(
+            "Presence untrack error:",
+            error
+        );
+
+    }
+
+
+    try {
 
         await supabaseClient.removeChannel(
             presenceChannel
@@ -2549,19 +2922,23 @@ async function stopPresence() {
     } catch (error) {
 
         console.error(
-            "Stop presence error:",
+            "Presence remove error:",
             error
         );
+
     }
 
 
     presenceChannel =
         null;
 
+
     presenceUsers =
         [];
 
+
     updateOnlineCounters();
+
 }
 
 
@@ -2569,10 +2946,11 @@ async function stopPresence() {
    CHAT
 ========================================================= */
 
-async function initSimpleChat() {
+async function initChat() {
 
     const content =
         $("page-content");
+
 
     if (!content) {
         return;
@@ -2580,32 +2958,36 @@ async function initSimpleChat() {
 
 
     content.innerHTML = `
+
         <div class="chat-layout">
 
             <div
-                class="chat-messages"
                 id="chat-messages"
+                class="chat-messages"
             >
+
                 <div class="info-card">
-                    <div class="info-card-icon">◌</div>
-                    <div>
-                        <strong>Загрузка чата...</strong>
-                        <p>Подключение к Realtime.</p>
-                    </div>
+
+                    <strong>
+                        Загрузка...
+                    </strong>
+
                 </div>
+
             </div>
 
+
             <form
-                class="chat-input-row"
                 id="chat-form"
+                class="chat-input-row"
             >
 
                 <input
-                    type="text"
                     id="chat-input"
-                    placeholder="Введите сообщение..."
+                    type="text"
                     maxlength="1000"
                     autocomplete="off"
+                    placeholder="Введите сообщение..."
                 >
 
                 <button
@@ -2618,6 +3000,7 @@ async function initSimpleChat() {
             </form>
 
         </div>
+
     `;
 
 
@@ -2643,7 +3026,9 @@ async function initSimpleChat() {
 
     await loadChatMessages();
 
+
     startChatRealtime();
+
 }
 
 
@@ -2674,33 +3059,46 @@ async function loadChatMessages() {
     if (result.error) {
 
         console.warn(
-            "Chat load error:",
+            "Chat load:",
             result.error.message
         );
+
 
         const container =
             $("chat-messages");
 
+
         if (container) {
 
             container.innerHTML = `
+
                 <div class="info-card">
-                    <strong>Чат пока не настроен</strong>
+
+                    <strong>
+                        Чат не загружен
+                    </strong>
+
                     <p>
-                        Проверь таблицу chat_messages в Supabase.
+                        Проверьте таблицу
+                        chat_messages в Supabase.
                     </p>
+
                 </div>
+
             `;
 
         }
 
+
         return;
+
     }
 
 
     renderChatMessages(
         result.data || []
     );
+
 }
 
 
@@ -2708,6 +3106,7 @@ function renderChatMessages(messages) {
 
     const container =
         $("chat-messages");
+
 
     if (!container) {
         return;
@@ -2717,46 +3116,61 @@ function renderChatMessages(messages) {
     if (!messages.length) {
 
         container.innerHTML = `
+
             <div class="info-card">
-                <strong>Пока нет сообщений.</strong>
-                <p>Напишите первое сообщение.</p>
+
+                <strong>
+                    Пока нет сообщений.
+                </strong>
+
+                <p>
+                    Напишите первое сообщение.
+                </p>
+
             </div>
+
         `;
 
         return;
+
     }
 
 
     container.innerHTML =
         messages
-            .map(function (message) {
+            .map(
+                function (message) {
 
-                return `
-                    <div class="chat-message">
+                    return `
 
-                        <strong>
-                            ${escapeHtml(
-                                message.nickname ||
-                                "Player"
-                            )}
-                        </strong>
+                        <div class="chat-message">
 
-                        <span>
-                            ${escapeHtml(
-                                message.message ||
-                                ""
-                            )}
-                        </span>
+                            <strong>
+                                ${escapeHtml(
+                                    message.nickname ||
+                                    "Player"
+                                )}
+                            </strong>
 
-                    </div>
-                `;
+                            <span>
+                                ${escapeHtml(
+                                    message.message ||
+                                    ""
+                                )}
+                            </span>
 
-            })
+                        </div>
+
+                    `;
+
+                }
+            )
             .join("");
 
 
     container.scrollTop =
         container.scrollHeight;
+
 }
 
 
@@ -2766,30 +3180,33 @@ function startChatRealtime() {
         !supabaseClient ||
         chatChannel
     ) {
+
         return;
+
     }
 
 
     chatChannel =
-        supabaseClient
-            .channel(
-                "global-chat-" +
-                Date.now()
-            )
-            .on(
-                "postgres_changes",
-                {
-                    event: "INSERT",
-                    schema: "public",
-                    table: "chat_messages",
-                    filter: "room_type=eq.global"
-                },
-                function () {
+        supabaseClient.channel(
+            "global-chat-" +
+            Date.now()
+        );
 
-                    loadChatMessages();
 
-                }
-            );
+    chatChannel.on(
+        "postgres_changes",
+        {
+            event: "INSERT",
+            schema: "public",
+            table: "chat_messages",
+            filter: "room_type=eq.global"
+        },
+        function () {
+
+            loadChatMessages();
+
+        }
+    );
 
 
     chatChannel.subscribe(
@@ -2802,6 +3219,7 @@ function startChatRealtime() {
 
         }
     );
+
 }
 
 
@@ -2812,14 +3230,26 @@ function stopChatRealtime() {
         supabaseClient
     ) {
 
-        supabaseClient.removeChannel(
-            chatChannel
-        );
+        try {
+
+            supabaseClient.removeChannel(
+                chatChannel
+            );
+
+        } catch (error) {
+
+            console.error(
+                error
+            );
+
+        }
 
     }
 
+
     chatChannel =
         null;
+
 }
 
 
@@ -2834,7 +3264,9 @@ async function sendChatMessage() {
         !currentUser ||
         !supabaseClient
     ) {
+
         return;
+
     }
 
 
@@ -2853,6 +3285,7 @@ async function sendChatMessage() {
             await supabaseClient
                 .from("chat_messages")
                 .insert({
+
                     user_id:
                         currentUser.id,
 
@@ -2865,6 +3298,7 @@ async function sendChatMessage() {
 
                     message:
                         message
+
                 });
 
 
@@ -2876,6 +3310,7 @@ async function sendChatMessage() {
         input.value =
             "";
 
+
         await loadChatMessages();
 
     } catch (error) {
@@ -2885,17 +3320,21 @@ async function sendChatMessage() {
             error
         );
 
+
         alert(
-            error && error.message
+            error &&
+            error.message
                 ? error.message
                 : "Не удалось отправить сообщение."
         );
+
     }
+
 }
 
 
 /* =========================================================
-   VIDEO
+   WEBRTC BASIC
 ========================================================= */
 
 async function startCall(roomName) {
@@ -2906,7 +3345,8 @@ async function startCall(roomName) {
 
 
     callRoom =
-        roomName || "global";
+        roomName ||
+        "global";
 
 
     openModal(
@@ -2923,8 +3363,11 @@ async function startCall(roomName) {
 
         localStream =
             await navigator.mediaDevices.getUserMedia({
+
                 video: true,
+
                 audio: true
+
             });
 
 
@@ -2943,6 +3386,7 @@ async function startCall(roomName) {
         micEnabled =
             true;
 
+
         cameraEnabled =
             true;
 
@@ -2950,7 +3394,6 @@ async function startCall(roomName) {
         updateCallStatus(
             "Камера и микрофон подключены."
         );
-
 
     } catch (error) {
 
@@ -2963,7 +3406,9 @@ async function startCall(roomName) {
         updateCallStatus(
             "Нет доступа к камере или микрофону."
         );
+
     }
+
 }
 
 
@@ -2972,12 +3417,14 @@ function updateCallStatus(message) {
     const element =
         $("call-status");
 
+
     if (element) {
 
         element.textContent =
             message;
 
     }
+
 }
 
 
@@ -2994,12 +3441,14 @@ function toggleMicrophone() {
 
     localStream
         .getAudioTracks()
-        .forEach(function (track) {
+        .forEach(
+            function (track) {
 
-            track.enabled =
-                micEnabled;
+                track.enabled =
+                    micEnabled;
 
-        });
+            }
+        );
 
 
     updateCallStatus(
@@ -3007,6 +3456,7 @@ function toggleMicrophone() {
             ? "Микрофон включён."
             : "Микрофон выключен."
     );
+
 }
 
 
@@ -3023,12 +3473,14 @@ function toggleCamera() {
 
     localStream
         .getVideoTracks()
-        .forEach(function (track) {
+        .forEach(
+            function (track) {
 
-            track.enabled =
-                cameraEnabled;
+                track.enabled =
+                    cameraEnabled;
 
-        });
+            }
+        );
 
 
     updateCallStatus(
@@ -3036,6 +3488,7 @@ function toggleCamera() {
             ? "Камера включена."
             : "Камера выключена."
     );
+
 }
 
 
@@ -3047,10 +3500,11 @@ async function toggleScreenShare() {
     ) {
 
         updateCallStatus(
-            "Браузер не поддерживает демонстрацию экрана."
+            "Демонстрация экрана не поддерживается."
         );
 
         return;
+
     }
 
 
@@ -3093,6 +3547,7 @@ async function toggleScreenShare() {
                         );
 
                     };
+
             }
 
         } else {
@@ -3101,22 +3556,29 @@ async function toggleScreenShare() {
 
                 screenStream
                     .getTracks()
-                    .forEach(function (track) {
+                    .forEach(
+                        function (track) {
 
-                        track.stop();
+                            track.stop();
 
-                    });
+                        }
+                    );
+
             }
+
 
             screenStream =
                 null;
 
+
             screenSharing =
                 false;
+
 
             updateCallStatus(
                 "Демонстрация экрана выключена."
             );
+
         }
 
     } catch (error) {
@@ -3125,7 +3587,9 @@ async function toggleScreenShare() {
             "Screen share error:",
             error
         );
+
     }
+
 }
 
 
@@ -3135,11 +3599,14 @@ async function leaveCall() {
 
         localStream
             .getTracks()
-            .forEach(function (track) {
+            .forEach(
+                function (track) {
 
-                track.stop();
+                    track.stop();
 
-            });
+                }
+            );
+
     }
 
 
@@ -3151,11 +3618,14 @@ async function leaveCall() {
 
         screenStream
             .getTracks()
-            .forEach(function (track) {
+            .forEach(
+                function (track) {
 
-                track.stop();
+                    track.stop();
 
-            });
+                }
+            );
+
     }
 
 
@@ -3164,21 +3634,23 @@ async function leaveCall() {
 
 
     Object.keys(peerConnections)
-        .forEach(function (key) {
+        .forEach(
+            function (key) {
 
-            try {
+                try {
 
-                peerConnections[key].close();
+                    peerConnections[key].close();
 
-            } catch (error) {
+                } catch (error) {
 
-                console.error(
-                    error
-                );
+                    console.error(
+                        error
+                    );
+
+                }
 
             }
-
-        });
+        );
 
 
     peerConnections =
@@ -3203,29 +3675,30 @@ async function leaveCall() {
             );
 
         }
+
     }
 
 
     callChannel =
         null;
 
+
     callRoom =
         null;
+
 
     closeModal(
         "call-modal"
     );
+
 }
 
-
-/* =========================================================
-   CALL BUTTONS
-========================================================= */
 
 function initCallButtons() {
 
     const mic =
         $("call-mic-button");
+
 
     if (mic) {
 
@@ -3240,6 +3713,7 @@ function initCallButtons() {
     const camera =
         $("call-camera-button");
 
+
     if (camera) {
 
         camera.addEventListener(
@@ -3252,6 +3726,7 @@ function initCallButtons() {
 
     const screen =
         $("call-screen-button");
+
 
     if (screen) {
 
@@ -3266,6 +3741,7 @@ function initCallButtons() {
     const leave =
         $("call-leave-button");
 
+
     if (leave) {
 
         leave.addEventListener(
@@ -3279,6 +3755,7 @@ function initCallButtons() {
     const close =
         $("call-close-x");
 
+
     if (close) {
 
         close.addEventListener(
@@ -3287,20 +3764,17 @@ function initCallButtons() {
         );
 
     }
+
 }
 
 
 /* =========================================================
-   STARTUP
+   DOM READY
 ========================================================= */
 
 document.addEventListener(
     "DOMContentLoaded",
     async function () {
-
-        /* ---------------------------------------------
-           DOM
-        --------------------------------------------- */
 
         authScreen =
             $("auth-screen");
@@ -3363,23 +3837,47 @@ document.addEventListener(
             $("profile-message");
 
 
-        /* ---------------------------------------------
-           Initial state
-        --------------------------------------------- */
-
         updateVersion();
 
 
         if (appShell) {
 
-            appShell.style.display =
-                "none";
+            appShell.classList.remove(
+                "active"
+            );
+
+            appShell.style.setProperty(
+                "display",
+                "none",
+                "important"
+            );
+
+            appShell.style.visibility =
+                "hidden";
+
         }
 
 
-        /* ---------------------------------------------
-           UI
-        --------------------------------------------- */
+        if (authScreen) {
+
+            authScreen.classList.remove(
+                "hidden-screen"
+            );
+
+            authScreen.style.setProperty(
+                "display",
+                "flex",
+                "important"
+            );
+
+            authScreen.style.visibility =
+                "visible";
+
+            authScreen.style.opacity =
+                "1";
+
+        }
+
 
         initAuthTabs();
 
@@ -3394,74 +3892,21 @@ document.addEventListener(
         initCallButtons();
 
 
-        /* ---------------------------------------------
-           Supabase
-        --------------------------------------------- */
-
-        const supabaseReady =
-            initSupabase();
-
-
-        if (!supabaseReady) {
+        if (!initSupabase()) {
 
             showAuthMessage(
-                "Не удалось загрузить Supabase."
+                "Не удалось загрузить библиотеку Supabase."
             );
 
             return;
+
         }
 
-
-        /* ---------------------------------------------
-           AUTH
-        --------------------------------------------- */
 
         subscribeAuthState();
 
+
         await loadInitialSession();
-
-
-        /* ---------------------------------------------
-           PROFILE BUTTONS
-        --------------------------------------------- */
-
-        const profileButton =
-            $("profile-edit-button");
-
-
-        if (profileButton) {
-
-            profileButton.addEventListener(
-                "click",
-                function () {
-
-                    openProfileVip();
-
-                }
-            );
-
-        }
-
-
-        const headerProfile =
-            $("header-profile-button");
-
-
-        if (headerProfile) {
-
-            headerProfile.addEventListener(
-                "click",
-                function () {
-
-                    openProfileVip();
-
-                }
-            );
-
-        }
-
-
-        prepareProfileModal();
 
 
         console.log(
@@ -3481,30 +3926,47 @@ document.addEventListener(
 window.gamePlatform = {
 
     getUser: function () {
+
         return currentUser;
+
     },
+
 
     getSession: function () {
+
         return currentSession;
+
     },
+
 
     getProfile: function () {
+
         return profileData;
+
     },
 
+
     getSupabase: function () {
+
         return supabaseClient;
+
     },
+
 
     startCall: startCall,
 
+
     leaveCall: leaveCall,
 
-    openProfile: openProfileVip,
+
+    openProfile: openProfileModal,
+
 
     openModal: openModal,
 
+
     closeModal: closeModal,
+
 
     renderPage: renderPage
 
