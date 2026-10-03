@@ -1,53 +1,53 @@
+"use strict";
+
+
 /*
 ====================================================
 GAME PLATFORM
-MAIN HOME HUB
-VERSION 1.3.0
+HOME HUB
+VERSION 1.4.0
 ====================================================
 
-Сейчас это frontend-шаблон.
+Главная страница:
 
-Главная страница содержит:
-
+- компактная навигация слева;
+- центральная заставка;
 - профиль;
 - онлайн;
-- игры;
 - новости;
 - YouTube;
 - Twitch.
 
-Глобальный онлайн всех пользователей будет подключён
-после появления Auth + Realtime/Presence.
+Сейчас данные профиля и онлайн локальные.
+
+Позже онлайн будет подключён к Supabase Realtime,
+а профиль — к Supabase Auth/Profiles.
 
 ====================================================
 */
 
 
-"use strict";
-
-
-const APP_VERSION = "1.3.0";
-
-
-/*
-====================================================
-LOCAL PROFILE
-====================================================
-*/
+const APP_VERSION = "1.4.0";
 
 
 const DEFAULT_PROFILE = {
-    nickname: "Player",
-    status: "Добро пожаловать на Game Platform"
+
+    nickname:
+        "Player",
+
+    status:
+        "Добро пожаловать на Game Platform"
+
 };
 
 
-let profile = loadProfile();
+let profile =
+    loadProfile();
 
 
 /*
 ====================================================
- INITIALIZATION
+INITIALIZATION
 ====================================================
 */
 
@@ -58,7 +58,9 @@ document.addEventListener(
 
         renderProfile();
 
-        renderOnlineCounter();
+        renderOnline();
+
+        updatePageVersion();
 
     }
 );
@@ -66,7 +68,7 @@ document.addEventListener(
 
 /*
 ====================================================
- PROFILE STORAGE
+PROFILE
 ====================================================
 */
 
@@ -75,25 +77,27 @@ function loadProfile() {
 
     try {
 
-        const saved =
+        const raw =
             localStorage.getItem(
                 "game_platform_profile"
             );
 
 
-        if (!saved) {
+        if (!raw) {
 
             return {
                 ...DEFAULT_PROFILE
             };
+
         }
 
 
         const parsed =
-            JSON.parse(saved);
+            JSON.parse(raw);
 
 
         return {
+
             nickname:
                 parsed.nickname ||
                 DEFAULT_PROFILE.nickname,
@@ -101,12 +105,13 @@ function loadProfile() {
             status:
                 parsed.status ||
                 DEFAULT_PROFILE.status
+
         };
 
     } catch (error) {
 
         console.error(
-            "Ошибка загрузки профиля:",
+            "Не удалось загрузить профиль:",
             error
         );
 
@@ -114,30 +119,30 @@ function loadProfile() {
         return {
             ...DEFAULT_PROFILE
         };
+
     }
+
 }
 
 
-function saveProfileData() {
+function saveProfileToStorage() {
 
     localStorage.setItem(
+
         "game_platform_profile",
+
         JSON.stringify(profile)
+
     );
+
 }
-
-
-/*
-====================================================
- PROFILE RENDER
-====================================================
-*/
 
 
 function renderProfile() {
 
     const nickname =
-        profile.nickname || "Player";
+        profile.nickname ||
+        "Player";
 
 
     const status =
@@ -145,11 +150,12 @@ function renderProfile() {
         DEFAULT_PROFILE.status;
 
 
-    const avatarLetter =
+    const firstLetter =
         nickname
             .trim()
             .charAt(0)
-            .toUpperCase() || "P";
+            .toUpperCase() ||
+        "P";
 
 
     const profileName =
@@ -186,6 +192,7 @@ function renderProfile() {
 
         profileName.textContent =
             nickname;
+
     }
 
 
@@ -193,13 +200,15 @@ function renderProfile() {
 
         profileStatus.textContent =
             status;
+
     }
 
 
     if (profileAvatar) {
 
         profileAvatar.textContent =
-            avatarLetter;
+            firstLetter;
+
     }
 
 
@@ -207,32 +216,28 @@ function renderProfile() {
 
         headerNickname.textContent =
             nickname;
+
     }
 
 
     if (headerAvatar) {
 
         headerAvatar.textContent =
-            avatarLetter;
+            firstLetter;
+
     }
+
 }
 
 
 /*
 ====================================================
- PROFILE MODAL
+PROFILE WINDOW
 ====================================================
 */
 
 
 function openProfile() {
-
-    openProfileEditor();
-
-}
-
-
-function openProfileEditor() {
 
     const modal =
         document.getElementById(
@@ -261,6 +266,7 @@ function openProfileEditor() {
 
         nicknameInput.value =
             profile.nickname;
+
     }
 
 
@@ -268,10 +274,12 @@ function openProfileEditor() {
 
         statusInput.value =
             profile.status;
+
     }
 
 
-    modal.hidden = false;
+    modal.hidden =
+        false;
 
 }
 
@@ -284,6 +292,7 @@ function closeProfileModal(event) {
     ) {
 
         return;
+
     }
 
 
@@ -295,8 +304,11 @@ function closeProfileModal(event) {
 
     if (modal) {
 
-        modal.hidden = true;
+        modal.hidden =
+            true;
+
     }
+
 }
 
 
@@ -326,16 +338,20 @@ function saveProfile() {
             : "";
 
 
-    profile.nickname =
-        nickname || "Player";
+    profile = {
+
+        nickname:
+            nickname ||
+            "Player",
+
+        status:
+            status ||
+            DEFAULT_PROFILE.status
+
+    };
 
 
-    profile.status =
-        status ||
-        DEFAULT_PROFILE.status;
-
-
-    saveProfileData();
+    saveProfileToStorage();
 
     renderProfile();
 
@@ -346,33 +362,33 @@ function saveProfile() {
 
 /*
 ====================================================
- ONLINE SYSTEM — FRONTEND PROTOTYPE
+ONLINE
 ====================================================
 
-Пока backend отсутствует, глобальный список игроков
-невозможно честно получить со всех устройств.
+Пока настоящая межпользовательская синхронизация
+не подключена, список содержит текущий локальный
+профиль.
 
-Поэтому интерфейс работает с текущим локальным
-пользователем.
+После подключения Supabase Realtime здесь будет
+единый список всех пользователей онлайн.
 
-После подключения Auth + Realtime список будет
-заменён реальными пользователями платформы.
 ====================================================
 */
 
 
 function getOnlinePlayers() {
 
-    const nickname =
-        profile.nickname ||
-        "Player";
-
-
     return [
 
         {
-            nickname: nickname,
-            status: "Сейчас на платформе"
+
+            nickname:
+                profile.nickname ||
+                "Player",
+
+            status:
+                "Сейчас на платформе"
+
         }
 
     ];
@@ -380,22 +396,71 @@ function getOnlinePlayers() {
 }
 
 
-function renderOnlineCounter() {
+function renderOnline() {
 
     const players =
         getOnlinePlayers();
 
 
     const count =
+        players.length;
+
+
+    const headerCount =
         document.getElementById(
-            "online-count"
+            "online-header-count"
         );
 
 
-    if (count) {
+    const sideCount =
+        document.getElementById(
+            "online-side-count"
+        );
 
-        count.textContent =
-            players.length;
+
+    const heroCount =
+        document.getElementById(
+            "hero-online-count"
+        );
+
+
+    const modalCount =
+        document.getElementById(
+            "online-modal-count"
+        );
+
+
+    if (headerCount) {
+
+        headerCount.textContent =
+            count;
+
+    }
+
+
+    if (sideCount) {
+
+        sideCount.textContent =
+            count;
+
+    }
+
+
+    if (heroCount) {
+
+        heroCount.textContent =
+            count;
+
+    }
+
+
+    if (modalCount) {
+
+        modalCount.textContent =
+            count === 1
+                ? "1 игрок"
+                : `${count} игроков`;
+
     }
 
 }
@@ -403,7 +468,7 @@ function renderOnlineCounter() {
 
 /*
 ====================================================
- ONLINE MODAL
+ONLINE PLAYERS WINDOW
 ====================================================
 */
 
@@ -422,12 +487,6 @@ function openOnlinePlayers() {
         );
 
 
-    const modalCount =
-        document.getElementById(
-            "online-modal-count"
-        );
-
-
     if (!modal || !list) {
         return;
     }
@@ -437,7 +496,8 @@ function openOnlinePlayers() {
         getOnlinePlayers();
 
 
-    list.innerHTML = "";
+    list.innerHTML =
+        "";
 
 
     players.forEach(
@@ -464,12 +524,11 @@ function openOnlinePlayers() {
 
 
             avatar.textContent =
-                (
-                    player.nickname
-                        .trim()
-                        .charAt(0)
-                        .toUpperCase()
-                ) || "P";
+                player.nickname
+                    .trim()
+                    .charAt(0)
+                    .toUpperCase() ||
+                "P";
 
 
             const details =
@@ -510,16 +569,6 @@ function openOnlinePlayers() {
                 player.status;
 
 
-            details.appendChild(
-                nickname
-            );
-
-
-            details.appendChild(
-                status
-            );
-
-
             const indicator =
                 document.createElement(
                     "span"
@@ -528,6 +577,16 @@ function openOnlinePlayers() {
 
             indicator.className =
                 "player-online-indicator";
+
+
+            details.appendChild(
+                nickname
+            );
+
+
+            details.appendChild(
+                status
+            );
 
 
             row.appendChild(
@@ -553,16 +612,8 @@ function openOnlinePlayers() {
     );
 
 
-    if (modalCount) {
-
-        modalCount.textContent =
-            players.length === 1
-                ? "1 игрок"
-                : `${players.length} игроков`;
-    }
-
-
-    modal.hidden = false;
+    modal.hidden =
+        false;
 
 }
 
@@ -575,6 +626,7 @@ function closeOnlinePlayers(event) {
     ) {
 
         return;
+
     }
 
 
@@ -586,7 +638,9 @@ function closeOnlinePlayers(event) {
 
     if (modal) {
 
-        modal.hidden = true;
+        modal.hidden =
+            true;
+
     }
 
 }
@@ -594,7 +648,7 @@ function closeOnlinePlayers(event) {
 
 /*
 ====================================================
- PAGE NAVIGATION
+NAVIGATION
 ====================================================
 */
 
@@ -604,26 +658,39 @@ function openPage(page) {
     document.body.animate(
 
         [
+
             {
-                opacity: 1,
+                opacity:
+                    1,
+
                 transform:
                     "scale(1)"
+
             },
 
             {
-                opacity: 0,
+
+                opacity:
+                    0,
+
                 transform:
-                    "scale(1.02)"
+                    "scale(1.015)"
+
             }
 
         ],
 
         {
-            duration: 260,
+
+            duration:
+                260,
+
             easing:
                 "cubic-bezier(.4,0,.2,1)",
+
             fill:
                 "forwards"
+
         }
 
     );
@@ -644,22 +711,20 @@ function openPage(page) {
 
 /*
 ====================================================
- SOCIAL LINKS
-====================================================
-
-Здесь пока стоят общие страницы сервисов.
-Позже заменим на официальные ссылки платформы/
-канала Game Platform.
+SOCIAL LINKS
 ====================================================
 */
 
 
 function openSocial(type) {
 
-    let url = "";
+    let url =
+        "";
 
 
-    if (type === "youtube") {
+    if (
+        type === "youtube"
+    ) {
 
         url =
             "https://www.youtube.com/";
@@ -667,7 +732,9 @@ function openSocial(type) {
     }
 
 
-    if (type === "twitch") {
+    if (
+        type === "twitch"
+    ) {
 
         url =
             "https://www.twitch.tv/";
@@ -691,7 +758,33 @@ function openSocial(type) {
 
 /*
 ====================================================
- ESCAPE
+VERSION
+====================================================
+*/
+
+
+function updatePageVersion() {
+
+    const versionElement =
+        document.querySelector(
+            ".site-version"
+        );
+
+
+    if (versionElement) {
+
+        versionElement.textContent =
+            "v" +
+            APP_VERSION;
+
+    }
+
+}
+
+
+/*
+====================================================
+ESCAPE
 ====================================================
 */
 
@@ -705,6 +798,7 @@ document.addEventListener(
         ) {
 
             closeOnlinePlayers();
+
             closeProfileModal();
 
         }
