@@ -15,17 +15,16 @@
     --accent-soft: #e9edff;
 
     --blue-glow:
-        rgba(45, 115, 255, 0.95);
+        rgba(47, 119, 255, 0.95);
 
     --blue-glow-soft:
-        rgba(35, 105, 255, 0.38);
+        rgba(47, 119, 255, 0.38);
 
     --line: #e3e7ef;
 
     --green: #38d48a;
 
-    --radius:
-        24px;
+    --radius: 24px;
 }
 
 
@@ -547,12 +546,12 @@ button {
         8px;
 
     perspective:
-        800px;
+        900px;
 }
 
 
 /* =====================================================
-   BLACK GLOSSY 3D TILES
+   PEARL GREY GLOSSY 3D TILES
 ===================================================== */
 
 .side-tile {
@@ -585,20 +584,21 @@ button {
         8px 11px;
 
     color:
-        #bfc5d2;
+        #596271;
 
     background:
 
         linear-gradient(
             145deg,
-            #2a2e38 0%,
-            #11141b 42%,
-            #05070b 100%
+            #f5f6f8 0%,
+            #dfe3e9 32%,
+            #c9ced7 58%,
+            #edf0f4 100%
         );
 
     border:
         1px solid
-        rgba(103, 133, 205, .18);
+        rgba(174, 183, 197, .85);
 
     border-radius:
         14px;
@@ -615,14 +615,14 @@ button {
     box-shadow:
 
         0 12px 20px
-        rgba(4, 7, 13, .26),
+        rgba(50, 59, 74, .14),
 
         0 2px 0
-        rgba(255,255,255,.10)
+        rgba(255,255,255,.95)
         inset,
 
-        0 -1px 0
-        rgba(0,0,0,.95)
+        0 -2px 0
+        rgba(145, 153, 166, .26)
         inset;
 
     transition:
@@ -638,7 +638,7 @@ button {
 }
 
 
-/* верхний стеклянный слой */
+/* мягкий верхний глянец */
 
 .side-tile::before {
 
@@ -649,26 +649,26 @@ button {
         absolute;
 
     width:
-        150%;
+        170%;
 
     height:
-        55%;
+        58%;
 
     top:
-        -65%;
+        -70%;
 
     left:
-        -35%;
+        -45%;
 
     background:
 
         linear-gradient(
             105deg,
             transparent 22%,
-            rgba(255,255,255,.09) 38%,
-            rgba(130,170,255,.32) 48%,
-            rgba(63,130,255,.10) 54%,
-            transparent 68%
+            rgba(255,255,255,.35) 38%,
+            rgba(128,179,255,.58) 47%,
+            rgba(72,137,255,.22) 52%,
+            transparent 67%
         );
 
     transform:
@@ -676,7 +676,7 @@ button {
         translateX(-25%);
 
     opacity:
-        .75;
+        .95;
 
     pointer-events:
         none;
@@ -687,7 +687,7 @@ button {
 }
 
 
-/* синее свечение снизу */
+/* нижнее синее свечение */
 
 .side-tile::after {
 
@@ -698,16 +698,16 @@ button {
         absolute;
 
     width:
-        90px;
+        105px;
 
     height:
-        90px;
+        105px;
 
     right:
-        -55px;
+        -60px;
 
     bottom:
-        -55px;
+        -65px;
 
     border-radius:
         50%;
@@ -715,58 +715,58 @@ button {
     background:
         radial-gradient(
             circle,
-            rgba(47,120,255,.60),
-            rgba(30,90,255,.15) 45%,
-            transparent 72%
+            rgba(45,123,255,.52),
+            rgba(55,126,255,.16) 44%,
+            transparent 73%
         );
 
     filter:
         blur(4px);
 
     opacity:
-        .7;
+        .72;
 
     pointer-events:
         none;
 
     transition:
-        transform .35s ease,
-        opacity .35s ease;
+        transform .4s ease,
+        opacity .4s ease;
 }
 
 
 .side-tile:hover {
 
     transform:
-        perspective(700px)
+        perspective(800px)
         rotateY(-7deg)
         rotateX(2deg)
         translateX(5px)
-        translateZ(8px);
+        translateZ(10px);
 
     color:
-        #ffffff;
+        #263047;
 
     border-color:
-        rgba(78,142,255,.72);
+        rgba(67,130,255,.78);
 
     box-shadow:
 
-        12px 18px 28px
-        rgba(5, 10, 22, .34),
+        12px 18px 30px
+        rgba(41, 51, 68, .18),
 
         0 0 0 1px
-        rgba(50,125,255,.20),
+        rgba(63,126,255,.18),
 
-        0 0 24px
-        rgba(38,119,255,.25),
+        0 0 25px
+        rgba(48,124,255,.26),
 
         0 2px 0
-        rgba(255,255,255,.12)
+        rgba(255,255,255,.98)
         inset,
 
         0 -2px 0
-        rgba(0,0,0,.95)
+        rgba(126,137,154,.26)
         inset;
 }
 
@@ -782,7 +782,7 @@ button {
 .side-tile:hover::after {
 
     transform:
-        scale(1.5);
+        scale(1.45);
 
     opacity:
         1;
@@ -792,37 +792,38 @@ button {
 .side-tile.active {
 
     color:
-        #ffffff;
+        #273350;
 
     background:
 
         linear-gradient(
             145deg,
-            #202638 0%,
-            #0c1018 44%,
-            #030508 100%
+            #f8f9fb 0%,
+            #d9dee6 34%,
+            #bcc3ce 59%,
+            #edf0f4 100%
         );
 
     border-color:
-        rgba(74,137,255,.82);
+        rgba(69,129,255,.86);
 
     box-shadow:
 
-        0 15px 26px
-        rgba(7,12,25,.34),
+        0 15px 28px
+        rgba(41,50,68,.18),
 
         0 0 22px
-        rgba(43,119,255,.28),
+        rgba(43,123,255,.30),
 
         0 0 0 1px
-        rgba(50,126,255,.18),
+        rgba(52,124,255,.17),
 
         0 2px 0
-        rgba(255,255,255,.12)
+        rgba(255,255,255,.98)
         inset,
 
         0 -2px 0
-        rgba(0,0,0,.95)
+        rgba(126,137,154,.30)
         inset;
 }
 
@@ -831,10 +832,7 @@ button {
 
     transform:
         rotate(-12deg)
-        translateX(35%);
-
-    opacity:
-        .95;
+        translateX(36%);
 }
 
 
@@ -862,25 +860,25 @@ button {
         2;
 
     color:
-        #74a0ff;
+        #477df1;
 
     font-size:
         17px;
 
     text-shadow:
-        0 0 12px
-        rgba(82,143,255,.7);
+        0 0 10px
+        rgba(60,126,255,.42);
 }
 
 
 .online-side-icon {
 
     color:
-        #52e49a;
+        #32c77c;
 
     text-shadow:
-        0 0 12px
-        rgba(52,220,140,.65);
+        0 0 10px
+        rgba(50,199,124,.45);
 }
 
 
@@ -912,7 +910,7 @@ button {
         2;
 
     color:
-        #636c7e;
+        #8a93a0;
 
     font-size:
         8px;
@@ -950,20 +948,16 @@ button {
 
     border:
         1px solid
-        rgba(63,224,147,.22);
+        rgba(50,196,124,.26);
 
     border-radius:
         999px;
 
     background:
-        rgba(45,201,126,.10);
+        rgba(54,202,128,.11);
 
     color:
-        #58e8a0;
-
-    box-shadow:
-        0 0 12px
-        rgba(39,214,136,.12);
+        #24a968;
 
     font-size:
         8px;
