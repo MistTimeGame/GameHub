@@ -1,15 +1,15 @@
+"use strict";
+
+
 /* =========================================================
    GAME PLATFORM
-   SUPABASE
    AUTH
    PROFILE
    VIP
    PRESENCE
    CHAT
-   WEBRTC
+   WEBRTC CONFERENCE
 ========================================================= */
-
-"use strict";
 
 
 /* =========================================================
@@ -23,11 +23,11 @@ const SUPABASE_PUBLISHABLE_KEY =
     "sb_publishable_yNWxh02tapOVUQN9iJ_2_Q_IPVc60J3";
 
 const APP_VERSION =
-    "1.7.2";
+    "1.8.0";
 
 
 /* =========================================================
-   STATE
+   GLOBAL STATE
 ========================================================= */
 
 let supabaseClient = null;
@@ -50,27 +50,46 @@ let profileData = {
     vip_level: 0
 };
 
+
+/* =========================================================
+   PRESENCE
+========================================================= */
+
 let presenceChannel = null;
 
 let presenceUsers = [];
 
+
+/* =========================================================
+   CHAT
+========================================================= */
+
 let chatChannel = null;
+
+
+/* =========================================================
+   CONFERENCE
+========================================================= */
+
+let conferenceChannel = null;
+
+let conferenceJoined = false;
+
+let conferenceRoom = "global";
 
 let localStream = null;
 
 let screenStream = null;
-
-let callChannel = null;
-
-let peerConnections = {};
-
-let callRoom = null;
 
 let micEnabled = true;
 
 let cameraEnabled = true;
 
 let screenSharing = false;
+
+let peerConnections = {};
+
+let conferenceParticipants = {};
 
 
 /* =========================================================
@@ -119,7 +138,7 @@ let profileMessage = null;
 
 
 /* =========================================================
-   HELPERS
+   HELPER
 ========================================================= */
 
 function $(id) {
@@ -135,9 +154,7 @@ function escapeHtml(value) {
         value === null ||
         value === undefined
     ) {
-
         return "";
-
     }
 
     return String(value)
@@ -150,7 +167,7 @@ function escapeHtml(value) {
 }
 
 
-function setHidden(element, hidden) {
+function setHidden(element, state) {
 
     if (!element) {
         return;
@@ -158,7 +175,7 @@ function setHidden(element, hidden) {
 
     element.classList.toggle(
         "hidden",
-        Boolean(hidden)
+        Boolean(state)
     );
 
 }
@@ -177,11 +194,7 @@ function showAuthMessage(message, type) {
         "auth-message";
 
     if (type) {
-
-        authMessage.classList.add(
-            type
-        );
-
+        authMessage.classList.add(type);
     }
 
 }
@@ -197,14 +210,10 @@ function showProfileMessage(message, type) {
         message || "";
 
     profileMessage.className =
-        "modal-message";
+        "auth-message";
 
     if (type) {
-
-        profileMessage.classList.add(
-            type
-        );
-
+        profileMessage.classList.add(type);
     }
 
 }
@@ -240,12 +249,12 @@ function initSupabase() {
     ) {
 
         console.error(
-            "Supabase JS library is not loaded."
+            "Supabase library is not loaded."
         );
 
         return false;
-
     }
+
 
     try {
 
@@ -262,11 +271,14 @@ function initSupabase() {
                 }
             );
 
+
         window.supabaseClient =
             supabaseClient;
 
+
         window.gamePlatformSupabase =
             supabaseClient;
+
 
         return true;
 
@@ -308,15 +320,18 @@ function initAuthTabs() {
 
                 }
 
+
                 setHidden(
                     loginForm,
                     false
                 );
 
+
                 setHidden(
                     registerForm,
                     true
                 );
+
 
                 if (authTitle) {
 
@@ -325,12 +340,14 @@ function initAuthTabs() {
 
                 }
 
+
                 if (authSubtitle) {
 
                     authSubtitle.textContent =
                         "Войдите в свой игровой профиль";
 
                 }
+
 
                 showAuthMessage("");
 
@@ -350,6 +367,7 @@ function initAuthTabs() {
                     "active"
                 );
 
+
                 if (loginTab) {
 
                     loginTab.classList.remove(
@@ -358,15 +376,18 @@ function initAuthTabs() {
 
                 }
 
+
                 setHidden(
                     loginForm,
                     true
                 );
 
+
                 setHidden(
                     registerForm,
                     false
                 );
+
 
                 if (authTitle) {
 
@@ -375,12 +396,14 @@ function initAuthTabs() {
 
                 }
 
+
                 if (authSubtitle) {
 
                     authSubtitle.textContent =
                         "Создайте игровой профиль";
 
                 }
+
 
                 showAuthMessage("");
 
@@ -461,7 +484,6 @@ async function loginUser() {
         );
 
         return;
-
     }
 
 
@@ -484,7 +506,6 @@ async function loginUser() {
         );
 
         return;
-
     }
 
 
@@ -498,11 +519,8 @@ async function loginUser() {
 
         const result =
             await supabaseClient.auth.signInWithPassword({
-
-                email: email,
-
-                password: password
-
+                email,
+                password
             });
 
 
@@ -524,7 +542,6 @@ async function loginUser() {
             await enterApplication();
 
         }
-
 
     } catch (error) {
 
@@ -575,7 +592,6 @@ async function registerUser() {
         );
 
         return;
-
     }
 
 
@@ -597,7 +613,7 @@ async function registerUser() {
             : "";
 
 
-    const confirmPassword =
+    const confirm =
         registerPasswordConfirm
             ? registerPasswordConfirm.value
             : "";
@@ -613,7 +629,6 @@ async function registerUser() {
         );
 
         return;
-
     }
 
 
@@ -624,7 +639,6 @@ async function registerUser() {
         );
 
         return;
-
     }
 
 
@@ -635,18 +649,16 @@ async function registerUser() {
         );
 
         return;
-
     }
 
 
-    if (password !== confirmPassword) {
+    if (password !== confirm) {
 
         showAuthMessage(
             "Пароли не совпадают."
         );
 
         return;
-
     }
 
 
@@ -661,13 +673,13 @@ async function registerUser() {
         const result =
             await supabaseClient.auth.signUp({
 
-                email: email,
+                email,
 
-                password: password,
+                password,
 
                 options: {
                     data: {
-                        nickname: nickname,
+                        nickname,
                         status: "Онлайн"
                     }
                 }
@@ -696,12 +708,10 @@ async function registerUser() {
             );
 
             return;
-
         }
 
 
         await enterApplication();
-
 
     } catch (error) {
 
@@ -748,7 +758,8 @@ function subscribeAuthState() {
 
 
             currentUser =
-                session && session.user
+                session &&
+                session.user
                     ? session.user
                     : null;
 
@@ -760,7 +771,9 @@ function subscribeAuthState() {
 
                 setTimeout(
                     function () {
+
                         enterApplication();
+
                     },
                     0
                 );
@@ -829,6 +842,7 @@ async function loadInitialSession() {
             error
         );
 
+
         leaveApplication();
 
     }
@@ -846,9 +860,7 @@ async function ensureProfile() {
         !currentUser ||
         !supabaseClient
     ) {
-
         return;
-
     }
 
 
@@ -890,34 +902,18 @@ async function ensureProfile() {
 
             profileData =
                 Object.assign(
-                    {
-                        nickname: nickname,
-                        status: status,
-                        age: null,
-                        city: "",
-                        about: "",
-                        avatar_url: "",
-                        vip_level: 0
-                    },
+                    {},
+                    profileData,
                     result.data
                 );
+
 
             return;
 
         }
 
 
-        if (result.error) {
-
-            console.error(
-                "Profile select error:",
-                result.error
-            );
-
-        }
-
-
-        const insertResult =
+        const insert =
             await supabaseClient
                 .from("profiles")
                 .insert({
@@ -940,41 +936,26 @@ async function ensureProfile() {
 
 
         if (
-            !insertResult.error &&
-            insertResult.data
+            !insert.error &&
+            insert.data
         ) {
 
             profileData =
                 Object.assign(
                     {},
                     profileData,
-                    insertResult.data
+                    insert.data
                 );
 
-            return;
+        } else {
+
+            profileData.nickname =
+                nickname;
+
+            profileData.status =
+                status;
 
         }
-
-
-        if (insertResult.error) {
-
-            console.error(
-                "Profile insert error:",
-                insertResult.error
-            );
-
-        }
-
-
-        profileData =
-            Object.assign(
-                {},
-                profileData,
-                {
-                    nickname: nickname,
-                    status: status
-                }
-            );
 
     } catch (error) {
 
@@ -982,6 +963,12 @@ async function ensureProfile() {
             "Profile error:",
             error
         );
+
+        profileData.nickname =
+            nickname;
+
+        profileData.status =
+            status;
 
     }
 
@@ -991,25 +978,6 @@ async function ensureProfile() {
 /* =========================================================
    AVATAR
 ========================================================= */
-
-function getAvatarLetter(nickname) {
-
-    const value =
-        String(nickname || "P")
-            .trim();
-
-
-    if (!value) {
-        return "P";
-    }
-
-
-    return value
-        .charAt(0)
-        .toUpperCase();
-
-}
-
 
 function renderAvatar(
     element,
@@ -1040,14 +1008,10 @@ function renderAvatar(
             "Avatar";
 
 
-        image.loading =
-            "lazy";
-
-
         image.onerror =
             function () {
 
-                element.innerHTML =
+                element.textContent =
                     "🤖";
 
             };
@@ -1059,7 +1023,6 @@ function renderAvatar(
 
 
         return;
-
     }
 
 
@@ -1073,10 +1036,12 @@ function renderAvatar(
    VIP
 ========================================================= */
 
-function getRomanVip(level) {
+function getVipRoman(level) {
 
     const roman = [
+
         "",
+
         "I",
         "II",
         "III",
@@ -1089,36 +1054,40 @@ function getRomanVip(level) {
         "X",
         "XI",
         "XII"
+
     ];
 
 
-    const value =
-        Number(level) || 0;
-
-
-    return roman[value] || "";
+    return roman[
+        Number(level) || 0
+    ] || "";
 
 }
 
 
 function createVipBadge(level) {
 
-    const value =
+    const number =
         Number(level) || 0;
 
 
-    if (value <= 0) {
+    if (number <= 0) {
         return "";
     }
 
 
     return (
+
         '<span class="vip-badge">' +
-        "VIP " +
-        escapeHtml(
-            getRomanVip(value)
-        ) +
+
+            "VIP " +
+
+            escapeHtml(
+                getVipRoman(number)
+            ) +
+
         "</span>"
+
     );
 
 }
@@ -1140,50 +1109,36 @@ function applyProfile() {
         "Онлайн";
 
 
-    const nicknameElements = [
+    if ($("header-nickname")) {
 
-        $("header-nickname"),
+        $("header-nickname").textContent =
+            nickname;
 
-        $("profile-nickname")
-
-    ];
-
-
-    nicknameElements.forEach(
-        function (element) {
-
-            if (element) {
-
-                element.textContent =
-                    nickname;
-
-            }
-
-        }
-    );
+    }
 
 
-    const statusElements = [
+    if ($("profile-nickname")) {
 
-        $("header-status"),
+        $("profile-nickname").textContent =
+            nickname;
 
-        $("profile-status")
-
-    ];
+    }
 
 
-    statusElements.forEach(
-        function (element) {
+    if ($("header-status")) {
 
-            if (element) {
+        $("header-status").textContent =
+            status;
 
-                element.textContent =
-                    status;
+    }
 
-            }
 
-        }
-    );
+    if ($("profile-status")) {
+
+        $("profile-status").textContent =
+            status;
+
+    }
 
 
     renderAvatar(
@@ -1207,6 +1162,22 @@ function applyProfile() {
     );
 
 
+    document
+        .querySelectorAll(
+            "[data-vip-badge]"
+        )
+        .forEach(
+            function (element) {
+
+                element.innerHTML =
+                    createVipBadge(
+                        profileData.vip_level
+                    );
+
+            }
+        );
+
+
     if (profileNicknameInput) {
 
         profileNicknameInput.value =
@@ -1223,68 +1194,36 @@ function applyProfile() {
     }
 
 
-    const ageInput =
-        $("profile-age-input");
+    if ($("profile-age-input")) {
 
-
-    if (ageInput) {
-
-        ageInput.value =
+        $("profile-age-input").value =
             profileData.age || "";
 
     }
 
 
-    const cityInput =
-        $("profile-city-input");
+    if ($("profile-city-input")) {
 
-
-    if (cityInput) {
-
-        cityInput.value =
+        $("profile-city-input").value =
             profileData.city || "";
 
     }
 
 
-    const avatarInput =
-        $("profile-avatar-input");
+    if ($("profile-avatar-input")) {
 
-
-    if (avatarInput) {
-
-        avatarInput.value =
+        $("profile-avatar-input").value =
             profileData.avatar_url || "";
 
     }
 
 
-    const aboutInput =
-        $("profile-about-input");
+    if ($("profile-about-input")) {
 
-
-    if (aboutInput) {
-
-        aboutInput.value =
+        $("profile-about-input").value =
             profileData.about || "";
 
     }
-
-
-    document
-        .querySelectorAll(
-            "[data-vip-badge]"
-        )
-        .forEach(
-            function (element) {
-
-                element.innerHTML =
-                    createVipBadge(
-                        profileData.vip_level
-                    );
-
-            }
-        );
 
 }
 
@@ -1301,7 +1240,8 @@ async function saveProfile() {
     ) {
 
         showProfileMessage(
-            "Пользователь не авторизован."
+            "Пользователь не авторизован.",
+            "error"
         );
 
         return;
@@ -1310,15 +1250,11 @@ async function saveProfile() {
 
 
     const nickname =
-        profileNicknameInput
-            ? profileNicknameInput.value.trim()
-            : "";
+        profileNicknameInput.value.trim();
 
 
     const status =
-        profileStatusInput
-            ? profileStatusInput.value.trim()
-            : "";
+        profileStatusInput.value.trim();
 
 
     if (
@@ -1327,7 +1263,8 @@ async function saveProfile() {
     ) {
 
         showProfileMessage(
-            "Никнейм должен содержать от 3 до 24 символов."
+            "Никнейм должен содержать от 3 до 24 символов.",
+            "error"
         );
 
         return;
@@ -1335,59 +1272,31 @@ async function saveProfile() {
     }
 
 
-    const ageInput =
-        $("profile-age-input");
-
-
-    const cityInput =
-        $("profile-city-input");
-
-
-    const avatarInput =
-        $("profile-avatar-input");
-
-
-    const aboutInput =
-        $("profile-about-input");
-
-
     const age =
-        ageInput &&
-        ageInput.value
-            ? Number(ageInput.value)
+        $("profile-age-input") &&
+        $("profile-age-input").value
+            ? Number(
+                $("profile-age-input").value
+            )
             : null;
 
 
-    const updateData = {
+    const city =
+        $("profile-city-input")
+            ? $("profile-city-input").value.trim()
+            : "";
 
-        nickname:
-            nickname,
 
-        status:
-            status || "Онлайн",
+    const avatar =
+        $("profile-avatar-input")
+            ? $("profile-avatar-input").value.trim()
+            : "";
 
-        age:
-            age,
 
-        city:
-            cityInput
-                ? cityInput.value.trim()
-                : "",
-
-        avatar_url:
-            avatarInput
-                ? avatarInput.value.trim()
-                : "",
-
-        about:
-            aboutInput
-                ? aboutInput.value.trim()
-                : "",
-
-        updated_at:
-            new Date().toISOString()
-
-    };
+    const about =
+        $("profile-about-input")
+            ? $("profile-about-input").value.trim()
+            : "";
 
 
     showProfileMessage(
@@ -1401,7 +1310,26 @@ async function saveProfile() {
         const result =
             await supabaseClient
                 .from("profiles")
-                .update(updateData)
+                .update({
+
+                    nickname,
+
+                    status:
+                        status || "Онлайн",
+
+                    age,
+
+                    city,
+
+                    avatar_url:
+                        avatar,
+
+                    about,
+
+                    updated_at:
+                        new Date().toISOString()
+
+                })
                 .eq(
                     "id",
                     currentUser.id
@@ -1440,7 +1368,7 @@ async function saveProfile() {
                 );
 
             },
-            600
+            500
         );
 
 
@@ -1456,7 +1384,8 @@ async function saveProfile() {
             error &&
             error.message
                 ? error.message
-                : "Не удалось сохранить профиль."
+                : "Ошибка сохранения профиля.",
+            "error"
         );
 
     }
@@ -1465,27 +1394,21 @@ async function saveProfile() {
 
 
 /* =========================================================
-   ENTER APPLICATION
+   ENTER
 ========================================================= */
 
 async function enterApplication() {
 
-    if (!currentUser) {
+    if (
+        !currentUser ||
+        applicationStarted
+    ) {
         return;
     }
 
 
-    if (applicationStarted) {
-
-        return;
-
-    }
-
-
-    console.log(
-        "ENTER APPLICATION:",
-        currentUser.id
-    );
+    applicationStarted =
+        true;
 
 
     if (authScreen) {
@@ -1494,50 +1417,16 @@ async function enterApplication() {
             "hidden-screen"
         );
 
-        authScreen.style.setProperty(
-            "display",
-            "none",
-            "important"
-        );
-
     }
 
 
-    if (!appShell) {
+    if (appShell) {
 
-        console.error(
-            "app-shell not found."
+        appShell.classList.add(
+            "active"
         );
 
-        return;
-
     }
-
-
-    appShell.classList.add(
-        "active"
-    );
-
-
-    appShell.style.setProperty(
-        "display",
-        "flex",
-        "important"
-    );
-
-
-    appShell.style.setProperty(
-        "visibility",
-        "visible",
-        "important"
-    );
-
-
-    appShell.style.setProperty(
-        "opacity",
-        "1",
-        "important"
-    );
 
 
     await ensureProfile();
@@ -1546,51 +1435,54 @@ async function enterApplication() {
     applyProfile();
 
 
-    applicationStarted =
-        true;
-
-
     renderPage(
         currentPage
     );
 
 
-    await initGlobalPresence();
+    await initPresence();
 
 
     console.log(
-        "APPLICATION READY"
+        "GAME PLATFORM",
+        APP_VERSION,
+        "READY"
     );
 
 }
 
 
 /* =========================================================
-   LEAVE APPLICATION
+   LEAVE
 ========================================================= */
 
-function leaveApplication() {
+async function leaveApplication() {
 
     applicationStarted =
         false;
 
 
+    await stopConference();
+
+
+    await stopPresence();
+
+
     stopChatRealtime();
 
 
-    stopPresence();
+    currentUser =
+        null;
+
+
+    currentSession =
+        null;
 
 
     if (appShell) {
 
         appShell.classList.remove(
             "active"
-        );
-
-        appShell.style.setProperty(
-            "display",
-            "none",
-            "important"
         );
 
     }
@@ -1602,27 +1494,7 @@ function leaveApplication() {
             "hidden-screen"
         );
 
-        authScreen.style.setProperty(
-            "display",
-            "flex",
-            "important"
-        );
-
-        authScreen.style.visibility =
-            "visible";
-
-        authScreen.style.opacity =
-            "1";
-
     }
-
-
-    currentUser =
-        null;
-
-
-    currentSession =
-        null;
 
 }
 
@@ -1659,7 +1531,23 @@ function initNavigation() {
 
                         document
                             .querySelectorAll(
-                                ".side-tile[data-page]"
+                                ".nav-item"
+                            )
+                            .forEach(
+                                function (item) {
+
+                                    item.classList.toggle(
+                                        "active",
+                                        item.dataset.page === page
+                                    );
+
+                                }
+                            );
+
+
+                        document
+                            .querySelectorAll(
+                                ".mobile-nav button"
                             )
                             .forEach(
                                 function (item) {
@@ -1687,7 +1575,827 @@ function initNavigation() {
 
 
 /* =========================================================
-   RENDER PAGE
+   HOME PAGE
+========================================================= */
+
+function renderHome() {
+
+    const content =
+        $("page-content");
+
+
+    content.innerHTML = `
+
+        <section class="home-hero">
+
+            <div class="hero-content">
+
+                <div class="hero-small">
+                    GAME PLATFORM
+                </div>
+
+                <h2>
+                    Добро пожаловать,<br>
+                    ${escapeHtml(
+                        profileData.nickname ||
+                        "Player"
+                    )}
+                </h2>
+
+                <p>
+                    Игры, сообщества, новости,
+                    общение и видеосвязь —
+                    всё игровое пространство
+                    в одном месте.
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <div class="home-grid">
+
+
+            <section class="content-card">
+
+                <div class="content-card-header">
+
+                    <strong class="content-card-title">
+                        Последние новости
+                    </strong>
+
+                    <span class="content-card-label">
+                        NEWS
+                    </span>
+
+                </div>
+
+
+                <div class="news-list">
+
+
+                    <article class="news-item">
+
+                        <div class="news-icon">
+                            ◈
+                        </div>
+
+                        <div class="news-info">
+
+                            <strong>
+                                Добро пожаловать
+                            </strong>
+
+                            <p>
+                                GAME PLATFORM развивается
+                                как единое пространство
+                                для разных игр и сообществ.
+                            </p>
+
+                        </div>
+
+                    </article>
+
+
+                    <article class="news-item">
+
+                        <div class="news-icon">
+                            ●
+                        </div>
+
+                        <div class="news-info">
+
+                            <strong>
+                                Общение в реальном времени
+                            </strong>
+
+                            <p>
+                                В чате можно общаться
+                                и подключаться к общей
+                                видеоконференции.
+                            </p>
+
+                        </div>
+
+                    </article>
+
+
+                    <article class="news-item">
+
+                        <div class="news-icon">
+                            ◎
+                        </div>
+
+                        <div class="news-info">
+
+                            <strong>
+                                Новый профиль
+                            </strong>
+
+                            <p>
+                                Доступны возраст,
+                                город, информация о себе,
+                                фотография и VIP-статус.
+                            </p>
+
+                        </div>
+
+                    </article>
+
+
+                </div>
+
+            </section>
+
+
+            <section class="content-card media-card">
+
+                <div class="media-symbol">
+                    ▶
+                </div>
+
+                <h3>
+                    Видео и трансляции
+                </h3>
+
+                <p>
+                    Раздел для игровых видео,
+                    трансляций и будущих
+                    видеоматериалов сообщества.
+                </p>
+
+            </section>
+
+
+        </div>
+
+
+        <section class="content-card">
+
+            <div class="content-card-header">
+
+                <strong class="content-card-title">
+                    Ваши игры
+                </strong>
+
+                <span class="content-card-label">
+                    GAMES
+                </span>
+
+            </div>
+
+
+            <div class="game-card-grid">
+
+
+                <article class="game-card">
+
+                    <div class="game-card-icon">
+                        ◈
+                    </div>
+
+                    <strong>
+                        World of Sea Battle
+                    </strong>
+
+                    <span>
+                        Игровое сообщество
+                    </span>
+
+                </article>
+
+
+                <article class="game-card">
+
+                    <div class="game-card-icon">
+                        +
+                    </div>
+
+                    <strong>
+                        Новая игра
+                    </strong>
+
+                    <span>
+                        Добавить игровой проект
+                    </span>
+
+                </article>
+
+
+                <article class="game-card">
+
+                    <div class="game-card-icon">
+                        …
+                    </div>
+
+                    <strong>
+                        Скоро
+                    </strong>
+
+                    <span>
+                        Новые проекты платформы
+                    </span>
+
+                </article>
+
+
+            </div>
+
+        </section>
+
+    `;
+
+}
+
+
+/* =========================================================
+   GAMES
+========================================================= */
+
+function renderGames() {
+
+    const content =
+        $("page-content");
+
+
+    content.innerHTML = `
+
+        <section class="content-card">
+
+            <div class="content-card-header">
+
+                <strong class="content-card-title">
+                    Игры
+                </strong>
+
+                <span class="content-card-label">
+                    CATALOG
+                </span>
+
+            </div>
+
+
+            <div class="game-card-grid">
+
+
+                <article class="game-card">
+
+                    <div class="game-card-icon">
+                        ◈
+                    </div>
+
+                    <strong>
+                        World of Sea Battle
+                    </strong>
+
+                    <span>
+                        Открыть игровой раздел
+                    </span>
+
+                    <button
+                        id="wosb-open"
+                        class="primary-button"
+                        type="button"
+                        style="margin-top:12px;"
+                    >
+                        Открыть
+                    </button>
+
+                </article>
+
+
+                <article class="game-card">
+
+                    <div class="game-card-icon">
+                        +
+                    </div>
+
+                    <strong>
+                        Добавить игру
+                    </strong>
+
+                    <span>
+                        Новый проект
+                    </span>
+
+                </article>
+
+
+            </div>
+
+        </section>
+
+    `;
+
+
+    const button =
+        $("wosb-open");
+
+
+    if (button) {
+
+        button.addEventListener(
+            "click",
+            function () {
+
+                showInfo(
+                    "Раздел World of Sea Battle будет подключён следующим этапом."
+                );
+
+            }
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   NEWS
+========================================================= */
+
+function renderNews() {
+
+    const content =
+        $("page-content");
+
+
+    content.innerHTML = `
+
+        <section class="content-card">
+
+            <div class="content-card-header">
+
+                <strong class="content-card-title">
+                    Новости платформы
+                </strong>
+
+                <span class="content-card-label">
+                    NEWS
+                </span>
+
+            </div>
+
+
+            <div class="news-list">
+
+
+                <article class="news-item">
+
+                    <div class="news-icon">
+                        ◈
+                    </div>
+
+                    <div class="news-info">
+
+                        <strong>
+                            GAME PLATFORM
+                        </strong>
+
+                        <p>
+                            Платформа развивается
+                            как шаблон для разных игр,
+                            сообществ и гильдий.
+                        </p>
+
+                    </div>
+
+                </article>
+
+
+                <article class="news-item">
+
+                    <div class="news-icon">
+                        ▱
+                    </div>
+
+                    <div class="news-info">
+
+                        <strong>
+                            Чат и видеосвязь
+                        </strong>
+
+                        <p>
+                            Видеоконференция теперь
+                            находится непосредственно
+                            внутри чата.
+                        </p>
+
+                    </div>
+
+                </article>
+
+
+            </div>
+
+        </section>
+
+    `;
+
+}
+
+
+/* =========================================================
+   ONLINE
+========================================================= */
+
+function renderOnlinePage() {
+
+    const content =
+        $("page-content");
+
+
+    content.innerHTML = `
+
+        <section class="content-card">
+
+            <div class="content-card-header">
+
+                <strong class="content-card-title">
+                    Игроки онлайн
+                </strong>
+
+                <span class="content-card-label">
+                    ONLINE
+                </span>
+
+            </div>
+
+
+            <div
+                id="online-page-list"
+                class="online-list"
+                style="padding-top:15px;"
+            ></div>
+
+        </section>
+
+    `;
+
+
+    renderOnlinePlayers(
+        "online-page-list"
+    );
+
+}
+
+
+/* =========================================================
+   PROFILE PAGE
+========================================================= */
+
+function renderProfilePage() {
+
+    const content =
+        $("page-content");
+
+
+    content.innerHTML = `
+
+        <section class="content-card">
+
+            <div
+                style="
+                    padding:20px;
+                    display:flex;
+                    align-items:center;
+                    gap:15px;
+                "
+            >
+
+                <div
+                    id="page-avatar"
+                    class="avatar avatar-large"
+                >
+                    🤖
+                </div>
+
+
+                <div>
+
+                    <strong
+                        style="
+                            display:block;
+                            font-size:20px;
+                            margin-bottom:5px;
+                        "
+                    >
+                        ${escapeHtml(
+                            profileData.nickname ||
+                            "Player"
+                        )}
+                    </strong>
+
+                    <div
+                        style="
+                            color:#828b95;
+                            font-size:11px;
+                            margin-bottom:5px;
+                        "
+                    >
+                        ${escapeHtml(
+                            profileData.status ||
+                            "Онлайн"
+                        )}
+                    </div>
+
+                    <div
+                        data-vip-badge
+                    ></div>
+
+                    <div
+                        style="
+                            color:#828b95;
+                            font-size:10px;
+                            margin-top:9px;
+                        "
+                    >
+                        ${
+                            profileData.city
+                                ? escapeHtml(
+                                    profileData.city
+                                )
+                                : "Город не указан"
+                        }
+                    </div>
+
+                    <button
+                        id="page-edit-profile"
+                        type="button"
+                        class="primary-button"
+                        style="
+                            margin-top:13px;
+                            padding:0 16px;
+                        "
+                    >
+                        Редактировать
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    `;
+
+
+    renderAvatar(
+        $("page-avatar"),
+        profileData.nickname,
+        profileData.avatar_url
+    );
+
+
+    document
+        .querySelectorAll(
+            "[data-vip-badge]"
+        )
+        .forEach(
+            function (element) {
+
+                element.innerHTML =
+                    createVipBadge(
+                        profileData.vip_level
+                    );
+
+            }
+        );
+
+
+    const button =
+        $("page-edit-profile");
+
+
+    if (button) {
+
+        button.addEventListener(
+            "click",
+            openProfileModal
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   CHAT PAGE
+========================================================= */
+
+async function renderChat() {
+
+    const content =
+        $("page-content");
+
+
+    content.innerHTML = `
+
+        <div class="chat-page">
+
+
+            <!-- CHAT -->
+
+            <section class="chat-card">
+
+
+                <div class="chat-header">
+
+                    <strong>
+                        Общий чат
+                    </strong>
+
+                    <span>
+                        Realtime
+                    </span>
+
+                </div>
+
+
+                <div
+                    id="chat-messages"
+                    class="chat-messages"
+                ></div>
+
+
+                <form
+                    id="chat-form"
+                    class="chat-input"
+                >
+
+                    <input
+                        id="chat-input"
+                        type="text"
+                        maxlength="1000"
+                        autocomplete="off"
+                        placeholder="Введите сообщение..."
+                    >
+
+                    <button
+                        type="submit"
+                        class="primary-button"
+                    >
+                        Отправить
+                    </button>
+
+                </form>
+
+
+            </section>
+
+
+            <!-- CONFERENCE -->
+
+            <section class="conference-card">
+
+
+                <div class="conference-header">
+
+                    <div>
+
+                        <strong>
+                            Видеоконференция
+                        </strong>
+
+                        <div
+                            id="conference-status"
+                            class="conference-status"
+                        >
+                            НЕ ПОДКЛЮЧЕНО
+                        </div>
+
+                    </div>
+
+
+                    <span>
+                        ●
+                    </span>
+
+                </div>
+
+
+                <div
+                    id="conference-videos"
+                    class="conference-videos"
+                >
+
+                    <div class="conference-placeholder">
+
+                        <div class="conference-placeholder-icon">
+                            ◉
+                        </div>
+
+                        <strong>
+                            Общая конференция
+                        </strong>
+
+                        <span>
+                            Камера и микрофон работают
+                            прямо внутри страницы чата.
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <button
+                    id="conference-join"
+                    type="button"
+                    class="conference-main-button"
+                >
+                    Войти в конференцию
+                </button>
+
+
+                <button
+                    id="conference-leave"
+                    type="button"
+                    class="conference-main-button leave"
+                    style="display:none;"
+                >
+                    Покинуть конференцию
+                </button>
+
+
+                <div class="conference-controls">
+
+                    <button
+                        id="conference-mic"
+                        type="button"
+                        class="conference-button"
+                    >
+                        Микрофон
+                    </button>
+
+                    <button
+                        id="conference-camera"
+                        type="button"
+                        class="conference-button"
+                    >
+                        Камера
+                    </button>
+
+                    <button
+                        id="conference-screen"
+                        type="button"
+                        class="conference-button"
+                    >
+                        Экран
+                    </button>
+
+                    <button
+                        id="conference-refresh"
+                        type="button"
+                        class="conference-button"
+                    >
+                        Обновить
+                    </button>
+
+                </div>
+
+
+            </section>
+
+
+        </div>
+
+    `;
+
+
+    await loadChatMessages();
+
+    startChatRealtime();
+
+
+    const form =
+        $("chat-form");
+
+
+    if (form) {
+
+        form.addEventListener(
+            "submit",
+            async function (event) {
+
+                event.preventDefault();
+
+                await sendChatMessage();
+
+            }
+        );
+
+    }
+
+
+    initConferenceUI();
+
+}
+
+
+/* =========================================================
+   PAGE RENDER
 ========================================================= */
 
 function renderPage(page) {
@@ -1710,6 +2418,8 @@ function renderPage(page) {
 
     if (
         !title ||
+        !kicker ||
+        !badge ||
         !content
     ) {
 
@@ -1718,9 +2428,22 @@ function renderPage(page) {
     }
 
 
-    if (page !== "chat") {
+    if (
+        page !== "chat"
+    ) {
 
         stopChatRealtime();
+
+    }
+
+
+    if (
+        page !== "home" &&
+        conferenceJoined
+    ) {
+
+        /* Do not stop conference automatically.
+           User may keep it alive while navigating. */
 
     }
 
@@ -1730,89 +2453,13 @@ function renderPage(page) {
         title.textContent =
             "Главная";
 
-
         kicker.textContent =
             "PLATFORM";
-
 
         badge.textContent =
             "HOME";
 
-
-        content.innerHTML = `
-
-            <div class="welcome-grid">
-
-                <article class="info-card">
-
-                    <div class="info-card-icon">
-                        ◈
-                    </div>
-
-                    <div>
-
-                        <strong>
-                            Добро пожаловать
-                        </strong>
-
-                        <p>
-                            GAME PLATFORM —
-                            игровая платформа.
-                        </p>
-
-                    </div>
-
-                </article>
-
-
-                <article class="info-card">
-
-                    <div class="info-card-icon">
-                        ♜
-                    </div>
-
-                    <div>
-
-                        <strong>
-                            Игры
-                        </strong>
-
-                        <p>
-                            Здесь будут ваши игровые проекты.
-                        </p>
-
-                    </div>
-
-                </article>
-
-
-                <article class="info-card">
-
-                    <div class="info-card-icon">
-                        ◉
-                    </div>
-
-                    <div>
-
-                        <strong>
-                            Игроки онлайн
-                        </strong>
-
-                        <p>
-                            Сейчас в сети:
-                            <strong>
-                                ${presenceUsers.length}
-                            </strong>
-                        </p>
-
-                    </div>
-
-                </article>
-
-            </div>
-
-        `;
-
+        renderHome();
 
         return;
 
@@ -1824,71 +2471,13 @@ function renderPage(page) {
         title.textContent =
             "Игры";
 
-
         kicker.textContent =
             "GAME CATALOG";
-
 
         badge.textContent =
             "GAMES";
 
-
-        content.innerHTML = `
-
-            <div class="welcome-grid">
-
-                <article class="info-card">
-
-                    <div class="info-card-icon">
-                        ◈
-                    </div>
-
-                    <div>
-
-                        <strong>
-                            World of Sea Battle
-                        </strong>
-
-                        <p>
-                            Игровой раздел платформы.
-                        </p>
-
-                        <button
-                            type="button"
-                            class="modal-primary-button"
-                            id="open-wosb-button"
-                        >
-                            Открыть
-                        </button>
-
-                    </div>
-
-                </article>
-
-            </div>
-
-        `;
-
-
-        const gameButton =
-            $("open-wosb-button");
-
-
-        if (gameButton) {
-
-            gameButton.addEventListener(
-                "click",
-                function () {
-
-                    alert(
-                        "Раздел World of Sea Battle готовится."
-                    );
-
-                }
-            );
-
-        }
-
+        renderGames();
 
         return;
 
@@ -1900,44 +2489,13 @@ function renderPage(page) {
         title.textContent =
             "Новости";
 
-
         kicker.textContent =
             "COMMUNITY";
-
 
         badge.textContent =
             "NEWS";
 
-
-        content.innerHTML = `
-
-            <div class="welcome-grid">
-
-                <article class="info-card">
-
-                    <div class="info-card-icon">
-                        ◫
-                    </div>
-
-                    <div>
-
-                        <strong>
-                            Новости
-                        </strong>
-
-                        <p>
-                            Раздел будет использоваться
-                            для новостей платформы.
-                        </p>
-
-                    </div>
-
-                </article>
-
-            </div>
-
-        `;
-
+        renderNews();
 
         return;
 
@@ -1949,46 +2507,13 @@ function renderPage(page) {
         title.textContent =
             "Онлайн";
 
-
         kicker.textContent =
             "COMMUNITY";
-
 
         badge.textContent =
             "ONLINE";
 
-
-        content.innerHTML = `
-
-            <div class="info-card">
-
-                <div class="info-card-icon">
-                    ◉
-                </div>
-
-                <div>
-
-                    <strong>
-                        Игроки онлайн:
-                        ${presenceUsers.length}
-                    </strong>
-
-                    <div
-                        id="online-player-list-page"
-                        style="margin-top:16px;"
-                    ></div>
-
-                </div>
-
-            </div>
-
-        `;
-
-
-        renderOnlinePlayers(
-            "online-player-list-page"
-        );
-
+        renderOnlinePage();
 
         return;
 
@@ -2000,116 +2525,13 @@ function renderPage(page) {
         title.textContent =
             "Профиль";
 
-
         kicker.textContent =
             "PLAYER";
-
 
         badge.textContent =
             "PROFILE";
 
-
-        content.innerHTML = `
-
-            <div class="welcome-grid">
-
-                <article class="info-card">
-
-                    <div
-                        class="info-card-icon"
-                        id="page-profile-avatar"
-                    >
-                        🤖
-                    </div>
-
-                    <div>
-
-                        <strong>
-                            ${escapeHtml(
-                                profileData.nickname ||
-                                "Player"
-                            )}
-                        </strong>
-
-                        <p>
-                            ${escapeHtml(
-                                profileData.status ||
-                                "Онлайн"
-                            )}
-                        </p>
-
-                        <div
-                            data-vip-badge
-                            style="margin-top:8px;"
-                        ></div>
-
-                        <p>
-                            ${
-                                profileData.city
-                                    ? escapeHtml(
-                                        profileData.city
-                                    )
-                                    : "Город не указан"
-                            }
-                        </p>
-
-                        <button
-                            type="button"
-                            id="page-profile-edit"
-                            class="modal-primary-button"
-                        >
-                            Редактировать профиль
-                        </button>
-
-                    </div>
-
-                </article>
-
-            </div>
-
-        `;
-
-
-        const avatar =
-            $("page-profile-avatar");
-
-
-        renderAvatar(
-            avatar,
-            profileData.nickname,
-            profileData.avatar_url
-        );
-
-
-        document
-            .querySelectorAll(
-                "[data-vip-badge]"
-            )
-            .forEach(
-                function (element) {
-
-                    element.innerHTML =
-                        createVipBadge(
-                            profileData.vip_level
-                        );
-
-                }
-            );
-
-
-        const button =
-            $("page-profile-edit");
-
-
-        if (button) {
-
-            button.addEventListener(
-                "click",
-                openProfileModal
-            );
-
-        }
-
+        renderProfilePage();
 
         return;
 
@@ -2121,17 +2543,13 @@ function renderPage(page) {
         title.textContent =
             "Чат";
 
-
         kicker.textContent =
-            "COMMUNITY CHAT";
-
+            "COMMUNITY";
 
         badge.textContent =
             "CHAT";
 
-
-        initChat();
-
+        renderChat();
 
         return;
 
@@ -2144,159 +2562,101 @@ function renderPage(page) {
 
 
 /* =========================================================
-   BUTTONS
+   SOCIAL BUTTONS
 ========================================================= */
 
-function initButtons() {
+function initSocialButtons() {
 
-    const heroOnlineButton =
-        $("header-online-button");
-
-
-    if (heroOnlineButton) {
-
-        heroOnlineButton.addEventListener(
-            "click",
-            function () {
-
-                openModal(
-                    "online-modal"
-                );
-
-                renderOnlinePlayers(
-                    "online-player-list"
-                );
-
-            }
-        );
-
-    }
-
-
-    const youtubeButtons = [
-
+    [
         $("youtube-button"),
-
         $("right-youtube-button")
+    ]
+        .forEach(
+            function (button) {
 
-    ];
-
-
-    youtubeButtons.forEach(
-        function (button) {
-
-            if (!button) {
-                return;
-            }
-
-
-            button.addEventListener(
-                "click",
-                function () {
-
-                    window.open(
-                        "https://www.youtube.com/",
-                        "_blank",
-                        "noopener,noreferrer"
-                    );
-
+                if (!button) {
+                    return;
                 }
-            );
-
-        }
-    );
 
 
-    const twitchButtons = [
+                button.addEventListener(
+                    "click",
+                    function () {
 
-        $("twitch-button"),
+                        window.open(
+                            "https://www.youtube.com/",
+                            "_blank",
+                            "noopener,noreferrer"
+                        );
 
-        $("right-twitch-button")
-
-    ];
-
-
-    twitchButtons.forEach(
-        function (button) {
-
-            if (!button) {
-                return;
-            }
-
-
-            button.addEventListener(
-                "click",
-                function () {
-
-                    window.open(
-                        "https://www.twitch.tv/",
-                        "_blank",
-                        "noopener,noreferrer"
-                    );
-
-                }
-            );
-
-        }
-    );
-
-
-    if (logoutButton) {
-
-        logoutButton.addEventListener(
-            "click",
-            logoutUser
-        );
-
-    }
-
-
-    const profileButton =
-        $("profile-edit-button");
-
-
-    if (profileButton) {
-
-        profileButton.addEventListener(
-            "click",
-            openProfileModal
-        );
-
-    }
-
-
-    const headerProfile =
-        $("header-profile-button");
-
-
-    if (headerProfile) {
-
-        headerProfile.addEventListener(
-            "click",
-            openProfileModal
-        );
-
-    }
-
-
-    const callButton =
-        $("start-call-button");
-
-
-    if (callButton) {
-
-        callButton.addEventListener(
-            "click",
-            function () {
-
-                startCall(
-                    "global"
+                    }
                 );
 
             }
         );
 
-    }
+
+    [
+        $("twitch-button"),
+        $("right-twitch-button")
+    ]
+        .forEach(
+            function (button) {
+
+                if (!button) {
+                    return;
+                }
+
+
+                button.addEventListener(
+                    "click",
+                    function () {
+
+                        window.open(
+                            "https://www.twitch.tv/",
+                            "_blank",
+                            "noopener,noreferrer"
+                        );
+
+                    }
+                );
+
+            }
+        );
+
+}
+
+
+/* =========================================================
+   PROFILE BUTTONS
+========================================================= */
+
+function initProfileButtons() {
+
+    const buttons = [
+
+        $("profile-edit-button"),
+
+        $("header-profile-button")
+
+    ];
+
+
+    buttons.forEach(
+        function (button) {
+
+            if (!button) {
+                return;
+            }
+
+
+            button.addEventListener(
+                "click",
+                openProfileModal
+            );
+
+        }
+    );
 
 }
 
@@ -2406,75 +2766,7 @@ function openProfileModal() {
     }
 
 
-    if (profileNicknameInput) {
-
-        profileNicknameInput.value =
-            profileData.nickname || "";
-
-    }
-
-
-    if (profileStatusInput) {
-
-        profileStatusInput.value =
-            profileData.status || "";
-
-    }
-
-
-    const age =
-        $("profile-age-input");
-
-
-    if (age) {
-
-        age.value =
-            profileData.age || "";
-
-    }
-
-
-    const city =
-        $("profile-city-input");
-
-
-    if (city) {
-
-        city.value =
-            profileData.city || "";
-
-    }
-
-
-    const avatar =
-        $("profile-avatar-input");
-
-
-    if (avatar) {
-
-        avatar.value =
-            profileData.avatar_url || "";
-
-    }
-
-
-    const about =
-        $("profile-about-input");
-
-
-    if (about) {
-
-        about.value =
-            profileData.about || "";
-
-    }
-
-
-    renderAvatar(
-        $("profile-modal-avatar"),
-        profileData.nickname,
-        profileData.avatar_url
-    );
+    applyProfile();
 
 
     showProfileMessage(
@@ -2500,12 +2792,14 @@ async function logoutUser() {
     }
 
 
+    await stopConference();
+
+    await stopPresence();
+
+    stopChatRealtime();
+
+
     try {
-
-        await leaveCall();
-
-        await stopPresence();
-
 
         const result =
             await supabaseClient.auth.signOut();
@@ -2514,7 +2808,6 @@ async function logoutUser() {
         if (result.error) {
             throw result.error;
         }
-
 
     } catch (error) {
 
@@ -2532,7 +2825,7 @@ async function logoutUser() {
    PRESENCE
 ========================================================= */
 
-async function initGlobalPresence() {
+async function initPresence() {
 
     if (
         !supabaseClient ||
@@ -2540,7 +2833,6 @@ async function initGlobalPresence() {
     ) {
 
         return;
-
     }
 
 
@@ -2551,9 +2843,6 @@ async function initGlobalPresence() {
             await supabaseClient.removeChannel(
                 presenceChannel
             );
-
-            presenceChannel =
-                null;
 
         }
 
@@ -2577,11 +2866,7 @@ async function initGlobalPresence() {
             {
                 event: "sync"
             },
-            function () {
-
-                updatePresenceUsers();
-
-            }
+            updatePresenceUsers
         );
 
 
@@ -2590,11 +2875,7 @@ async function initGlobalPresence() {
             {
                 event: "join"
             },
-            function () {
-
-                updatePresenceUsers();
-
-            }
+            updatePresenceUsers
         );
 
 
@@ -2603,11 +2884,7 @@ async function initGlobalPresence() {
             {
                 event: "leave"
             },
-            function () {
-
-                updatePresenceUsers();
-
-            }
+            updatePresenceUsers
         );
 
 
@@ -2615,7 +2892,7 @@ async function initGlobalPresence() {
             async function (status) {
 
                 console.log(
-                    "Presence status:",
+                    "Presence:",
                     status
                 );
 
@@ -2624,39 +2901,28 @@ async function initGlobalPresence() {
                     status === "SUBSCRIBED"
                 ) {
 
-                    try {
+                    await presenceChannel.track({
 
-                        await presenceChannel.track({
+                        user_id:
+                            currentUser.id,
 
-                            user_id:
-                                currentUser.id,
+                        nickname:
+                            profileData.nickname ||
+                            "Player",
 
-                            nickname:
-                                profileData.nickname ||
-                                "Player",
+                        status:
+                            profileData.status ||
+                            "Онлайн",
 
-                            status:
-                                profileData.status ||
-                                "Онлайн",
+                        avatar_url:
+                            profileData.avatar_url ||
+                            "",
 
-                            avatar_url:
-                                profileData.avatar_url ||
-                                "",
+                        vip_level:
+                            profileData.vip_level ||
+                            0
 
-                            vip_level:
-                                profileData.vip_level ||
-                                0
-
-                        });
-
-                    } catch (error) {
-
-                        console.error(
-                            "Presence track error:",
-                            error
-                        );
-
-                    }
+                    });
 
                 }
 
@@ -2688,30 +2954,29 @@ function updatePresenceUsers() {
             presenceChannel.presenceState();
 
 
-        const unique =
-            {};
+        const unique = {};
 
 
         Object.keys(state)
             .forEach(
                 function (key) {
 
-                    const records =
+                    const entries =
                         state[key] || [];
 
 
-                    records.forEach(
-                        function (record) {
+                    entries.forEach(
+                        function (entry) {
 
                             if (
-                                record &&
-                                record.user_id
+                                entry &&
+                                entry.user_id
                             ) {
 
                                 unique[
-                                    record.user_id
+                                    entry.user_id
                                 ] =
-                                    record;
+                                    entry;
 
                             }
 
@@ -2736,25 +3001,25 @@ function updatePresenceUsers() {
         updateOnlineCounters();
 
 
-        renderOnlinePlayers(
-            "online-player-list"
-        );
-
-
         if (
             currentPage === "online"
         ) {
 
             renderOnlinePlayers(
-                "online-player-list-page"
+                "online-page-list"
             );
 
         }
 
+
+        renderOnlinePlayers(
+            "online-player-list"
+        );
+
     } catch (error) {
 
         console.error(
-            "Presence update error:",
+            "Presence sync error:",
             error
         );
 
@@ -2769,66 +3034,58 @@ function updateOnlineCounters() {
         presenceUsers.length;
 
 
-    const ids = [
-
+    [
         "online-header-count",
-
         "online-side-count",
-
         "online-side-card-count",
-
         "online-modal-count",
-
         "hero-online-count-right"
+    ]
+        .forEach(
+            function (id) {
 
-    ];
-
-
-    ids.forEach(
-        function (id) {
-
-            const element =
-                $(id);
+                const element =
+                    $(id);
 
 
-            if (element) {
+                if (element) {
 
-                element.textContent =
-                    String(count);
+                    element.textContent =
+                        String(count);
+
+                }
 
             }
-
-        }
-    );
+        );
 
 }
 
 
 function renderOnlinePlayers(targetId) {
 
-    const list =
+    const element =
         $(targetId);
 
 
-    if (!list) {
+    if (!element) {
         return;
     }
 
 
     if (!presenceUsers.length) {
 
-        list.innerHTML = `
+        element.innerHTML = `
 
-            <div class="info-card">
+            <div class="conference-placeholder">
 
                 <strong>
                     Никого нет онлайн
                 </strong>
 
-                <p>
-                    Пользователи появятся здесь
+                <span>
+                    Игроки появятся здесь
                     после подключения.
-                </p>
+                </span>
 
             </div>
 
@@ -2839,7 +3096,7 @@ function renderOnlinePlayers(targetId) {
     }
 
 
-    list.innerHTML =
+    element.innerHTML =
         presenceUsers
             .map(
                 function (user) {
@@ -2848,7 +3105,7 @@ function renderOnlinePlayers(targetId) {
 
                         <div class="online-player">
 
-                            <div class="mini-avatar">
+                            <div class="avatar avatar-medium">
                                 🤖
                             </div>
 
@@ -2894,7 +3151,6 @@ async function stopPresence() {
     ) {
 
         return;
-
     }
 
 
@@ -2902,11 +3158,9 @@ async function stopPresence() {
 
         await presenceChannel.untrack();
 
-
     } catch (error) {
 
         console.error(
-            "Presence untrack error:",
             error
         );
 
@@ -2922,7 +3176,6 @@ async function stopPresence() {
     } catch (error) {
 
         console.error(
-            "Presence remove error:",
             error
         );
 
@@ -2943,98 +3196,21 @@ async function stopPresence() {
 
 
 /* =========================================================
-   CHAT
+   CHAT DATABASE
 ========================================================= */
-
-async function initChat() {
-
-    const content =
-        $("page-content");
-
-
-    if (!content) {
-        return;
-    }
-
-
-    content.innerHTML = `
-
-        <div class="chat-layout">
-
-            <div
-                id="chat-messages"
-                class="chat-messages"
-            >
-
-                <div class="info-card">
-
-                    <strong>
-                        Загрузка...
-                    </strong>
-
-                </div>
-
-            </div>
-
-
-            <form
-                id="chat-form"
-                class="chat-input-row"
-            >
-
-                <input
-                    id="chat-input"
-                    type="text"
-                    maxlength="1000"
-                    autocomplete="off"
-                    placeholder="Введите сообщение..."
-                >
-
-                <button
-                    type="submit"
-                    class="modal-primary-button"
-                >
-                    Отправить
-                </button>
-
-            </form>
-
-        </div>
-
-    `;
-
-
-    const form =
-        $("chat-form");
-
-
-    if (form) {
-
-        form.addEventListener(
-            "submit",
-            async function (event) {
-
-                event.preventDefault();
-
-                await sendChatMessage();
-
-            }
-        );
-
-    }
-
-
-    await loadChatMessages();
-
-
-    startChatRealtime();
-
-}
-
 
 async function loadChatMessages() {
 
     if (!supabaseClient) {
+        return;
+    }
+
+
+    const container =
+        $("chat-messages");
+
+
+    if (!container) {
         return;
     }
 
@@ -3050,7 +3226,8 @@ async function loadChatMessages() {
             .order(
                 "created_at",
                 {
-                    ascending: true
+                    ascending:
+                        true
                 }
             )
             .limit(100);
@@ -3058,40 +3235,24 @@ async function loadChatMessages() {
 
     if (result.error) {
 
-        console.warn(
-            "Chat load:",
-            result.error.message
-        );
+        container.innerHTML = `
 
+            <div class="conference-placeholder">
 
-        const container =
-            $("chat-messages");
+                <strong>
+                    Чат пока не настроен
+                </strong>
 
+                <span>
+                    Проверьте таблицу
+                    chat_messages в Supabase.
+                </span>
 
-        if (container) {
+            </div>
 
-            container.innerHTML = `
-
-                <div class="info-card">
-
-                    <strong>
-                        Чат не загружен
-                    </strong>
-
-                    <p>
-                        Проверьте таблицу
-                        chat_messages в Supabase.
-                    </p>
-
-                </div>
-
-            `;
-
-        }
-
+        `;
 
         return;
-
     }
 
 
@@ -3117,22 +3278,21 @@ function renderChatMessages(messages) {
 
         container.innerHTML = `
 
-            <div class="info-card">
+            <div class="conference-placeholder">
 
                 <strong>
-                    Пока нет сообщений.
+                    Пока нет сообщений
                 </strong>
 
-                <p>
+                <span>
                     Напишите первое сообщение.
-                </p>
+                </span>
 
             </div>
 
         `;
 
         return;
-
     }
 
 
@@ -3141,9 +3301,21 @@ function renderChatMessages(messages) {
             .map(
                 function (message) {
 
+                    const mine =
+                        currentUser &&
+                        message.user_id ===
+                            currentUser.id;
+
+
                     return `
 
-                        <div class="chat-message">
+                        <div
+                            class="chat-message ${
+                                mine
+                                    ? "mine"
+                                    : ""
+                            }"
+                        >
 
                             <strong>
                                 ${escapeHtml(
@@ -3174,85 +3346,6 @@ function renderChatMessages(messages) {
 }
 
 
-function startChatRealtime() {
-
-    if (
-        !supabaseClient ||
-        chatChannel
-    ) {
-
-        return;
-
-    }
-
-
-    chatChannel =
-        supabaseClient.channel(
-            "global-chat-" +
-            Date.now()
-        );
-
-
-    chatChannel.on(
-        "postgres_changes",
-        {
-            event: "INSERT",
-            schema: "public",
-            table: "chat_messages",
-            filter: "room_type=eq.global"
-        },
-        function () {
-
-            loadChatMessages();
-
-        }
-    );
-
-
-    chatChannel.subscribe(
-        function (status) {
-
-            console.log(
-                "Chat realtime:",
-                status
-            );
-
-        }
-    );
-
-}
-
-
-function stopChatRealtime() {
-
-    if (
-        chatChannel &&
-        supabaseClient
-    ) {
-
-        try {
-
-            supabaseClient.removeChannel(
-                chatChannel
-            );
-
-        } catch (error) {
-
-            console.error(
-                error
-            );
-
-        }
-
-    }
-
-
-    chatChannel =
-        null;
-
-}
-
-
 async function sendChatMessage() {
 
     const input =
@@ -3266,7 +3359,6 @@ async function sendChatMessage() {
     ) {
 
         return;
-
     }
 
 
@@ -3316,16 +3408,522 @@ async function sendChatMessage() {
     } catch (error) {
 
         console.error(
-            "Chat send error:",
+            "Chat send:",
+            error
+        );
+
+    }
+
+}
+
+
+function startChatRealtime() {
+
+    stopChatRealtime();
+
+
+    if (!supabaseClient) {
+        return;
+    }
+
+
+    chatChannel =
+        supabaseClient.channel(
+            "global-chat-" +
+            Date.now()
+        );
+
+
+    chatChannel.on(
+        "postgres_changes",
+        {
+            event:
+                "INSERT",
+
+            schema:
+                "public",
+
+            table:
+                "chat_messages",
+
+            filter:
+                "room_type=eq.global"
+
+        },
+        function () {
+
+            loadChatMessages();
+
+        }
+    );
+
+
+    chatChannel.subscribe();
+
+}
+
+
+function stopChatRealtime() {
+
+    if (
+        chatChannel &&
+        supabaseClient
+    ) {
+
+        try {
+
+            supabaseClient.removeChannel(
+                chatChannel
+            );
+
+        } catch (error) {
+
+            console.error(
+                error
+            );
+
+        }
+
+    }
+
+
+    chatChannel =
+        null;
+
+}
+
+
+/* =========================================================
+   CONFERENCE UI
+========================================================= */
+
+function initConferenceUI() {
+
+    const join =
+        $("conference-join");
+
+    const leave =
+        $("conference-leave");
+
+    const mic =
+        $("conference-mic");
+
+    const camera =
+        $("conference-camera");
+
+    const screen =
+        $("conference-screen");
+
+    const refresh =
+        $("conference-refresh");
+
+
+    if (join) {
+
+        join.addEventListener(
+            "click",
+            startConference
+        );
+
+    }
+
+
+    if (leave) {
+
+        leave.addEventListener(
+            "click",
+            stopConference
+        );
+
+    }
+
+
+    if (mic) {
+
+        mic.addEventListener(
+            "click",
+            toggleConferenceMic
+        );
+
+    }
+
+
+    if (camera) {
+
+        camera.addEventListener(
+            "click",
+            toggleConferenceCamera
+        );
+
+    }
+
+
+    if (screen) {
+
+        screen.addEventListener(
+            "click",
+            toggleConferenceScreen
+        );
+
+    }
+
+
+    if (refresh) {
+
+        refresh.addEventListener(
+            "click",
+            function () {
+
+                if (conferenceJoined) {
+
+                    updateConferenceVideos();
+
+                }
+
+            }
+        );
+
+    }
+
+}
+
+
+function setConferenceStatus(text) {
+
+    const element =
+        $("conference-status");
+
+
+    if (element) {
+
+        element.textContent =
+            text;
+
+    }
+
+}
+
+
+/* =========================================================
+   START CONFERENCE
+========================================================= */
+
+async function startConference() {
+
+    if (
+        conferenceJoined ||
+        !currentUser ||
+        !supabaseClient
+    ) {
+
+        return;
+    }
+
+
+    if (
+        !navigator.mediaDevices ||
+        !navigator.mediaDevices.getUserMedia
+    ) {
+
+        setConferenceStatus(
+            "КАМЕРА НЕДОСТУПНА"
+        );
+
+        showInfo(
+            "Браузер не поддерживает доступ к камере и микрофону."
+        );
+
+        return;
+    }
+
+
+    try {
+
+        setConferenceStatus(
+            "ПОДКЛЮЧЕНИЕ..."
+        );
+
+
+        localStream =
+            await navigator.mediaDevices.getUserMedia({
+
+                video: {
+                    facingMode:
+                        "user"
+                },
+
+                audio:
+                    true
+
+            });
+
+
+        conferenceJoined =
+            true;
+
+
+        conferenceParticipants =
+            {};
+
+
+        conferenceChannel =
+            supabaseClient.channel(
+                "conference-" +
+                conferenceRoom,
+                {
+                    config: {
+                        broadcast: {
+                            self:
+                                false
+                        }
+                    }
+                }
+            );
+
+
+        conferenceChannel.on(
+            "broadcast",
+            {
+                event:
+                    "join"
+            },
+            async function (payload) {
+
+                const peerId =
+                    payload &&
+                    payload.payload
+                        ? payload.payload.userId
+                        : null;
+
+
+                if (
+                    !peerId ||
+                    peerId === currentUser.id
+                ) {
+
+                    return;
+                }
+
+
+                await createPeerOffer(
+                    peerId
+                );
+
+            }
+        );
+
+
+        conferenceChannel.on(
+            "broadcast",
+            {
+                event:
+                    "offer"
+            },
+            async function (payload) {
+
+                const data =
+                    payload &&
+                    payload.payload
+                        ? payload.payload
+                        : null;
+
+
+                if (!data) {
+                    return;
+                }
+
+
+                if (
+                    data.to !==
+                    currentUser.id
+                ) {
+
+                    return;
+                }
+
+
+                await handleOffer(
+                    data
+                );
+
+            }
+        );
+
+
+        conferenceChannel.on(
+            "broadcast",
+            {
+                event:
+                    "answer"
+            },
+            async function (payload) {
+
+                const data =
+                    payload &&
+                    payload.payload
+                        ? payload.payload
+                        : null;
+
+
+                if (!data) {
+                    return;
+                }
+
+
+                if (
+                    data.to !==
+                    currentUser.id
+                ) {
+
+                    return;
+                }
+
+
+                await handleAnswer(
+                    data
+                );
+
+            }
+        );
+
+
+        conferenceChannel.on(
+            "broadcast",
+            {
+                event:
+                    "ice"
+            },
+            async function (payload) {
+
+                const data =
+                    payload &&
+                    payload.payload
+                        ? payload.payload
+                        : null;
+
+
+                if (!data) {
+                    return;
+                }
+
+
+                if (
+                    data.to !==
+                    currentUser.id
+                ) {
+
+                    return;
+                }
+
+
+                await handleIceCandidate(
+                    data
+                );
+
+            }
+        );
+
+
+        conferenceChannel.on(
+            "broadcast",
+            {
+                event:
+                    "leave"
+            },
+            function (payload) {
+
+                const peerId =
+                    payload &&
+                    payload.payload
+                        ? payload.payload.userId
+                        : null;
+
+
+                if (peerId) {
+
+                    removePeer(
+                        peerId
+                    );
+
+                }
+
+            }
+        );
+
+
+        await new Promise(
+            function (resolve) {
+
+                conferenceChannel.subscribe(
+                    async function (status) {
+
+                        if (
+                            status ===
+                            "SUBSCRIBED"
+                        ) {
+
+                            updateLocalVideo();
+
+
+                            await conferenceChannel.send({
+
+                                type:
+                                    "broadcast",
+
+                                event:
+                                    "join",
+
+                                payload: {
+
+                                    userId:
+                                        currentUser.id,
+
+                                    nickname:
+                                        profileData.nickname ||
+                                        "Player"
+
+                                }
+
+                            });
+
+
+                            resolve();
+
+                        }
+
+                    }
+                );
+
+            }
+        );
+
+
+        setConferenceStatus(
+            "ПОДКЛЮЧЕНО"
+        );
+
+
+        updateConferenceButtons();
+
+
+    } catch (error) {
+
+        console.error(
+            "Conference error:",
             error
         );
 
 
-        alert(
-            error &&
-            error.message
-                ? error.message
-                : "Не удалось отправить сообщение."
+        await stopConference();
+
+
+        setConferenceStatus(
+            "ОШИБКА"
+        );
+
+
+        showInfo(
+            "Не удалось получить доступ к камере или микрофону."
         );
 
     }
@@ -3334,77 +3932,386 @@ async function sendChatMessage() {
 
 
 /* =========================================================
-   WEBRTC BASIC
+   PEER CONNECTION
 ========================================================= */
 
-async function startCall(roomName) {
+function createPeerConnection(
+    peerId
+) {
 
-    if (!currentUser) {
+    if (peerConnections[peerId]) {
+
+        return peerConnections[peerId];
+
+    }
+
+
+    const connection =
+        new RTCPeerConnection({
+
+            iceServers: [
+
+                {
+                    urls:
+                        "stun:stun.l.google.com:19302"
+                },
+
+                {
+                    urls:
+                        "stun:stun1.l.google.com:19302"
+                }
+
+            ]
+
+        });
+
+
+    peerConnections[peerId] =
+        connection;
+
+
+    if (localStream) {
+
+        localStream
+            .getTracks()
+            .forEach(
+                function (track) {
+
+                    connection.addTrack(
+                        track,
+                        localStream
+                    );
+
+                }
+            );
+
+    }
+
+
+    connection.onicecandidate =
+        async function (event) {
+
+            if (
+                !event.candidate ||
+                !conferenceChannel
+            ) {
+
+                return;
+            }
+
+
+            await conferenceChannel.send({
+
+                type:
+                    "broadcast",
+
+                event:
+                    "ice",
+
+                payload: {
+
+                    from:
+                        currentUser.id,
+
+                    to:
+                        peerId,
+
+                    candidate:
+                        event.candidate
+
+                }
+
+            });
+
+        };
+
+
+    connection.ontrack =
+        function (event) {
+
+            const stream =
+                event.streams &&
+                event.streams[0]
+                    ? event.streams[0]
+                    : null;
+
+
+            if (!stream) {
+                return;
+            }
+
+
+            addRemoteVideo(
+                peerId,
+                stream
+            );
+
+        };
+
+
+    connection.onconnectionstatechange =
+        function () {
+
+            if (
+                connection.connectionState ===
+                "failed"
+            ) {
+
+                connection.restartIce();
+
+            }
+
+
+            if (
+                connection.connectionState ===
+                "closed" ||
+                connection.connectionState ===
+                "disconnected"
+            ) {
+
+                setTimeout(
+                    function () {
+
+                        removePeer(
+                            peerId
+                        );
+
+                    },
+                    1000
+                );
+
+            }
+
+        };
+
+
+    return connection;
+
+}
+
+
+/* =========================================================
+   OFFER
+========================================================= */
+
+async function createPeerOffer(
+    peerId
+) {
+
+    if (
+        !conferenceJoined ||
+        peerId === currentUser.id
+    ) {
+
         return;
     }
 
 
-    callRoom =
-        roomName ||
-        "global";
-
-
-    openModal(
-        "call-modal"
-    );
-
-
-    updateCallStatus(
-        "Получение камеры и микрофона..."
-    );
-
-
     try {
 
-        localStream =
-            await navigator.mediaDevices.getUserMedia({
-
-                video: true,
-
-                audio: true
-
-            });
+        const connection =
+            createPeerConnection(
+                peerId
+            );
 
 
-        const video =
-            $("local-video");
+        const offer =
+            await connection.createOffer();
 
 
-        if (video) {
+        await connection.setLocalDescription(
+            offer
+        );
 
-            video.srcObject =
-                localStream;
 
+        if (!conferenceChannel) {
+            return;
         }
 
 
-        micEnabled =
-            true;
+        await conferenceChannel.send({
+
+            type:
+                "broadcast",
+
+            event:
+                "offer",
+
+            payload: {
+
+                from:
+                    currentUser.id,
+
+                to:
+                    peerId,
+
+                offer:
+                    offer
+
+            }
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Offer error:",
+            error
+        );
+
+    }
+
+}
 
 
-        cameraEnabled =
-            true;
+/* =========================================================
+   OFFER HANDLER
+========================================================= */
+
+async function handleOffer(
+    data
+) {
+
+    try {
+
+        const peerId =
+            data.from;
 
 
-        updateCallStatus(
-            "Камера и микрофон подключены."
+        if (!peerId) {
+            return;
+        }
+
+
+        const connection =
+            createPeerConnection(
+                peerId
+            );
+
+
+        await connection.setRemoteDescription(
+            new RTCSessionDescription(
+                data.offer
+            )
+        );
+
+
+        const answer =
+            await connection.createAnswer();
+
+
+        await connection.setLocalDescription(
+            answer
+        );
+
+
+        await conferenceChannel.send({
+
+            type:
+                "broadcast",
+
+            event:
+                "answer",
+
+            payload: {
+
+                from:
+                    currentUser.id,
+
+                to:
+                    peerId,
+
+                answer:
+                    answer
+
+            }
+
+        });
+
+
+    } catch (error) {
+
+        console.error(
+            "Handle offer error:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   ANSWER
+========================================================= */
+
+async function handleAnswer(
+    data
+) {
+
+    try {
+
+        const connection =
+            peerConnections[
+                data.from
+            ];
+
+
+        if (!connection) {
+            return;
+        }
+
+
+        await connection.setRemoteDescription(
+            new RTCSessionDescription(
+                data.answer
+            )
         );
 
     } catch (error) {
 
         console.error(
-            "Media error:",
+            "Answer error:",
             error
         );
 
+    }
 
-        updateCallStatus(
-            "Нет доступа к камере или микрофону."
+}
+
+
+/* =========================================================
+   ICE
+========================================================= */
+
+async function handleIceCandidate(
+    data
+) {
+
+    try {
+
+        const connection =
+            peerConnections[
+                data.from
+            ];
+
+
+        if (!connection) {
+            return;
+        }
+
+
+        await connection.addIceCandidate(
+            new RTCIceCandidate(
+                data.candidate
+            )
+        );
+
+    } catch (error) {
+
+        console.error(
+            "ICE error:",
+            error
         );
 
     }
@@ -3412,23 +4319,315 @@ async function startCall(roomName) {
 }
 
 
-function updateCallStatus(message) {
+/* =========================================================
+   LOCAL VIDEO
+========================================================= */
 
-    const element =
-        $("call-status");
+function updateLocalVideo() {
+
+    const container =
+        $("conference-videos");
 
 
-    if (element) {
+    if (!container) {
+        return;
+    }
 
-        element.textContent =
-            message;
+
+    container.innerHTML =
+        "";
+
+
+    if (!localStream) {
+        return;
+    }
+
+
+    addVideoTile(
+        currentUser.id,
+        localStream,
+        profileData.nickname || "Вы",
+        true
+    );
+
+}
+
+
+/* =========================================================
+   REMOTE VIDEO
+========================================================= */
+
+function addRemoteVideo(
+    peerId,
+    stream
+) {
+
+    conferenceParticipants[
+        peerId
+    ] =
+        stream;
+
+
+    const existing =
+        document.querySelector(
+            '[data-peer-id="' +
+            peerId +
+            '"]'
+        );
+
+
+    if (existing) {
+
+        const video =
+            existing.querySelector(
+                "video"
+            );
+
+
+        if (video) {
+
+            video.srcObject =
+                stream;
+
+        }
+
+
+        return;
+
+    }
+
+
+    addVideoTile(
+        peerId,
+        stream,
+        "Участник",
+        false
+    );
+
+}
+
+
+function addVideoTile(
+    id,
+    stream,
+    name,
+    local
+) {
+
+    const container =
+        $("conference-videos");
+
+
+    if (!container) {
+        return;
+    }
+
+
+    const placeholder =
+        container.querySelector(
+            ".conference-placeholder"
+        );
+
+
+    if (placeholder) {
+        placeholder.remove();
+    }
+
+
+    const tile =
+        document.createElement(
+            "div"
+        );
+
+
+    tile.className =
+        "video-tile";
+
+
+    tile.dataset.peerId =
+        id;
+
+
+    const video =
+        document.createElement(
+            "video"
+        );
+
+
+    video.autoplay =
+        true;
+
+
+    video.playsInline =
+        true;
+
+
+    video.muted =
+        local;
+
+
+    video.srcObject =
+        stream;
+
+
+    const label =
+        document.createElement(
+            "div"
+        );
+
+
+    label.className =
+        "video-tile-label";
+
+
+    label.textContent =
+        local
+            ? "Вы"
+            : name;
+
+
+    tile.appendChild(
+        video
+    );
+
+
+    tile.appendChild(
+        label
+    );
+
+
+    container.appendChild(
+        tile
+    );
+
+}
+
+
+/* =========================================================
+   REMOVE PEER
+========================================================= */
+
+function removePeer(
+    peerId
+) {
+
+    if (
+        peerConnections[peerId]
+    ) {
+
+        try {
+
+            peerConnections[
+                peerId
+            ].close();
+
+        } catch (error) {
+
+            console.error(
+                error
+            );
+
+        }
+
+    }
+
+
+    delete peerConnections[
+        peerId
+    ];
+
+
+    delete conferenceParticipants[
+        peerId
+    ];
+
+
+    const tile =
+        document.querySelector(
+            '[data-peer-id="' +
+            peerId +
+            '"]'
+        );
+
+
+    if (tile) {
+
+        tile.remove();
+
+    }
+
+
+    updateConferenceVideos();
+
+}
+
+
+/* =========================================================
+   CONFERENCE VIDEOS
+========================================================= */
+
+function updateConferenceVideos() {
+
+    const container =
+        $("conference-videos");
+
+
+    if (!container) {
+        return;
+    }
+
+
+    if (
+        localStream &&
+        !document.querySelector(
+            '[data-peer-id="' +
+            currentUser.id +
+            '"]'
+        )
+    ) {
+
+        updateLocalVideo();
+
+    }
+
+
+    if (
+        !localStream &&
+        Object.keys(
+            conferenceParticipants
+        ).length === 0
+    ) {
+
+        container.innerHTML = `
+
+            <div class="conference-placeholder">
+
+                <div class="conference-placeholder-icon">
+                    ◉
+                </div>
+
+                <strong>
+                    Конференция не подключена
+                </strong>
+
+                <span>
+                    Нажмите «Войти в конференцию».
+                </span>
+
+            </div>
+
+        `;
 
     }
 
 }
 
 
-function toggleMicrophone() {
+/* =========================================================
+   MICROPHONE
+========================================================= */
+
+function toggleConferenceMic() {
 
     if (!localStream) {
         return;
@@ -3451,16 +4650,33 @@ function toggleMicrophone() {
         );
 
 
-    updateCallStatus(
-        micEnabled
-            ? "Микрофон включён."
-            : "Микрофон выключен."
-    );
+    const button =
+        $("conference-mic");
+
+
+    if (button) {
+
+        button.classList.toggle(
+            "active",
+            !micEnabled
+        );
+
+
+        button.textContent =
+            micEnabled
+                ? "Микрофон"
+                : "Микрофон выкл.";
+
+    }
 
 }
 
 
-function toggleCamera() {
+/* =========================================================
+   CAMERA
+========================================================= */
+
+function toggleConferenceCamera() {
 
     if (!localStream) {
         return;
@@ -3483,28 +4699,49 @@ function toggleCamera() {
         );
 
 
-    updateCallStatus(
-        cameraEnabled
-            ? "Камера включена."
-            : "Камера выключена."
-    );
+    const button =
+        $("conference-camera");
+
+
+    if (button) {
+
+        button.classList.toggle(
+            "active",
+            !cameraEnabled
+        );
+
+
+        button.textContent =
+            cameraEnabled
+                ? "Камера"
+                : "Камера выкл.";
+
+    }
 
 }
 
 
-async function toggleScreenShare() {
+/* =========================================================
+   SCREEN SHARE
+========================================================= */
+
+async function toggleConferenceScreen() {
 
     if (
         !navigator.mediaDevices ||
         !navigator.mediaDevices.getDisplayMedia
     ) {
 
-        updateCallStatus(
-            "Демонстрация экрана не поддерживается."
+        showInfo(
+            "Ваш браузер не поддерживает демонстрацию экрана."
         );
 
         return;
+    }
 
+
+    if (!conferenceJoined) {
+        return;
     }
 
 
@@ -3514,70 +4751,92 @@ async function toggleScreenShare() {
 
             screenStream =
                 await navigator.mediaDevices.getDisplayMedia({
-                    video: true
+                    video:
+                        true
                 });
+
+
+            const screenTrack =
+                screenStream.getVideoTracks()[0];
+
+
+            if (!screenTrack) {
+                return;
+            }
 
 
             screenSharing =
                 true;
 
 
-            updateCallStatus(
-                "Демонстрация экрана включена."
-            );
+            Object.keys(
+                peerConnections
+            )
+                .forEach(
+                    function (peerId) {
+
+                        const connection =
+                            peerConnections[
+                                peerId
+                            ];
 
 
-            const track =
-                screenStream.getVideoTracks()[0];
+                        const sender =
+                            connection
+                                .getSenders()
+                                .find(
+                                    function (item) {
+
+                                        return (
+                                            item.track &&
+                                            item.track.kind ===
+                                            "video"
+                                        );
+
+                                    }
+                                );
 
 
-            if (track) {
+                        if (sender) {
 
-                track.onended =
-                    function () {
+                            sender.replaceTrack(
+                                screenTrack
+                            );
 
-                        screenSharing =
-                            false;
+                        }
 
-                        screenStream =
-                            null;
+                    }
+                );
 
-                        updateCallStatus(
-                            "Демонстрация экрана завершена."
-                        );
 
-                    };
+            screenTrack.onended =
+                function () {
+
+                    stopScreenShare();
+
+                };
+
+
+            const button =
+                $("conference-screen");
+
+
+            if (button) {
+
+                button.classList.add(
+                    "active"
+                );
+
+
+                button.textContent =
+                    "Экран вкл.";
 
             }
+
 
         } else {
 
-            if (screenStream) {
-
-                screenStream
-                    .getTracks()
-                    .forEach(
-                        function (track) {
-
-                            track.stop();
-
-                        }
-                    );
-
-            }
-
-
-            screenStream =
-                null;
-
-
-            screenSharing =
-                false;
-
-
-            updateCallStatus(
-                "Демонстрация экрана выключена."
-            );
+            await stopScreenShare();
 
         }
 
@@ -3593,25 +4852,10 @@ async function toggleScreenShare() {
 }
 
 
-async function leaveCall() {
+async function stopScreenShare() {
 
-    if (localStream) {
-
-        localStream
-            .getTracks()
-            .forEach(
-                function (track) {
-
-                    track.stop();
-
-                }
-            );
-
-    }
-
-
-    localStream =
-        null;
+    screenSharing =
+        false;
 
 
     if (screenStream) {
@@ -3633,13 +4877,201 @@ async function leaveCall() {
         null;
 
 
-    Object.keys(peerConnections)
+    const cameraTrack =
+        localStream &&
+        localStream.getVideoTracks()[0]
+            ? localStream.getVideoTracks()[0]
+            : null;
+
+
+    Object.keys(
+        peerConnections
+    )
         .forEach(
-            function (key) {
+            function (peerId) {
+
+                const connection =
+                    peerConnections[
+                        peerId
+                    ];
+
+
+                const sender =
+                    connection
+                        .getSenders()
+                        .find(
+                            function (item) {
+
+                                return (
+                                    item.track &&
+                                    item.track.kind ===
+                                    "video"
+                                );
+
+                            }
+                        );
+
+
+                if (
+                    sender &&
+                    cameraTrack
+                ) {
+
+                    sender.replaceTrack(
+                        cameraTrack
+                    );
+
+                }
+
+            }
+        );
+
+
+    const button =
+        $("conference-screen");
+
+
+    if (button) {
+
+        button.classList.remove(
+            "active"
+        );
+
+
+        button.textContent =
+            "Экран";
+
+    }
+
+}
+
+
+/* =========================================================
+   CONFERENCE BUTTON STATE
+========================================================= */
+
+function updateConferenceButtons() {
+
+    const join =
+        $("conference-join");
+
+
+    const leave =
+        $("conference-leave");
+
+
+    if (join) {
+
+        join.style.display =
+            conferenceJoined
+                ? "none"
+                : "block";
+
+    }
+
+
+    if (leave) {
+
+        leave.style.display =
+            conferenceJoined
+                ? "block"
+                : "none";
+
+    }
+
+}
+
+
+/* =========================================================
+   STOP CONFERENCE
+========================================================= */
+
+async function stopConference() {
+
+    if (
+        conferenceChannel &&
+        currentUser
+    ) {
+
+        try {
+
+            await conferenceChannel.send({
+
+                type:
+                    "broadcast",
+
+                event:
+                    "leave",
+
+                payload: {
+
+                    userId:
+                        currentUser.id
+
+                }
+
+            });
+
+        } catch (error) {
+
+            console.error(
+                error
+            );
+
+        }
+
+    }
+
+
+    if (screenStream) {
+
+        screenStream
+            .getTracks()
+            .forEach(
+                function (track) {
+
+                    track.stop();
+
+                }
+            );
+
+    }
+
+
+    screenStream =
+        null;
+
+
+    if (localStream) {
+
+        localStream
+            .getTracks()
+            .forEach(
+                function (track) {
+
+                    track.stop();
+
+                }
+            );
+
+    }
+
+
+    localStream =
+        null;
+
+
+    Object.keys(
+        peerConnections
+    )
+        .forEach(
+            function (peerId) {
 
                 try {
 
-                    peerConnections[key].close();
+                    peerConnections[
+                        peerId
+                    ].close();
 
                 } catch (error) {
 
@@ -3657,15 +5089,19 @@ async function leaveCall() {
         {};
 
 
+    conferenceParticipants =
+        {};
+
+
     if (
-        callChannel &&
+        conferenceChannel &&
         supabaseClient
     ) {
 
         try {
 
             await supabaseClient.removeChannel(
-                callChannel
+                conferenceChannel
             );
 
         } catch (error) {
@@ -3679,88 +5115,87 @@ async function leaveCall() {
     }
 
 
-    callChannel =
+    conferenceChannel =
         null;
 
 
-    callRoom =
-        null;
+    conferenceJoined =
+        false;
 
 
-    closeModal(
-        "call-modal"
+    screenSharing =
+        false;
+
+
+    const videos =
+        $("conference-videos");
+
+
+    if (videos) {
+
+        videos.innerHTML = `
+
+            <div class="conference-placeholder">
+
+                <div class="conference-placeholder-icon">
+                    ◉
+                </div>
+
+                <strong>
+                    Общая конференция
+                </strong>
+
+                <span>
+                    Камера и микрофон работают
+                    прямо внутри страницы чата.
+                </span>
+
+            </div>
+
+        `;
+
+    }
+
+
+    setConferenceStatus(
+        "НЕ ПОДКЛЮЧЕНО"
     );
 
-}
+
+    updateConferenceButtons();
 
 
-function initCallButtons() {
+    if ($("conference-mic")) {
 
-    const mic =
-        $("call-mic-button");
+        $("conference-mic").textContent =
+            "Микрофон";
 
-
-    if (mic) {
-
-        mic.addEventListener(
-            "click",
-            toggleMicrophone
+        $("conference-mic").classList.remove(
+            "active"
         );
 
     }
 
 
-    const camera =
-        $("call-camera-button");
+    if ($("conference-camera")) {
 
+        $("conference-camera").textContent =
+            "Камера";
 
-    if (camera) {
-
-        camera.addEventListener(
-            "click",
-            toggleCamera
+        $("conference-camera").classList.remove(
+            "active"
         );
 
     }
 
 
-    const screen =
-        $("call-screen-button");
+    if ($("conference-screen")) {
 
+        $("conference-screen").textContent =
+            "Экран";
 
-    if (screen) {
-
-        screen.addEventListener(
-            "click",
-            toggleScreenShare
-        );
-
-    }
-
-
-    const leave =
-        $("call-leave-button");
-
-
-    if (leave) {
-
-        leave.addEventListener(
-            "click",
-            leaveCall
-        );
-
-    }
-
-
-    const close =
-        $("call-close-x");
-
-
-    if (close) {
-
-        close.addEventListener(
-            "click",
-            leaveCall
+        $("conference-screen").classList.remove(
+            "active"
         );
 
     }
@@ -3769,7 +5204,24 @@ function initCallButtons() {
 
 
 /* =========================================================
-   DOM READY
+   INFO
+========================================================= */
+
+function showInfo(message) {
+
+    console.log(
+        message
+    );
+
+    window.alert(
+        message
+    );
+
+}
+
+
+/* =========================================================
+   INIT
 ========================================================= */
 
 document.addEventListener(
@@ -3837,47 +5289,16 @@ document.addEventListener(
             $("profile-message");
 
 
-        updateVersion();
-
-
         if (appShell) {
 
             appShell.classList.remove(
                 "active"
             );
 
-            appShell.style.setProperty(
-                "display",
-                "none",
-                "important"
-            );
-
-            appShell.style.visibility =
-                "hidden";
-
         }
 
 
-        if (authScreen) {
-
-            authScreen.classList.remove(
-                "hidden-screen"
-            );
-
-            authScreen.style.setProperty(
-                "display",
-                "flex",
-                "important"
-            );
-
-            authScreen.style.visibility =
-                "visible";
-
-            authScreen.style.opacity =
-                "1";
-
-        }
-
+        updateVersion();
 
         initAuthTabs();
 
@@ -3887,18 +5308,52 @@ document.addEventListener(
 
         initModals();
 
-        initButtons();
+        initSocialButtons();
 
-        initCallButtons();
+        initProfileButtons();
 
 
         if (!initSupabase()) {
 
             showAuthMessage(
-                "Не удалось загрузить библиотеку Supabase."
+                "Не удалось загрузить Supabase."
             );
 
             return;
+
+        }
+
+
+        if (logoutButton) {
+
+            logoutButton.addEventListener(
+                "click",
+                logoutUser
+            );
+
+        }
+
+
+        const onlineButton =
+            $("header-online-button");
+
+
+        if (onlineButton) {
+
+            onlineButton.addEventListener(
+                "click",
+                function () {
+
+                    renderOnlinePlayers(
+                        "online-player-list"
+                    );
+
+                    openModal(
+                        "online-modal"
+                    );
+
+                }
+            );
 
         }
 
@@ -3912,7 +5367,7 @@ document.addEventListener(
         console.log(
             "GAME PLATFORM " +
             APP_VERSION +
-            " started."
+            " STARTED"
         );
 
     }
@@ -3925,49 +5380,39 @@ document.addEventListener(
 
 window.gamePlatform = {
 
-    getUser: function () {
+    getUser:
+        function () {
+            return currentUser;
+        },
 
-        return currentUser;
+    getSession:
+        function () {
+            return currentSession;
+        },
 
-    },
+    getProfile:
+        function () {
+            return profileData;
+        },
 
+    getSupabase:
+        function () {
+            return supabaseClient;
+        },
 
-    getSession: function () {
+    startConference:
+        startConference,
 
-        return currentSession;
+    stopConference:
+        stopConference,
 
-    },
+    openProfile:
+        openProfileModal,
 
+    openModal:
+        openModal,
 
-    getProfile: function () {
-
-        return profileData;
-
-    },
-
-
-    getSupabase: function () {
-
-        return supabaseClient;
-
-    },
-
-
-    startCall: startCall,
-
-
-    leaveCall: leaveCall,
-
-
-    openProfile: openProfileModal,
-
-
-    openModal: openModal,
-
-
-    closeModal: closeModal,
-
-
-    renderPage: renderPage
+    closeModal:
+        closeModal
 
 };
