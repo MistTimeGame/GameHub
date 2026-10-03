@@ -15,18 +15,15 @@
     --accent-soft: #e9edff;
 
     --green: #38d48a;
-
     --red: #ef5d72;
 
     --line: #e3e7ef;
 
-    --radius: 24px;
-
     --shadow-card:
-        0 20px 55px rgba(65,78,105,.08);
+        0 20px 55px rgba(65, 78, 105, 0.08);
 
     --shadow-small:
-        0 10px 25px rgba(60,70,90,.08);
+        0 10px 25px rgba(60, 70, 90, 0.08);
 }
 
 
@@ -58,7 +55,7 @@ body {
     background:
         radial-gradient(
             circle at 30% 0%,
-            rgba(80,122,255,.05),
+            rgba(80, 122, 255, 0.05),
             transparent 40%
         ),
         var(--bg-main);
@@ -75,12 +72,12 @@ textarea {
 
 
 button {
-    border: none;
+    border: 0;
 }
 
 
 button:disabled {
-    opacity: .7;
+    opacity: 0.6;
     cursor: default;
 }
 
@@ -110,6 +107,7 @@ textarea {
     display: flex;
 
     align-items: center;
+
     justify-content: center;
 
     padding: 30px;
@@ -134,21 +132,23 @@ textarea {
 
     background:
         linear-gradient(
-            rgba(255,255,255,.72),
-            rgba(255,255,255,.72)
+            rgba(255, 255, 255, 0.72),
+            rgba(255, 255, 255, 0.72)
         ),
+
         repeating-linear-gradient(
             90deg,
             transparent 0,
             transparent 80px,
-            rgba(81,118,198,.035) 81px,
+            rgba(81, 118, 198, 0.035) 81px,
             transparent 82px
         ),
+
         repeating-linear-gradient(
             0deg,
             transparent 0,
             transparent 80px,
-            rgba(81,118,198,.035) 81px,
+            rgba(81, 118, 198, 0.035) 81px,
             transparent 82px
         );
 }
@@ -160,26 +160,30 @@ textarea {
 
     z-index: 2;
 
-    width: min(470px,100%);
+    width:
+        min(
+            470px,
+            100%
+        );
 
     padding: 34px;
 
     border:
         1px solid
-        rgba(190,198,211,.82);
+        rgba(190, 198, 211, 0.82);
 
     border-radius: 28px;
 
     background:
         linear-gradient(
             145deg,
-            rgba(255,255,255,.98),
-            rgba(237,241,247,.96)
+            rgba(255, 255, 255, 0.98),
+            rgba(237, 241, 247, 0.96)
         );
 
     box-shadow:
-        0 35px 90px rgba(42,54,77,.17),
-        0 2px 0 rgba(255,255,255,.95) inset;
+        0 35px 90px rgba(42, 54, 77, 0.17),
+        0 2px 0 rgba(255, 255, 255, 0.95) inset;
 
     overflow: hidden;
 }
@@ -201,9 +205,9 @@ textarea {
         linear-gradient(
             105deg,
             transparent 25%,
-            rgba(255,255,255,.55) 38%,
-            rgba(89,145,255,.32) 48%,
-            rgba(255,255,255,.12) 54%,
+            rgba(255, 255, 255, 0.55) 38%,
+            rgba(89, 145, 255, 0.32) 48%,
+            rgba(255, 255, 255, 0.12) 54%,
             transparent 68%
         );
 
@@ -214,8 +218,6 @@ textarea {
 
 
 .auth-brand {
-
-    position: relative;
 
     display: flex;
 
@@ -233,6 +235,7 @@ textarea {
     display: flex;
 
     align-items: center;
+
     justify-content: center;
 
     width: 48px;
@@ -254,8 +257,8 @@ textarea {
         );
 
     box-shadow:
-        0 10px 24px rgba(47,93,224,.22),
-        0 2px 0 rgba(255,255,255,.45) inset;
+        0 10px 24px rgba(47, 93, 224, 0.22),
+        0 2px 0 rgba(255, 255, 255, 0.45) inset;
 }
 
 
@@ -265,7 +268,7 @@ textarea {
 
     font-weight: 800;
 
-    letter-spacing: .08em;
+    letter-spacing: 0.08em;
 }
 
 
@@ -277,7 +280,7 @@ textarea {
 
     font-weight: 700;
 
-    letter-spacing: .22em;
+    letter-spacing: 0.22em;
 
     color: var(--text-light);
 }
@@ -285,13 +288,14 @@ textarea {
 
 .auth-heading h1 {
 
-    margin: 0 0 8px;
+    margin:
+        0 0 8px;
 
     font-size: 28px;
 
     line-height: 1.15;
 
-    letter-spacing: -.04em;
+    letter-spacing: -0.04em;
 }
 
 
@@ -309,7 +313,8 @@ textarea {
 
     display: grid;
 
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns:
+        1fr 1fr;
 
     gap: 7px;
 
@@ -338,7 +343,12 @@ textarea {
 
     background: transparent;
 
-    transition: .25s ease;
+    transition: 0.25s ease;
+}
+
+
+.auth-tab:hover {
+    color: #30394a;
 }
 
 
@@ -349,13 +359,13 @@ textarea {
     background:
         linear-gradient(
             145deg,
-            #fff,
+            #ffffff,
             #dce1e8
         );
 
     box-shadow:
-        0 7px 16px rgba(49,59,77,.12),
-        0 1px 0 rgba(255,255,255,.95) inset;
+        0 7px 16px rgba(49, 59, 77, 0.12),
+        0 1px 0 rgba(255, 255, 255, 0.95) inset;
 }
 
 
@@ -391,11 +401,12 @@ textarea {
 
     min-height: 49px;
 
-    padding: 0 15px;
+    padding:
+        0 15px;
 
     border:
         1px solid
-        rgba(190,198,210,.94);
+        rgba(190, 198, 210, 0.94);
 
     border-radius: 13px;
 
@@ -406,24 +417,36 @@ textarea {
     background:
         linear-gradient(
             145deg,
-            #fff,
+            #ffffff,
             #eef1f5
         );
 
     box-shadow:
-        0 6px 15px rgba(67,77,95,.05),
-        0 1px 0 rgba(255,255,255,.95) inset;
+        0 6px 15px rgba(67, 77, 95, 0.05),
+        0 1px 0 rgba(255, 255, 255, 0.95) inset;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+.auth-input::placeholder {
+    color: #aeb5c0;
 }
 
 
 .auth-input:focus {
 
     border-color:
-        rgba(62,121,255,.82);
+        rgba(62, 121, 255, 0.82);
 
     box-shadow:
-        0 0 0 4px rgba(58,121,255,.09),
-        0 8px 20px rgba(67,77,95,.08);
+        0 0 0 4px
+        rgba(58, 121, 255, 0.09),
+
+        0 8px 20px
+        rgba(67, 77, 95, 0.08);
 }
 
 
@@ -437,7 +460,7 @@ textarea {
 
     cursor: pointer;
 
-    color: #fff;
+    color: #ffffff;
 
     font-weight: 800;
 
@@ -449,10 +472,15 @@ textarea {
         );
 
     box-shadow:
-        0 14px 28px rgba(49,97,224,.25),
-        0 2px 0 rgba(255,255,255,.35) inset;
+        0 14px 28px
+        rgba(49, 97, 224, 0.25),
 
-    transition: .25s ease;
+        0 2px 0
+        rgba(255, 255, 255, 0.35) inset;
+
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease;
 }
 
 
@@ -462,8 +490,11 @@ textarea {
         translateY(-2px);
 
     box-shadow:
-        0 18px 34px rgba(49,97,224,.30),
-        0 2px 0 rgba(255,255,255,.38) inset;
+        0 18px 34px
+        rgba(49, 97, 224, 0.30),
+
+        0 2px 0
+        rgba(255, 255, 255, 0.38) inset;
 }
 
 
@@ -503,13 +534,14 @@ textarea {
 
     font-weight: 800;
 
-    letter-spacing: .14em;
+    letter-spacing: 0.14em;
 }
 
 
 .auth-footer span {
 
-    margin: 0 4px;
+    margin:
+        0 4px;
 
     color: #7ca0ff;
 }
@@ -521,9 +553,11 @@ textarea {
 
     border:
         1px solid
-        rgba(70,126,255,.13);
+        rgba(70, 126, 255, 0.13);
 
     border-radius: 50%;
+
+    pointer-events: none;
 }
 
 
@@ -535,7 +569,8 @@ textarea {
     right: -160px;
     top: 70px;
 
-    transform: rotate(-17deg);
+    transform:
+        rotate(-17deg);
 }
 
 
@@ -547,7 +582,8 @@ textarea {
     left: -150px;
     bottom: 80px;
 
-    transform: rotate(18deg);
+    transform:
+        rotate(18deg);
 }
 
 
@@ -593,12 +629,13 @@ textarea {
 
     border-bottom:
         1px solid
-        rgba(218,223,232,.85);
+        rgba(218, 223, 232, 0.85);
 
     background:
-        rgba(248,250,253,.88);
+        rgba(248, 250, 253, 0.88);
 
-    backdrop-filter: blur(18px);
+    backdrop-filter:
+        blur(18px);
 }
 
 
@@ -629,7 +666,7 @@ textarea {
 
     font-weight: 800;
 
-    letter-spacing: .08em;
+    letter-spacing: 0.08em;
 }
 
 
@@ -643,7 +680,7 @@ textarea {
 
     font-weight: 800;
 
-    letter-spacing: .20em;
+    letter-spacing: 0.20em;
 }
 
 
@@ -669,8 +706,6 @@ textarea {
     border-radius: 14px;
 
     cursor: pointer;
-
-    transition: .25s ease;
 }
 
 
@@ -701,11 +736,11 @@ textarea {
 
     border-radius: 50%;
 
-    background:
-        var(--green);
+    background: var(--green);
 
     box-shadow:
-        0 0 10px rgba(56,212,138,.7);
+        0 0 10px
+        rgba(56, 212, 138, 0.7);
 }
 
 
@@ -721,16 +756,17 @@ textarea {
     background:
         linear-gradient(
             145deg,
-            #fff,
+            #ffffff,
             #e9edf3
         );
 
     border:
         1px solid
-        rgba(193,201,212,.8);
+        rgba(193, 201, 212, 0.8);
 
     box-shadow:
-        0 7px 18px rgba(51,61,77,.08);
+        0 7px 18px
+        rgba(51, 61, 77, 0.08);
 }
 
 
@@ -739,6 +775,7 @@ textarea {
     display: flex;
 
     align-items: center;
+
     justify-content: center;
 
     width: 36px;
@@ -796,7 +833,7 @@ textarea {
 
 
 /* =========================================================
-   MAIN
+   LAYOUT
 ========================================================= */
 
 .main-layout {
@@ -804,9 +841,9 @@ textarea {
     display: grid;
 
     grid-template-columns:
-        minmax(190px,235px)
-        minmax(0,1fr)
-        minmax(255px,310px);
+        minmax(190px, 235px)
+        minmax(0, 1fr)
+        minmax(255px, 310px);
 
     gap: 18px;
 
@@ -818,15 +855,6 @@ textarea {
         18px 24px 38px;
 }
 
-
-.content-area {
-    min-width: 0;
-}
-
-
-/* =========================================================
-   SIDEBAR
-========================================================= */
 
 .sidebar {
 
@@ -849,7 +877,7 @@ textarea {
 
     font-weight: 800;
 
-    letter-spacing: .18em;
+    letter-spacing: 0.18em;
 }
 
 
@@ -871,6 +899,15 @@ textarea {
     padding-top: 18px;
 }
 
+
+.content-area {
+    min-width: 0;
+}
+
+
+/* =========================================================
+   3D SIDE TILES
+========================================================= */
 
 .side-tile {
 
@@ -909,7 +946,7 @@ textarea {
 
     border:
         1px solid
-        rgba(174,183,197,.85);
+        rgba(174, 183, 197, 0.85);
 
     border-radius: 14px;
 
@@ -920,15 +957,22 @@ textarea {
     transform-style: preserve-3d;
 
     box-shadow:
-        0 12px 20px rgba(50,59,74,.14),
-        0 2px 0 rgba(255,255,255,.95) inset,
-        0 -2px 0 rgba(145,153,166,.26) inset;
+        0 12px 20px
+        rgba(50, 59, 74, 0.14),
+
+        0 2px 0
+        rgba(255, 255, 255, 0.95)
+        inset,
+
+        0 -2px 0
+        rgba(145, 153, 166, 0.26)
+        inset;
 
     transition:
-        transform .35s cubic-bezier(.2,.8,.2,1),
-        box-shadow .35s ease,
-        border-color .35s ease,
-        color .25s ease;
+        transform 0.35s cubic-bezier(.2,.8,.2,1),
+        box-shadow 0.35s ease,
+        border-color 0.35s ease,
+        color 0.25s ease;
 }
 
 
@@ -963,7 +1007,7 @@ textarea {
     pointer-events: none;
 
     transition:
-        transform .7s cubic-bezier(.2,.7,.2,1);
+        transform 0.7s cubic-bezier(.2,.7,.2,1);
 }
 
 
@@ -1012,10 +1056,23 @@ textarea {
         rgba(67,130,255,.78);
 
     box-shadow:
-        12px 18px 30px rgba(41,51,68,.18),
-        0 0 25px rgba(48,124,255,.26),
-        0 2px 0 rgba(255,255,255,.98) inset,
-        0 -2px 0 rgba(126,137,154,.26) inset;
+        12px 18px 30px
+        rgba(41,51,68,.18),
+
+        0 0 25px
+        rgba(48,124,255,.26),
+
+        0 2px 0
+        rgba(255,255,255,.98)
+        inset;
+}
+
+
+.side-tile:hover::before {
+
+    transform:
+        rotate(-12deg)
+        translateX(32%);
 }
 
 
@@ -1026,19 +1083,28 @@ textarea {
     background:
         linear-gradient(
             145deg,
-            #f8f9fb,
+            #f8f9fb 0%,
             #d9dee6 34%,
             #bcc3ce 59%,
-            #edf0f4
+            #edf0f4 100%
         );
 
     border-color:
         rgba(69,129,255,.86);
 
     box-shadow:
-        0 15px 28px rgba(41,50,68,.18),
-        0 0 22px rgba(43,123,255,.30),
-        0 2px 0 rgba(255,255,255,.98) inset;
+        0 15px 28px
+        rgba(41,50,68,.18),
+
+        0 0 22px
+        rgba(43,123,255,.30),
+
+        0 0 0 1px
+        rgba(52,124,255,.17),
+
+        0 2px 0
+        rgba(255,255,255,.98)
+        inset;
 }
 
 
@@ -1051,6 +1117,7 @@ textarea {
     display: flex;
 
     align-items: center;
+
     justify-content: center;
 
     width: 27px;
@@ -1062,6 +1129,10 @@ textarea {
 
     background:
         rgba(255,255,255,.52);
+
+    box-shadow:
+        0 2px 4px
+        rgba(57,67,80,.08);
 
     font-size: 13px;
 
@@ -1101,9 +1172,11 @@ textarea {
     display: flex;
 
     align-items: center;
+
     justify-content: center;
 
     min-width: 22px;
+
     height: 22px;
 
     border-radius: 8px;
@@ -1140,14 +1213,17 @@ textarea {
     background:
         linear-gradient(
             145deg,
-            #fff 0%,
+            #ffffff 0%,
             #eef3fa 52%,
             #e9edf5 100%
         );
 
     box-shadow:
         var(--shadow-card),
-        0 2px 0 rgba(255,255,255,.98) inset;
+
+        0 2px 0
+        rgba(255,255,255,.98)
+        inset;
 }
 
 
@@ -1157,20 +1233,22 @@ textarea {
 
     inset: 0;
 
-    opacity: .6;
+    opacity: 0.6;
 
     background:
         linear-gradient(
             rgba(93,127,202,.07) 1px,
             transparent 1px
         ),
+
         linear-gradient(
             90deg,
             rgba(93,127,202,.07) 1px,
             transparent 1px
         );
 
-    background-size: 38px 38px;
+    background-size:
+        38px 38px;
 }
 
 
@@ -1238,7 +1316,8 @@ textarea {
     right: -40px;
     top: 34px;
 
-    transform: rotate(-20deg);
+    transform:
+        rotate(-20deg);
 }
 
 
@@ -1250,7 +1329,8 @@ textarea {
     right: 30px;
     top: 75px;
 
-    transform: rotate(-20deg);
+    transform:
+        rotate(-20deg);
 }
 
 
@@ -1262,7 +1342,8 @@ textarea {
     right: 85px;
     top: 108px;
 
-    transform: rotate(-20deg);
+    transform:
+        rotate(-20deg);
 }
 
 
@@ -1314,6 +1395,10 @@ textarea {
 .hero-content h1 span {
 
     color: #5678f2;
+
+    text-shadow:
+        0 10px 25px
+        rgba(69,110,242,.18);
 }
 
 
@@ -1358,6 +1443,15 @@ textarea {
     font-size: 12px;
 
     font-weight: 800;
+
+    transition:
+        transform .25s ease;
+}
+
+
+.hero-button:hover {
+    transform:
+        translateY(-2px);
 }
 
 
@@ -1371,6 +1465,10 @@ textarea {
             #6286ff,
             #3f67e8
         );
+
+    box-shadow:
+        0 13px 24px
+        rgba(57,101,224,.21);
 }
 
 
@@ -1388,6 +1486,14 @@ textarea {
     border:
         1px solid
         rgba(187,196,209,.85);
+}
+
+
+.hero-button.secondary strong {
+
+    margin-left: 5px;
+
+    color: #4c70e9;
 }
 
 
@@ -1520,9 +1626,13 @@ textarea {
 
 .info-card-icon {
 
+    flex:
+        0 0 auto;
+
     display: flex;
 
     align-items: center;
+
     justify-content: center;
 
     width: 40px;
@@ -1559,7 +1669,7 @@ textarea {
 
 
 /* =========================================================
-   RIGHT
+   RIGHT COLUMN
 ========================================================= */
 
 .right-column {
@@ -1569,6 +1679,8 @@ textarea {
     flex-direction: column;
 
     gap: 14px;
+
+    min-width: 0;
 }
 
 
@@ -1630,10 +1742,13 @@ textarea {
     display: flex;
 
     align-items: center;
+
     justify-content: center;
 
     width: 58px;
     height: 58px;
+
+    flex: 0 0 auto;
 
     border-radius: 17px;
 
@@ -1645,6 +1760,10 @@ textarea {
             #7898ff,
             #496ce0
         );
+
+    box-shadow:
+        0 12px 22px
+        rgba(69,101,224,.18);
 
     font-size: 18px;
 
@@ -1658,6 +1777,8 @@ textarea {
         0 0 4px;
 
     font-size: 16px;
+
+    letter-spacing: -.02em;
 }
 
 
@@ -1791,6 +1912,92 @@ textarea {
 
 
 /* =========================================================
+   GAMES
+========================================================= */
+
+.games-list {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(0,1fr)
+        );
+
+    gap: 12px;
+}
+
+
+.game-card {
+
+    padding: 18px;
+
+    border:
+        1px solid
+        #e0e5ec;
+
+    border-radius: 18px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #fff,
+            #f1f4f8
+        );
+
+    box-shadow:
+        0 8px 20px
+        rgba(50,65,90,.05);
+}
+
+
+.game-card-title {
+
+    font-size: 15px;
+
+    font-weight: 800;
+}
+
+
+.game-card-description {
+
+    min-height: 40px;
+
+    margin-top: 7px;
+
+    color: #818a99;
+
+    font-size: 11px;
+
+    line-height: 1.55;
+}
+
+
+.game-chat-link {
+
+    min-height: 40px;
+
+    margin-top: 15px;
+
+    padding:
+        0 13px;
+
+    border-radius: 10px;
+
+    cursor: pointer;
+
+    color: #496ddd;
+
+    background: #edf1ff;
+
+    font-size: 10px;
+
+    font-weight: 800;
+}
+
+
+/* =========================================================
    CHAT
 ========================================================= */
 
@@ -1804,7 +2011,7 @@ textarea {
 
     gap: 14px;
 
-    min-height: 540px;
+    min-height: 560px;
 }
 
 
@@ -1913,14 +2120,13 @@ textarea {
 
     text-align: left;
 
-    background: transparent;
+    background:
+        transparent;
 }
 
 
 .chat-room-button:hover {
-
-    background:
-        #f0f3f7;
+    background: #f0f3f7;
 }
 
 
@@ -2009,7 +2215,7 @@ textarea {
 
     min-width: 0;
 
-    min-height: 540px;
+    min-height: 560px;
 
     border:
         1px solid
@@ -2104,7 +2310,8 @@ textarea {
         );
 
     box-shadow:
-        0 8px 18px rgba(60,100,220,.18);
+        0 8px 18px
+        rgba(60,100,220,.18);
 
     font-size: 10px;
 
@@ -2120,8 +2327,7 @@ textarea {
 
     overflow-y: auto;
 
-    padding:
-        18px;
+    padding: 18px;
 
     background:
         radial-gradient(
@@ -2140,8 +2346,6 @@ textarea {
 
     justify-content: center;
 
-    height: 100%;
-
     min-height: 280px;
 
     color: #a0a8b5;
@@ -2149,7 +2353,6 @@ textarea {
     text-align: center;
 
     font-size: 12px;
-
 }
 
 
@@ -2164,7 +2367,6 @@ textarea {
 
 
 .chat-message.own {
-
     justify-content: flex-end;
 }
 
@@ -2201,7 +2403,11 @@ textarea {
 
 .chat-message-body {
 
-    max-width: min(72%, 650px);
+    max-width:
+        min(
+            72%,
+            650px
+        );
 
     padding:
         9px 11px;
@@ -2218,7 +2424,8 @@ textarea {
 }
 
 
-.chat-message.own .chat-message-body {
+.chat-message.own
+.chat-message-body {
 
     border-radius:
         13px 13px 4px 13px;
@@ -2269,9 +2476,11 @@ textarea {
 }
 
 
-.chat-message.own .chat-message-meta {
+.chat-message.own
+.chat-message-meta {
 
-    color: rgba(255,255,255,.72);
+    color:
+        rgba(255,255,255,.72);
 }
 
 
@@ -2281,14 +2490,14 @@ textarea {
 
     gap: 8px;
 
-    padding:
-        12px;
+    padding: 12px;
 
     border-top:
         1px solid
         #ebeff4;
 
-    background: #fbfcfd;
+    background:
+        #fbfcfd;
 }
 
 
@@ -2341,218 +2550,8 @@ textarea {
 
 
 /* =========================================================
-   GAMES
+   ONLINE
 ========================================================= */
-
-.games-list {
-
-    display: grid;
-
-    grid-template-columns:
-        repeat(
-            2,
-            minmax(0,1fr)
-        );
-
-    gap: 12px;
-}
-
-
-.game-card {
-
-    padding: 18px;
-
-    border:
-        1px solid
-        #e0e5ec;
-
-    border-radius: 18px;
-
-    background:
-        linear-gradient(
-            145deg,
-            #fff,
-            #f1f4f8
-        );
-}
-
-
-.game-card-title {
-
-    font-size: 15px;
-
-    font-weight: 800;
-}
-
-
-.game-card-description {
-
-    min-height: 38px;
-
-    margin-top: 7px;
-
-    color: #818a99;
-
-    font-size: 11px;
-
-    line-height: 1.55;
-}
-
-
-.game-card-footer {
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-    gap: 10px;
-
-    margin-top: 15px;
-}
-
-
-.game-chat-link {
-
-    min-height: 38px;
-
-    padding:
-        0 12px;
-
-    border-radius: 10px;
-
-    cursor: pointer;
-
-    color: #496ddd;
-
-    background: #edf1ff;
-
-    font-size: 10px;
-
-    font-weight: 800;
-}
-
-
-/* =========================================================
-   MODALS
-========================================================= */
-
-.modal-overlay {
-
-    position: fixed;
-
-    inset: 0;
-
-    z-index: 300;
-
-    display: none;
-
-    align-items: center;
-    justify-content: center;
-
-    padding: 20px;
-
-    background:
-        rgba(27,34,48,.36);
-
-    backdrop-filter:
-        blur(8px);
-}
-
-
-.modal-overlay.open {
-    display: flex;
-}
-
-
-.modal-card {
-
-    position: relative;
-
-    width: min(540px,100%);
-
-    max-height:
-        calc(100vh - 40px);
-
-    overflow: auto;
-
-    padding: 28px;
-
-    border:
-        1px solid
-        rgba(193,201,213,.9);
-
-    border-radius: 23px;
-
-    background:
-        linear-gradient(
-            145deg,
-            #fff,
-            #eef1f6
-        );
-
-    box-shadow:
-        0 30px 80px rgba(33,44,64,.24);
-}
-
-
-.modal-close {
-
-    position: absolute;
-
-    top: 13px;
-    right: 13px;
-
-    width: 35px;
-    height: 35px;
-
-    border-radius: 10px;
-
-    color: #737e90;
-
-    background: #e8ecf2;
-
-    cursor: pointer;
-
-    font-size: 21px;
-}
-
-
-.modal-kicker {
-
-    color: #7d95df;
-
-    font-size: 9px;
-
-    font-weight: 800;
-
-    letter-spacing: .18em;
-}
-
-
-.modal-card h2 {
-
-    margin:
-        6px 0 8px;
-
-    font-size: 24px;
-
-    letter-spacing: -.04em;
-}
-
-
-.modal-description {
-
-    margin: 0;
-
-    color: #7b8594;
-
-    font-size: 12px;
-
-    line-height: 1.6;
-}
-
 
 .online-modal-status {
 
@@ -2565,7 +2564,6 @@ textarea {
 
 
 .online-modal-status strong {
-
     color: #3e63da;
 }
 
@@ -2608,6 +2606,7 @@ textarea {
     display: flex;
 
     align-items: center;
+
     justify-content: center;
 
     width: 38px;
@@ -2661,6 +2660,120 @@ textarea {
     font-size: 9px;
 
     font-weight: 700;
+}
+
+
+/* =========================================================
+   MODALS
+========================================================= */
+
+.modal-overlay {
+
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 300;
+
+    display: none;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 20px;
+
+    background:
+        rgba(27,34,48,.36);
+
+    backdrop-filter:
+        blur(8px);
+}
+
+
+.modal-overlay.open {
+    display: flex;
+}
+
+
+.modal-card {
+
+    position: relative;
+
+    width:
+        min(
+            540px,
+            100%
+        );
+
+    max-height:
+        calc(100vh - 40px);
+
+    overflow: auto;
+
+    padding: 28px;
+
+    border:
+        1px solid
+        rgba(193,201,213,.9);
+
+    border-radius: 23px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #fff,
+            #eef1f6
+        );
+
+    box-shadow:
+        0 30px 80px
+        rgba(33,44,64,.24);
+}
+
+
+.modal-close {
+
+    position: absolute;
+
+    top: 13px;
+    right: 13px;
+
+    width: 35px;
+    height: 35px;
+
+    border-radius: 10px;
+
+    color: #737e90;
+
+    background: #e8ecf2;
+
+    cursor: pointer;
+
+    font-size: 21px;
+}
+
+
+.modal-kicker {
+
+    color: #7d95df;
+
+    font-size: 9px;
+
+    font-weight: 800;
+
+    letter-spacing: .18em;
+}
+
+
+.modal-card h2 {
+
+    margin:
+        6px 0 8px;
+
+    font-size: 24px;
+
+    letter-spacing: -.04em;
 }
 
 
@@ -2727,12 +2840,21 @@ textarea {
 }
 
 
+.modal-message.error {
+    color: var(--red);
+}
+
+
+.modal-message.success {
+    color: #2ea970;
+}
+
+
 /* =========================================================
-   VIDEO CALL
+   VIDEO CONFERENCE
 ========================================================= */
 
 .call-overlay {
-
     z-index: 500;
 }
 
@@ -2765,8 +2887,7 @@ textarea {
 
     border-radius: 24px;
 
-    background:
-        #10141d;
+    background: #10141d;
 
     box-shadow:
         0 40px 100px
@@ -2878,6 +2999,7 @@ textarea {
             rgba(70,111,255,.10),
             transparent 40%
         ),
+
         #0b0f16;
 }
 
@@ -2904,13 +3026,14 @@ textarea {
 .call-video-tile video {
 
     width: 100%;
+
     height: 100%;
 
     min-height: 180px;
 
-    object-fit: cover;
-
     display: block;
+
+    object-fit: cover;
 
     background: #10151e;
 }
@@ -2933,28 +3056,12 @@ textarea {
     background:
         rgba(8,11,18,.65);
 
-    backdrop-filter: blur(5px);
+    backdrop-filter:
+        blur(5px);
 
     font-size: 9px;
 
     font-weight: 700;
-}
-
-
-.call-placeholder {
-
-    position: absolute;
-
-    inset: 0;
-
-    display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    color: #75819a;
-
-    font-size: 12px;
 }
 
 
@@ -2963,14 +3070,14 @@ textarea {
     display: flex;
 
     align-items: center;
+
     justify-content: center;
 
     flex-wrap: wrap;
 
     gap: 8px;
 
-    padding:
-        13px;
+    padding: 13px;
 
     border-top:
         1px solid
@@ -3041,12 +3148,6 @@ textarea {
 }
 
 
-.call-control-icon {
-
-    font-size: 13px;
-}
-
-
 .call-message {
 
     min-height: 22px;
@@ -3058,7 +3159,8 @@ textarea {
 
     color: #8c98ab;
 
-    background: #10141d;
+    background:
+        #10141d;
 
     font-size: 10px;
 }
@@ -3073,6 +3175,7 @@ textarea {
     position: fixed;
 
     right: 12px;
+
     bottom: 9px;
 
     z-index: 40;
@@ -3084,6 +3187,8 @@ textarea {
     font-weight: 800;
 
     letter-spacing: .10em;
+
+    pointer-events: none;
 }
 
 
@@ -3171,39 +3276,26 @@ textarea {
 
 
     .hero-content {
-
         padding: 38px;
     }
 
 
     .welcome-grid {
-
         grid-template-columns: 1fr;
     }
 
 
     .chat-layout {
-
         grid-template-columns: 1fr;
-
-        min-height: auto;
     }
 
 
     .chat-rooms-panel {
-
         max-height: 260px;
     }
 
 
-    .chat-main {
-
-        min-height: 520px;
-    }
-
-
     .games-list {
-
         grid-template-columns: 1fr;
     }
 
@@ -3247,16 +3339,8 @@ textarea {
     }
 
 
-    .right-column {
-        grid-template-columns: 1fr;
-    }
-
-
-    .side-navigation {
-        grid-template-columns: 1fr;
-    }
-
-
+    .right-column,
+    .side-navigation,
     .sidebar-bottom {
         grid-template-columns: 1fr;
     }
@@ -3267,16 +3351,13 @@ textarea {
     }
 
 
-    .auth-card {
-        padding: 25px;
-    }
-
-
     .chat-header {
 
-        align-items: flex-start;
+        align-items:
+            flex-start;
 
-        flex-direction: column;
+        flex-direction:
+            column;
     }
 
 
@@ -3286,7 +3367,6 @@ textarea {
 
 
     .chat-form {
-
         flex-direction: column;
     }
 
@@ -3299,6 +3379,7 @@ textarea {
     .call-card {
 
         width: 100%;
+
         height: 100%;
 
         border-radius: 0;
@@ -3309,6 +3390,11 @@ textarea {
 
         grid-template-columns:
             1fr;
+    }
+
+
+    .auth-card {
+        padding: 25px;
     }
 
 }
