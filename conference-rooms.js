@@ -1,5756 +1,2493 @@
+/* =========================================================
+   GAME PLATFORM
+   CONFERENCE ROOMS
+   Version 2.0
+   Supabase + Realtime + WebRTC
+
+   ВАЖНО:
+   Этот файл НЕ управляет #app-shell и #page-content.
+   Конференция работает отдельным модальным окном.
+   ========================================================= */
+
 (function () {
-  "use strict";
+    "use strict";
 
-  /*
-   * =========================================================
-   * GAME PLATFORM
-   * CONFERENCE ROOMS
-   * =========================================================
-   *
-   * Возможности:
-   *
-   * - постоянный список конференций из Supabase
-   * - создание комнат
-   * - список участников
-   * - количество участников
-   * - кнопка "Присоединиться"
-   * - выход из комнаты
-   * - микрофон
-   * - камера
-   * - демонстрация экрана
-   * - WebRTC
-   * - Supabase Realtime Presence
-   * - Supabase Realtime Broadcast
-   *
-   * Python не используется.
-   */
+    const SUPABASE_URL = "https://tpdpciooxfulythevhgw.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_yNWxh02tapOVUQN9iJ_2_Q_IPVc60J3";
 
-  const SUPABASE_URL =
-    "https://tpdpciooxfulythevhgw.supabase.co";
-
-  const SUPABASE_KEY =
-    "sb_publishable_yNWxh02tapOVUQN9iJ_2_Q_IPVc60J3";
-
-
-  /*
-   * ---------------------------------------------------------
-   * SUPABASE CLIENT
-   * ---------------------------------------------------------
-   */
-
-  let db = null;
-
-  try {
-    if (
-      window.GamePlatform &&
-      window.GamePlatform.supabase
-    ) {
-      db = window.GamePlatform.supabase;
+    if (!window.supabase) {
+        console.error("[Conference] Supabase CDN не найден.");
+        return;
     }
 
-    if (
-      !db &&
-      window.GamePlatform &&
-      window.GamePlatform.db
-    ) {
-      db = window.GamePlatform.db;
-    }
-
-    if (
-      !db &&
-      window.supabaseClient
-    ) {
-      db = window.supabaseClient;
-    }
-
-    if (
-      !db &&
-      window.supabase &&
-      typeof window.supabase.createClient === "function"
-    ) {
-      db = window.supabase.createClient(
+    const db = window.supabase.createClient(
         SUPABASE_URL,
         SUPABASE_KEY
-      );
-    }
-  } catch (error) {
-    console.error(
-      "Conference Supabase initialization error:",
-      error
     );
-  }
 
+    let currentUser = null;
+    let currentRoom = null;
+    let roomChannel = null;
+    let memberChannel = null;
 
-  /*
-   * ---------------------------------------------------------
-   * STATE
-   * ---------------------------------------------------------
-   */
+    let localStream = null;
+    let screenStream = null;
 
-  const state = {
+    const peers = {};
+    const remoteStreams = {};
 
-    session: null,
+    let conferenceInitialized = false;
 
-    user: null,
+    /* =========================================================
+       STYLES
+       ========================================================= */
 
-    profile: null,
-
-    rooms: [],
-
-    lobbyChannel: null,
-
-    lobbyPresence: {},
-
-    currentRoom: null,
-
-    roomChannel: null,
-
-    peers: new Map(),
-
-    remoteStreams: new Map(),
-
-    localStream: null,
-
-    cameraStream: null,
-
-    screenStream: null,
-
-    isMicEnabled: false,
-
-    isCameraEnabled: false,
-
-    isScreenSharing: false,
-
-    selectedMicId: "",
-
-    selectedCameraId: "",
-
-    selectedSpeakerId: "",
-
-    videoQuality: "720p",
-
-    pollingTimer: null,
-
-    lobbyReady: false,
-
-    initialized: false,
-
-    loadingRooms: false,
-
-    pendingOffers: new Map(),
-
-    ui: {}
-
-  };
-
-
-  /*
-   * ---------------------------------------------------------
-   * CONSTANTS
-   * ---------------------------------------------------------
-   */
-
-  const LOBBY_TOPIC =
-    "game-platform-conference-lobby-v3";
-
-  const ROOM_TOPIC_PREFIX =
-    "game-platform-conference-room-v3-";
-
-  const ROOM_POLL_INTERVAL =
-    5000;
-
-
-  /*
-   * ---------------------------------------------------------
-   * STYLES
-   * ---------------------------------------------------------
-   */
-
-  function injectStyles() {
-
-    if (
-      document.getElementById(
-        "conference-rooms-runtime-style"
-      )
-    ) {
-      return;
-    }
-
-    const style =
-      document.createElement("style");
-
-    style.id =
-      "conference-rooms-runtime-style";
-
-    style.textContent = `
-
-      .conference-modal {
-        width: min(1180px, calc(100vw - 30px));
-        max-width: 1180px;
-        max-height: calc(100vh - 30px);
-        overflow: hidden;
-      }
-
-      .conference-root {
-        min-height: 560px;
-        display: flex;
-        flex-direction: column;
-      }
-
-      .conference-loading {
-        min-height: 400px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #667085;
-        font-size: 15px;
-      }
-
-      .conference-message {
-        margin-bottom: 14px;
-        padding: 10px 13px;
-        border-radius: 12px;
-        background: #f1f4f8;
-        border: 1px solid #e1e6ed;
-        color: #303846;
-        font-size: 13px;
-      }
-
-      .conference-message.error {
-        background: #fff1f1;
-        border-color: #ffd2d2;
-        color: #a31d1d;
-      }
-
-      .conference-message.success {
-        background: #eefbf3;
-        border-color: #ccefd8;
-        color: #176b39;
-      }
-
-      .conference-lobby {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 320px;
-        gap: 18px;
-        min-height: 520px;
-      }
-
-      .conference-main-panel,
-      .conference-side-panel {
-        background: rgba(255,255,255,.92);
-        border: 1px solid #e0e5ec;
-        border-radius: 18px;
-        box-shadow:
-          0 10px 30px rgba(40, 55, 75, .08);
-      }
-
-      .conference-main-panel {
-        padding: 18px;
-        overflow: hidden;
-      }
-
-      .conference-side-panel {
-        padding: 18px;
-      }
-
-      .conference-toolbar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 15px;
-      }
-
-      .conference-toolbar-title {
-        display: flex;
-        flex-direction: column;
-        gap: 3px;
-      }
-
-      .conference-toolbar-title strong {
-        font-size: 18px;
-        color: #111827;
-      }
-
-      .conference-toolbar-title span {
-        font-size: 12px;
-        color: #7b8492;
-      }
-
-      .conference-toolbar-actions {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-
-      .conference-button {
-        border: 1px solid #d7dde6;
-        background: linear-gradient(
-          180deg,
-          #ffffff 0%,
-          #eef2f6 100%
-        );
-        color: #171b22;
-        border-radius: 11px;
-        padding: 9px 13px;
-        font-size: 13px;
-        font-weight: 700;
-        cursor: pointer;
-        transition: .18s ease;
-      }
-
-      .conference-button:hover {
-        transform: translateY(-1px);
-        border-color: #b8c3d0;
-        box-shadow:
-          0 6px 18px rgba(40,55,75,.10);
-      }
-
-      .conference-button.primary {
-        background: #111827;
-        color: #fff;
-        border-color: #111827;
-      }
-
-      .conference-button.blue {
-        background: #eaf4ff;
-        border-color: #bddcff;
-        color: #145ca8;
-      }
-
-      .conference-button.danger {
-        background: #fff0f0;
-        border-color: #ffcaca;
-        color: #b42323;
-      }
-
-      .conference-button:disabled {
-        opacity: .5;
-        cursor: not-allowed;
-        transform: none;
-      }
-
-      .conference-room-list {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        max-height: 455px;
-        overflow-y: auto;
-        padding-right: 3px;
-      }
-
-      .conference-room-card {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 14px;
-        align-items: center;
-        padding: 15px;
-        border: 1px solid #e0e5eb;
-        border-radius: 15px;
-        background: #fff;
-        transition: .18s ease;
-      }
-
-      .conference-room-card:hover {
-        border-color: #bcc7d4;
-        box-shadow:
-          0 8px 20px rgba(30,45,65,.07);
-      }
-
-      .conference-room-card.active {
-        border-color: #78aee8;
-        background: #f7fbff;
-      }
-
-      .conference-room-info {
-        min-width: 0;
-      }
-
-      .conference-room-name-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 5px;
-      }
-
-      .conference-room-name {
-        font-size: 15px;
-        font-weight: 800;
-        color: #151a22;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .conference-live-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #31c66b;
-        box-shadow: 0 0 0 4px rgba(49,198,107,.10);
-        flex: 0 0 auto;
-      }
-
-      .conference-room-description {
-        font-size: 12px;
-        line-height: 1.45;
-        color: #737d8b;
-        margin-bottom: 8px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .conference-room-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 7px;
-      }
-
-      .conference-meta-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        padding: 5px 8px;
-        border-radius: 999px;
-        background: #f2f5f8;
-        color: #596575;
-        font-size: 11px;
-        font-weight: 700;
-      }
-
-      .conference-room-actions {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-      }
-
-      .conference-empty {
-        min-height: 280px;
-        border: 1px dashed #cfd6df;
-        border-radius: 15px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        padding: 30px;
-        color: #747e8d;
-      }
-
-      .conference-empty-icon {
-        font-size: 38px;
-        margin-bottom: 10px;
-      }
-
-      .conference-empty strong {
-        color: #303743;
-        margin-bottom: 5px;
-      }
-
-      .conference-side-title {
-        font-size: 11px;
-        letter-spacing: .12em;
-        font-weight: 800;
-        color: #8a94a2;
-        margin-bottom: 12px;
-      }
-
-      .conference-current-user {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 10px;
-        border-radius: 13px;
-        background: #f5f7fa;
-        margin-bottom: 18px;
-      }
-
-      .conference-current-user-avatar {
-        width: 38px;
-        height: 38px;
-        border-radius: 50%;
-        object-fit: cover;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #e4e9ef;
-        overflow: hidden;
-        flex: 0 0 auto;
-      }
-
-      .conference-current-user-avatar img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-
-      .conference-current-user-data {
-        min-width: 0;
-      }
-
-      .conference-current-user-data strong {
-        display: block;
-        font-size: 13px;
-        color: #202630;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .conference-current-user-data span {
-        display: block;
-        font-size: 11px;
-        color: #7a8491;
-        margin-top: 2px;
-      }
-
-      .conference-create-form {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-
-      .conference-create-form label {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-      }
-
-      .conference-create-form label span {
-        font-size: 11px;
-        font-weight: 700;
-        color: #687383;
-      }
-
-      .conference-create-form input,
-      .conference-create-form textarea,
-      .conference-select {
-        width: 100%;
-        box-sizing: border-box;
-        border: 1px solid #d8dee7;
-        background: #fff;
-        border-radius: 10px;
-        padding: 10px 11px;
-        outline: none;
-        color: #1c2430;
-        font: inherit;
-        font-size: 13px;
-      }
-
-      .conference-create-form textarea {
-        resize: vertical;
-        min-height: 75px;
-      }
-
-      .conference-create-form input:focus,
-      .conference-create-form textarea:focus,
-      .conference-select:focus {
-        border-color: #8db7e7;
-        box-shadow: 0 0 0 3px rgba(82,146,220,.10);
-      }
-
-      .conference-hint {
-        font-size: 11px;
-        color: #8993a0;
-        line-height: 1.45;
-        margin-top: 4px;
-      }
-
-      .conference-room-view {
-        display: flex;
-        flex-direction: column;
-        min-height: 570px;
-      }
-
-      .conference-room-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 15px;
-        margin-bottom: 13px;
-      }
-
-      .conference-room-heading {
-        min-width: 0;
-      }
-
-      .conference-room-heading strong {
-        display: block;
-        font-size: 20px;
-        color: #141922;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .conference-room-heading span {
-        display: block;
-        font-size: 12px;
-        color: #77818f;
-        margin-top: 4px;
-      }
-
-      .conference-room-top-actions {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-      }
-
-      .conference-stage {
-        flex: 1;
-        min-height: 390px;
-        display: grid;
-        grid-template-columns: repeat(
-          auto-fit,
-          minmax(190px, 1fr)
-        );
-        gap: 12px;
-        padding: 12px;
-        border-radius: 17px;
-        background:
-          radial-gradient(
-            circle at 50% 0%,
-            rgba(115,156,205,.15),
-            transparent 40%
-          ),
-          #111820;
-        border: 1px solid #293441;
-        overflow-y: auto;
-      }
-
-      .conference-video-tile {
-        position: relative;
-        min-height: 170px;
-        border-radius: 14px;
-        overflow: hidden;
-        background: #202832;
-        border: 1px solid rgba(255,255,255,.09);
-      }
-
-      .conference-video-tile video {
-        width: 100%;
-        height: 100%;
-        min-height: 170px;
-        object-fit: cover;
-        display: block;
-        background: #161c23;
-      }
-
-      .conference-video-tile.audio-only video {
-        opacity: .08;
-      }
-
-      .conference-avatar-fallback {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 48px;
-        background:
-          radial-gradient(
-            circle,
-            #34404f,
-            #161d25 70%
-          );
-        pointer-events: none;
-      }
-
-      .conference-video-label {
-        position: absolute;
-        left: 8px;
-        bottom: 8px;
-        right: 8px;
-        display: flex;
-        justify-content: space-between;
-        gap: 7px;
-        align-items: center;
-        padding: 7px 9px;
-        border-radius: 9px;
-        background: rgba(0,0,0,.58);
-        backdrop-filter: blur(8px);
-        color: #fff;
-        font-size: 11px;
-        font-weight: 700;
-      }
-
-      .conference-video-status {
-        display: flex;
-        gap: 5px;
-        align-items: center;
-        opacity: .85;
-        font-weight: 500;
-      }
-
-      .conference-mic-off {
-        color: #ff8f8f;
-      }
-
-      .conference-controls {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        padding: 13px 0 0;
-      }
-
-      .conference-control {
-        width: 46px;
-        height: 42px;
-        border-radius: 12px;
-        border: 1px solid #d3dbe5;
-        background: linear-gradient(
-          180deg,
-          #ffffff,
-          #e9eef4
-        );
-        color: #1b2330;
-        cursor: pointer;
-        font-size: 17px;
-        transition: .18s ease;
-      }
-
-      .conference-control:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 6px 15px rgba(0,0,0,.10);
-      }
-
-      .conference-control.active {
-        background: #e8f5ed;
-        border-color: #9bd4ae;
-        color: #16743d;
-      }
-
-      .conference-control.off {
-        background: #fff0f0;
-        border-color: #ffc8c8;
-        color: #b42020;
-      }
-
-      .conference-control.leave {
-        width: auto;
-        padding: 0 17px;
-        background: #111827;
-        color: #fff;
-        border-color: #111827;
-        font-size: 13px;
-        font-weight: 800;
-      }
-
-      .conference-settings {
-        margin-top: 13px;
-        display: flex;
-        justify-content: center;
-      }
-
-      .conference-settings-panel {
-        width: min(760px, 100%);
-        display: none;
-        grid-template-columns: repeat(
-          3,
-          minmax(0,1fr)
-        );
-        gap: 10px;
-        padding: 13px;
-        border-radius: 14px;
-        background: #f5f7fa;
-        border: 1px solid #e0e5eb;
-      }
-
-      .conference-settings-panel.open {
-        display: grid;
-      }
-
-      .conference-setting {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-      }
-
-      .conference-setting span {
-        font-size: 10px;
-        font-weight: 800;
-        color: #737d8a;
-      }
-
-      .conference-participants-title {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-      }
-
-      .conference-participants-title strong {
-        font-size: 13px;
-        color: #252c37;
-      }
-
-      .conference-participants-title span {
-        font-size: 11px;
-        color: #7b8592;
-      }
-
-      .conference-participants-list {
-        display: flex;
-        flex-direction: column;
-        gap: 7px;
-        max-height: 220px;
-        overflow-y: auto;
-      }
-
-      .conference-participant-row {
-        display: flex;
-        align-items: center;
-        gap: 9px;
-        padding: 8px;
-        border-radius: 10px;
-        background: #f6f8fa;
-      }
-
-      .conference-participant-avatar {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        overflow: hidden;
-        background: #dfe5ec;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex: 0 0 auto;
-      }
-
-      .conference-participant-avatar img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-
-      .conference-participant-data {
-        min-width: 0;
-        flex: 1;
-      }
-
-      .conference-participant-data strong {
-        display: block;
-        color: #2a3039;
-        font-size: 12px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .conference-participant-data span {
-        display: block;
-        color: #818b98;
-        font-size: 10px;
-        margin-top: 2px;
-      }
-
-      .conference-empty-participants {
-        padding: 15px;
-        text-align: center;
-        font-size: 11px;
-        color: #87919e;
-        border: 1px dashed #d2d9e2;
-        border-radius: 10px;
-      }
-
-      @media (max-width: 900px) {
-
-        .conference-lobby {
-          grid-template-columns: 1fr;
-        }
-
-        .conference-side-panel {
-          order: -1;
-        }
-
-        .conference-root {
-          min-height: auto;
-        }
-
-        .conference-main-panel {
-          min-height: 450px;
-        }
-
-        .conference-room-list {
-          max-height: 420px;
-        }
-
-        .conference-settings-panel {
-          grid-template-columns: 1fr;
-        }
-
-      }
-
-      @media (max-width: 600px) {
-
-        .conference-modal {
-          width: calc(100vw - 12px);
-          max-height: calc(100vh - 12px);
-        }
-
-        .conference-room-card {
-          grid-template-columns: 1fr;
-        }
-
-        .conference-room-actions {
-          justify-content: stretch;
-        }
-
-        .conference-room-actions button {
-          flex: 1;
-        }
-
-        .conference-room-top {
-          flex-direction: column;
-          align-items: stretch;
-        }
-
-        .conference-room-top-actions {
-          justify-content: stretch;
-        }
-
-        .conference-room-top-actions button {
-          flex: 1;
-        }
-
-        .conference-stage {
-          grid-template-columns: 1fr;
-        }
-
-      }
-
-    `;
-
-    document.head.appendChild(style);
-  }
-
-
-  /*
-   * ---------------------------------------------------------
-   * DOM
-   * ---------------------------------------------------------
-   */
-
-  function getRoot() {
-    return document.getElementById(
-      "conference-root"
-    );
-  }
-
-
-  function openModal() {
-
-    const modal =
-      document.getElementById(
-        "conference-modal"
-      );
-
-    if (!modal) {
-      return;
-    }
-
-    modal.classList.add("active");
-    modal.style.display = "flex";
-    modal.removeAttribute("hidden");
-
-    renderLobby();
-
-    loadRooms();
-  }
-
-
-  function closeModal() {
-
-    const modal =
-      document.getElementById(
-        "conference-modal"
-      );
-
-    if (!modal) {
-      return;
-    }
-
-    modal.classList.remove("active");
-    modal.style.display = "none";
-  }
-
-
-  /*
-   * ---------------------------------------------------------
-   * HELPERS
-   * ---------------------------------------------------------
-   */
-
-  function escapeHtml(value) {
-
-    return String(value || "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-
-
-  function getAvatarUrl(profile) {
-
-    if (
-      profile &&
-      profile.avatar_url
-    ) {
-      return profile.avatar_url;
-    }
-
-    return "";
-  }
-
-
-  function getNickname(profile) {
-
-    if (
-      profile &&
-      profile.nickname
-    ) {
-      return profile.nickname;
-    }
-
-    return "Player";
-  }
-
-
-  function avatarHtml(profile, className) {
-
-    const avatar =
-      getAvatarUrl(profile);
-
-    if (avatar) {
-
-      return `
-        <div class="${className}">
-          <img
-            src="${escapeHtml(avatar)}"
-            alt=""
-            onerror="this.parentElement.innerHTML='🤖';"
-          >
-        </div>
-      `;
-
-    }
-
-    return `
-      <div class="${className}">
-        🤖
-      </div>
-    `;
-  }
-
-
-  function showMessage(
-    message,
-    type
-  ) {
-
-    const root = getRoot();
-
-    if (!root) {
-      return;
-    }
-
-    let element =
-      document.getElementById(
-        "conference-message"
-      );
-
-    if (!element) {
-
-      element =
-        document.createElement("div");
-
-      element.id =
-        "conference-message";
-
-      element.className =
-        "conference-message";
-
-      root.prepend(element);
-    }
-
-    element.className =
-      "conference-message" +
-      (type ? " " + type : "");
-
-    element.textContent =
-      message;
-
-    window.setTimeout(() => {
-
-      if (
-        element &&
-        element.parentNode
-      ) {
-        element.remove();
-      }
-
-    }, 5000);
-  }
-
-
-  /*
-   * ---------------------------------------------------------
-   * AUTH
-   * ---------------------------------------------------------
-   */
-
-  async function loadSession() {
-
-    if (!db) {
-      return null;
-    }
-
-    try {
-
-      const result =
-        await db.auth.getSession();
-
-      if (
-        result &&
-        result.data
-      ) {
-        state.session =
-          result.data.session || null;
-
-        state.user =
-          state.session
-            ? state.session.user
-            : null;
-      }
-
-      return state.session;
-
-    } catch (error) {
-
-      console.error(
-        "Conference getSession error:",
-        error
-      );
-
-      return null;
-    }
-  }
-
-
-  async function loadProfile() {
-
-    if (
-      !db ||
-      !state.user
-    ) {
-      return null;
-    }
-
-    try {
-
-      const result =
-        await db
-          .from("profiles")
-          .select("*")
-          .eq("id", state.user.id)
-          .maybeSingle();
-
-      if (
-        result.error
-      ) {
-        console.warn(
-          "Conference profile error:",
-          result.error
-        );
-
-        return null;
-      }
-
-      state.profile =
-        result.data || {
-          id: state.user.id,
-          nickname:
-            state.user.email ||
-            "Player"
-        };
-
-      return state.profile;
-
-    } catch (error) {
-
-      console.error(
-        "Conference profile exception:",
-        error
-      );
-
-      return null;
-    }
-  }
-
-
-  /*
-   * ---------------------------------------------------------
-   * LOBBY PRESENCE
-   * ---------------------------------------------------------
-   */
-
-  async function startLobbyPresence() {
-
-    if (
-      !db ||
-      !state.user
-    ) {
-      return;
-    }
-
-    if (
-      state.lobbyChannel
-    ) {
-
-      try {
-        await db.removeChannel(
-          state.lobbyChannel
-        );
-      } catch (error) {
-        console.warn(error);
-      }
-
-      state.lobbyChannel = null;
-    }
-
-
-    const channel =
-      db.channel(
-        LOBBY_TOPIC,
-        {
-          config: {
-            presence: {
-              key: state.user.id
-            }
-          }
-        }
-      );
-
-    state.lobbyChannel =
-      channel;
-
-
-    channel
-      .on(
-        "presence",
-        {
-          event: "sync"
-        },
-        () => {
-
-          state.lobbyPresence =
-            channel.presenceState();
-
-          renderLobby();
-
-        }
-      )
-      .on(
-        "presence",
-        {
-          event: "join"
-        },
-        () => {
-
-          state.lobbyPresence =
-            channel.presenceState();
-
-          renderLobby();
-
-        }
-      )
-      .on(
-        "presence",
-        {
-          event: "leave"
-        },
-        () => {
-
-          state.lobbyPresence =
-            channel.presenceState();
-
-          renderLobby();
-
-        }
-      );
-
-
-    const status =
-      await new Promise((resolve) => {
-
-        let finished = false;
-
-        const finish = (value) => {
-
-          if (finished) {
+    function injectStyles() {
+        if (document.getElementById("conference-v2-styles")) {
             return;
-          }
-
-          finished = true;
-          resolve(value);
-        };
-
-        channel.subscribe(
-          async (subscriptionStatus) => {
-
-            if (
-              subscriptionStatus ===
-              "SUBSCRIBED"
-            ) {
-
-              state.lobbyReady =
-                true;
-
-              await updateLobbyPresence();
-
-              finish(true);
-
-              return;
-            }
-
-            if (
-              subscriptionStatus ===
-              "CHANNEL_ERROR" ||
-              subscriptionStatus ===
-              "TIMED_OUT"
-            ) {
-
-              finish(false);
-
-            }
-
-          }
-        );
-
-        window.setTimeout(
-          () => finish(false),
-          10000
-        );
-
-      });
-
-
-    if (!status) {
-
-      console.warn(
-        "Conference lobby realtime is unavailable."
-      );
-
-    }
-
-  }
-
-
-  async function updateLobbyPresence() {
-
-    if (
-      !state.lobbyChannel ||
-      !state.user
-    ) {
-      return;
-    }
-
-    try {
-
-      await state.lobbyChannel.track({
-
-        userId:
-          state.user.id,
-
-        nickname:
-          getNickname(state.profile),
-
-        avatarUrl:
-          getAvatarUrl(state.profile),
-
-        status:
-          state.profile &&
-          state.profile.status
-            ? state.profile.status
-            : "Онлайн",
-
-        roomId:
-          state.currentRoom
-            ? state.currentRoom.id
-            : null,
-
-        roomName:
-          state.currentRoom
-            ? state.currentRoom.name
-            : null,
-
-        updatedAt:
-          new Date().toISOString()
-
-      });
-
-    } catch (error) {
-
-      console.warn(
-        "Conference presence track error:",
-        error
-      );
-
-    }
-  }
-
-
-  /*
-   * ---------------------------------------------------------
-   * PRESENCE NORMALIZATION
-   * ---------------------------------------------------------
-   */
-
-  function getLobbyUsers() {
-
-    const result = [];
-
-    const source =
-      state.lobbyPresence || {};
-
-
-    Object.keys(source).forEach(
-      (presenceKey) => {
-
-        const records =
-          source[presenceKey] || [];
-
-        if (!records.length) {
-          return;
         }
 
-        /*
-         * Если пользователь открыл несколько вкладок,
-         * берем последнюю запись.
-         */
+        const style = document.createElement("style");
+        style.id = "conference-v2-styles";
 
-        const record =
-          records[records.length - 1];
+        style.textContent = `
+        #conference-v2-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: rgba(15, 20, 30, 0.55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
 
-        result.push(record);
+        #conference-v2-modal.open {
+            display: flex;
+        }
 
-      }
-    );
+        .conference-v2-window {
+            width: min(1180px, 96vw);
+            height: min(760px, 92vh);
+            min-height: 520px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #f7f9fc;
+            border: 1px solid rgba(0,0,0,.14);
+            border-radius: 28px;
+            box-shadow:
+                0 30px 80px rgba(0,0,0,.25),
+                0 0 35px rgba(80,150,255,.10);
+        }
 
-    return result;
-  }
+        .conference-v2-header {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 18px 22px;
+            background: rgba(255,255,255,.92);
+            border-bottom: 1px solid rgba(0,0,0,.08);
+        }
 
+        .conference-v2-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
 
-  function getRoomParticipants(
-    roomId
-  ) {
+        .conference-v2-logo {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            color: #111;
+            background: linear-gradient(145deg,#ffffff,#dfe4ea);
+            border: 1px solid rgba(0,0,0,.16);
+            box-shadow:
+                inset 0 1px 0 #fff,
+                0 5px 12px rgba(0,0,0,.08);
+        }
 
-    return getLobbyUsers()
-      .filter(
-        user =>
-          user.roomId === roomId
-      );
-  }
+        .conference-v2-title-text {
+            min-width: 0;
+        }
 
+        .conference-v2-title-text strong {
+            display: block;
+            font-size: 17px;
+            line-height: 1.2;
+            color: #101216;
+        }
 
-  /*
-   * ---------------------------------------------------------
-   * DATABASE ROOMS
-   * ---------------------------------------------------------
-   */
+        .conference-v2-title-text span {
+            display: block;
+            margin-top: 3px;
+            color: #727985;
+            font-size: 12px;
+        }
 
-  async function loadRooms() {
+        .conference-v2-close {
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(0,0,0,.12);
+            border-radius: 13px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 24px;
+            line-height: 1;
+            color: #222;
+        }
 
-    if (
-      !db ||
-      state.loadingRooms
-    ) {
-      return;
-    }
+        .conference-v2-close:hover {
+            background: #edf1f6;
+        }
 
-    state.loadingRooms = true;
+        .conference-v2-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: hidden;
+            display: flex;
+        }
 
-    try {
+        .conference-v2-lobby {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            padding: 24px;
+        }
 
-      const result =
-        await db
-          .from("conference_rooms")
-          .select(
-            "id,name,description,created_by,created_at,is_active"
-          )
-          .eq("is_active", true)
-          .order(
-            "created_at",
-            {
-              ascending: true
+        .conference-v2-lobby-head {
+            margin-bottom: 20px;
+        }
+
+        .conference-v2-lobby-head h2 {
+            margin: 0;
+            font-size: 26px;
+            color: #111;
+        }
+
+        .conference-v2-lobby-head p {
+            margin: 7px 0 0;
+            color: #727985;
+        }
+
+        .conference-v2-rooms {
+            display: grid;
+            grid-template-columns: repeat(auto-fill,minmax(280px,1fr));
+            gap: 16px;
+        }
+
+        .conference-v2-room {
+            padding: 20px;
+            border-radius: 20px;
+            background: #fff;
+            border: 1px solid rgba(0,0,0,.11);
+            box-shadow:
+                0 8px 22px rgba(0,0,0,.05),
+                inset 0 1px 0 rgba(255,255,255,.9);
+        }
+
+        .conference-v2-room-name {
+            font-size: 18px;
+            font-weight: 800;
+            color: #111;
+        }
+
+        .conference-v2-room-description {
+            margin-top: 8px;
+            min-height: 42px;
+            color: #747b86;
+            font-size: 13px;
+            line-height: 1.45;
+        }
+
+        .conference-v2-room-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 15px;
+            color: #68707c;
+            font-size: 12px;
+        }
+
+        .conference-v2-online-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #26b36a;
+            box-shadow: 0 0 8px rgba(38,179,106,.45);
+        }
+
+        .conference-v2-button {
+            border: 1px solid rgba(0,0,0,.16);
+            border-radius: 14px;
+            min-height: 42px;
+            padding: 0 16px;
+            font-weight: 750;
+            cursor: pointer;
+            background: linear-gradient(145deg,#fff,#e5e9ee);
+            color: #111;
+            box-shadow:
+                inset 0 1px 0 #fff,
+                0 5px 12px rgba(0,0,0,.07);
+        }
+
+        .conference-v2-button:hover {
+            transform: translateY(-1px);
+        }
+
+        .conference-v2-button.primary {
+            background: linear-gradient(145deg,#eaf4ff,#cfe4ff);
+            border-color: rgba(75,145,225,.4);
+        }
+
+        .conference-v2-button.danger {
+            background: linear-gradient(145deg,#fff,#f0dddd);
+        }
+
+        .conference-v2-empty {
+            padding: 40px;
+            text-align: center;
+            color: #737b87;
+        }
+
+        .conference-v2-error {
+            margin: 15px 0;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: #fff0f0;
+            border: 1px solid #edb4b4;
+            color: #a12626;
+            font-size: 13px;
+        }
+
+        .conference-v2-room-view {
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .conference-v2-room-toolbar {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 18px;
+            background: #fff;
+            border-bottom: 1px solid rgba(0,0,0,.08);
+        }
+
+        .conference-v2-room-info strong {
+            display: block;
+            font-size: 17px;
+            color: #111;
+        }
+
+        .conference-v2-room-info span {
+            display: block;
+            margin-top: 3px;
+            color: #737b87;
+            font-size: 12px;
+        }
+
+        .conference-v2-toolbar-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .conference-v2-content {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .conference-v2-video-area {
+            flex: 1 1 auto;
+            min-width: 0;
+            min-height: 0;
+            padding: 14px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit,minmax(260px,1fr));
+            grid-auto-rows: minmax(180px,1fr);
+            gap: 12px;
+            overflow: auto;
+            background:
+                radial-gradient(circle at 50% 0%,rgba(105,160,220,.10),transparent 45%),
+                #e9edf2;
+        }
+
+        .conference-v2-video-card {
+            position: relative;
+            min-height: 180px;
+            overflow: hidden;
+            border-radius: 20px;
+            background: #16191e;
+            border: 1px solid rgba(0,0,0,.18);
+            box-shadow: 0 10px 25px rgba(0,0,0,.13);
+        }
+
+        .conference-v2-video-card video {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+            background: #111;
+        }
+
+        .conference-v2-video-name {
+            position: absolute;
+            left: 10px;
+            bottom: 10px;
+            max-width: calc(100% - 20px);
+            padding: 7px 10px;
+            border-radius: 10px;
+            background: rgba(0,0,0,.60);
+            color: #fff;
+            font-size: 12px;
+        }
+
+        .conference-v2-participants {
+            flex: 0 0 245px;
+            width: 245px;
+            padding: 16px;
+            overflow: auto;
+            background: #fff;
+            border-left: 1px solid rgba(0,0,0,.08);
+        }
+
+        .conference-v2-participants-title {
+            margin-bottom: 12px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: .08em;
+            color: #777f8a;
+        }
+
+        .conference-v2-member {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 8px;
+            border-radius: 12px;
+        }
+
+        .conference-v2-member:hover {
+            background: #f2f5f8;
+        }
+
+        .conference-v2-member-avatar {
+            width: 34px;
+            height: 34px;
+            flex: 0 0 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: #e7ebf0;
+            border: 1px solid rgba(0,0,0,.1);
+        }
+
+        .conference-v2-member-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .conference-v2-member-name {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #222;
+            font-size: 13px;
+        }
+
+        .conference-v2-member-name small {
+            display: block;
+            margin-top: 2px;
+            color: #8a919b;
+            font-size: 10px;
+        }
+
+        .conference-v2-local-controls {
+            flex: 0 0 auto;
+            display: flex;
+            gap: 8px;
+            padding: 12px 16px;
+            background: #fff;
+            border-top: 1px solid rgba(0,0,0,.08);
+        }
+
+        .conference-v2-status {
+            margin-right: auto;
+            display: flex;
+            align-items: center;
+            color: #6f7782;
+            font-size: 12px;
+        }
+
+        @media (max-width: 850px) {
+            #conference-v2-modal {
+                padding: 0;
             }
-          );
 
-
-      if (result.error) {
-
-        console.error(
-          "Conference rooms query error:",
-          result.error
-        );
-
-        renderRoomError(
-          result.error.message
-        );
-
-        return;
-      }
-
-
-      state.rooms =
-        result.data || [];
-
-      renderLobby();
-
-    } catch (error) {
-
-      console.error(
-        "Conference rooms exception:",
-        error
-      );
-
-      renderRoomError(
-        error.message ||
-        "Ошибка загрузки комнат"
-      );
-
-    } finally {
-
-      state.loadingRooms =
-        false;
-    }
-  }
-
-
-  async function createRoom(
-    name,
-    description
-  ) {
-
-    if (
-      !db ||
-      !state.user
-    ) {
-
-      showMessage(
-        "Необходимо войти в аккаунт.",
-        "error"
-      );
-
-      return;
-    }
-
-
-    name =
-      String(name || "")
-        .trim();
-
-    description =
-      String(description || "")
-        .trim();
-
-
-    if (
-      name.length < 2
-    ) {
-
-      showMessage(
-        "Название комнаты должно содержать минимум 2 символа.",
-        "error"
-      );
-
-      return;
-    }
-
-
-    if (
-      name.length > 80
-    ) {
-
-      showMessage(
-        "Название комнаты слишком длинное.",
-        "error"
-      );
-
-      return;
-    }
-
-
-    try {
-
-      const result =
-        await db
-          .from("conference_rooms")
-          .insert({
-
-            name,
-
-            description:
-              description ||
-              null,
-
-            created_by:
-              state.user.id,
-
-            is_active:
-              true
-
-          })
-          .select()
-          .single();
-
-
-      if (result.error) {
-
-        console.error(
-          result.error
-        );
-
-        showMessage(
-          result.error.message ||
-          "Не удалось создать комнату.",
-          "error"
-        );
-
-        return;
-      }
-
-
-      if (result.data) {
-
-        state.rooms.push(
-          result.data
-        );
-
-      }
-
-
-      renderLobby();
-
-      showMessage(
-        "Комната создана.",
-        "success"
-      );
-
-
-    } catch (error) {
-
-      console.error(error);
-
-      showMessage(
-        "Ошибка создания комнаты.",
-        "error"
-      );
-
-    }
-
-  }
-
-
-  function renderRoomError(
-    message
-  ) {
-
-    const list =
-      document.getElementById(
-        "conference-room-list"
-      );
-
-    if (!list) {
-      return;
-    }
-
-    list.innerHTML = `
-
-      <div class="conference-empty">
-
-        <div class="conference-empty-icon">
-          ⚠️
-        </div>
-
-        <strong>
-          Не удалось загрузить комнаты
-        </strong>
-
-        <span>
-          ${escapeHtml(message || "")}
-        </span>
-
-      </div>
-
-    `;
-  }
-
-
-  /*
-   * ---------------------------------------------------------
-   * LOBBY UI
-   * ---------------------------------------------------------
-   */
-
-  function renderLobby() {
-
-    const root =
-      getRoot();
-
-    if (!root) {
-      return;
-    }
-
-
-    if (
-      !state.user
-    ) {
-
-      root.innerHTML = `
-
-        <div class="conference-empty">
-
-          <div class="conference-empty-icon">
-            🔐
-          </div>
-
-          <strong>
-            Войдите в GAME PLATFORM
-          </strong>
-
-          <span>
-            Для участия в конференциях необходимо авторизоваться.
-          </span>
-
-        </div>
-
-      `;
-
-      return;
-    }
-
-
-    const currentNickname =
-      getNickname(state.profile);
-
-
-    const currentAvatar =
-      getAvatarUrl(state.profile);
-
-
-    root.innerHTML = `
-
-      <div class="conference-lobby">
-
-        <section class="conference-main-panel">
-
-          <div class="conference-toolbar">
-
-            <div class="conference-toolbar-title">
-
-              <strong>
-                Доступные конференции
-              </strong>
-
-              <span>
-                Выберите комнату и нажмите «Присоединиться»
-              </span>
-
-            </div>
-
-            <div class="conference-toolbar-actions">
-
-              <button
-                type="button"
-                class="conference-button"
-                id="conference-refresh-button"
-              >
-                ↻ Обновить
-              </button>
-
-            </div>
-
-          </div>
-
-
-          <div
-            id="conference-room-list"
-            class="conference-room-list"
-          >
-
-            ${renderRoomCards()}
-
-          </div>
-
-        </section>
-
-
-        <aside class="conference-side-panel">
-
-          <div class="conference-side-title">
-            ВЫ
-          </div>
-
-
-          <div class="conference-current-user">
-
-            <div class="conference-current-user-avatar">
-
-              ${
-                currentAvatar
-                  ? `
-                    <img
-                      src="${escapeHtml(currentAvatar)}"
-                      alt=""
-                      onerror="this.parentElement.innerHTML='🤖';"
-                    >
-                  `
-                  : "🤖"
-              }
-
-            </div>
-
-            <div class="conference-current-user-data">
-
-              <strong>
-                ${escapeHtml(currentNickname)}
-              </strong>
-
-              <span>
-                ${state.currentRoom
-                  ? "В конференции"
-                  : "Готов к подключению"}
-              </span>
-
-            </div>
-
-          </div>
-
-
-          <div class="conference-side-title">
-            СОЗДАТЬ КОМНАТУ
-          </div>
-
-
-          <form
-            id="conference-create-form"
-            class="conference-create-form"
-          >
-
-            <label>
-
-              <span>
-                Название
-              </span>
-
-              <input
-                id="conference-create-name"
-                type="text"
-                maxlength="80"
-                placeholder="Например: Общая конференция"
-                required
-              >
-
-            </label>
-
-
-            <label>
-
-              <span>
-                Описание
-              </span>
-
-              <textarea
-                id="conference-create-description"
-                maxlength="300"
-                placeholder="О чем эта конференция?"
-              ></textarea>
-
-            </label>
-
-
-            <button
-              type="submit"
-              class="conference-button primary"
-            >
-              ＋ Создать комнату
-            </button>
-
-            <div class="conference-hint">
-              Комната сохраняется в базе данных и будет видна другим
-              пользователям после создания.
-            </div>
-
-          </form>
-
-
-          <div style="height:20px"></div>
-
-
-          <div class="conference-side-title">
-            УЧАСТНИКИ
-          </div>
-
-
-          <div
-            id="conference-lobby-online"
-            class="conference-hint"
-          >
-            ${renderLobbyOnlineText()}
-          </div>
-
-        </aside>
-
-      </div>
-
-    `;
-
-
-    bindLobbyEvents();
-  }
-
-
-  function renderRoomCards() {
-
-    if (
-      !state.rooms.length
-    ) {
-
-      return `
-
-        <div class="conference-empty">
-
-          <div class="conference-empty-icon">
-            🎙
-          </div>
-
-          <strong>
-            Конференций пока нет
-          </strong>
-
-          <span>
-            Создайте первую комнату справа.
-          </span>
-
-        </div>
-
-      `;
-
-    }
-
-
-    return state.rooms
-      .map(room => {
-
-        const participants =
-          getRoomParticipants(
-            room.id
-          );
-
-        const count =
-          participants.length;
-
-
-        const isCurrent =
-          state.currentRoom &&
-          state.currentRoom.id ===
-            room.id;
-
-
-        const description =
-          room.description ||
-          "Общая конференция";
-
-
-        return `
-
-          <div
-            class="conference-room-card ${
-              isCurrent ? "active" : ""
-            }"
-            data-room-id="${escapeHtml(room.id)}"
-          >
-
-            <div class="conference-room-info">
-
-              <div class="conference-room-name-row">
-
-                ${
-                  count > 0
-                    ? `
-                      <span class="conference-live-dot"></span>
-                    `
-                    : ""
-                }
-
-                <div class="conference-room-name">
-                  ${escapeHtml(room.name)}
-                </div>
-
-              </div>
-
-
-              <div class="conference-room-description">
-                ${escapeHtml(description)}
-              </div>
-
-
-              <div class="conference-room-meta">
-
-                <span class="conference-meta-pill">
-                  👥 ${count}
-                  ${
-                    count === 1
-                      ? "участник"
-                      : "участников"
-                  }
-                </span>
-
-                <span class="conference-meta-pill">
-                  🎙 WebRTC
-                </span>
-
-                ${
-                  isCurrent
-                    ? `
-                      <span class="conference-meta-pill">
-                        Вы здесь
-                      </span>
-                    `
-                    : ""
-                }
-
-              </div>
-
-            </div>
-
-
-            <div class="conference-room-actions">
-
-              ${
-                isCurrent
-                  ? `
-                    <button
-                      type="button"
-                      class="conference-button danger"
-                      data-leave-room="${escapeHtml(room.id)}"
-                    >
-                      Выйти
-                    </button>
-                  `
-                  : `
-                    <button
-                      type="button"
-                      class="conference-button blue"
-                      data-join-room="${escapeHtml(room.id)}"
-                    >
-                      Присоединиться
-                    </button>
-                  `
-              }
-
-            </div>
-
-          </div>
-
+            .conference-v2-window {
+                width: 100vw;
+                height: 100vh;
+                max-width: none;
+                max-height: none;
+                border-radius: 0;
+            }
+
+            .conference-v2-content {
+                flex-direction: column;
+            }
+
+            .conference-v2-participants {
+                width: auto;
+                flex: 0 0 170px;
+                border-left: 0;
+                border-top: 1px solid rgba(0,0,0,.08);
+            }
+
+            .conference-v2-video-area {
+                grid-template-columns: repeat(auto-fit,minmax(210px,1fr));
+            }
+        }
         `;
 
-      })
-      .join("");
-  }
-
-
-  function renderLobbyOnlineText() {
-
-    const users =
-      getLobbyUsers();
-
-    const inRooms =
-      users.filter(
-        user => !!user.roomId
-      ).length;
-
-
-    return `
-      Сейчас в конференциях:
-      <strong>${inRooms}</strong>
-      ${inRooms === 1 ? "человек" : "человек"}.
-      <br>
-      Всего пользователей конференционного лобби:
-      <strong>${users.length}</strong>.
-    `;
-  }
-
-
-  function bindLobbyEvents() {
-
-    const refresh =
-      document.getElementById(
-        "conference-refresh-button"
-      );
-
-    if (refresh) {
-
-      refresh.addEventListener(
-        "click",
-        async () => {
-
-          refresh.disabled = true;
-
-          await loadRooms();
-
-          refresh.disabled = false;
-
-        }
-      );
-
+        document.head.appendChild(style);
     }
 
-
-    const form =
-      document.getElementById(
-        "conference-create-form"
-      );
-
-    if (form) {
-
-      form.addEventListener(
-        "submit",
-        async (event) => {
-
-          event.preventDefault();
-
-          const name =
-            document.getElementById(
-              "conference-create-name"
-            ).value;
-
-          const description =
-            document.getElementById(
-              "conference-create-description"
-            ).value;
-
-          await createRoom(
-            name,
-            description
-          );
-
-        }
-      );
-
-    }
-
-
-    document
-      .querySelectorAll(
-        "[data-join-room]"
-      )
-      .forEach(button => {
-
-        button.addEventListener(
-          "click",
-          async () => {
-
-            const roomId =
-              button.getAttribute(
-                "data-join-room"
-              );
-
-            await joinRoomById(
-              roomId
-            );
-
-          }
-        );
-
-      });
-
-
-    document
-      .querySelectorAll(
-        "[data-leave-room]"
-      )
-      .forEach(button => {
-
-        button.addEventListener(
-          "click",
-          async () => {
-
-            await leaveRoom();
-          }
-        );
-
-      });
-
-  }
-
-
-  /*
-   * ---------------------------------------------------------
-   * JOIN ROOM
-   * ---------------------------------------------------------
-   */
-
-  async function joinRoomById(
-    roomId
-  ) {
-
-    const room =
-      state.rooms.find(
-        item => item.id === roomId
-      );
-
-    if (!room) {
-
-      showMessage(
-        "Комната не найдена.",
-        "error"
-      );
-
-      return;
-    }
-
-    await joinRoom(room);
-  }
-
-
-  async function joinRoom(
-    room
-  ) {
-
-    if (
-      !state.user
-    ) {
-
-      showMessage(
-        "Необходимо войти в аккаунт.",
-        "error"
-      );
-
-      return;
-    }
-
-
-    if (
-      state.currentRoom &&
-      state.currentRoom.id === room.id
-    ) {
-
-      renderConferenceRoom();
-
-      return;
-    }
-
-
-    if (
-      state.currentRoom
-    ) {
-
-      await leaveRoom(
-        false
-      );
-
-    }
-
-
-    state.currentRoom =
-      room;
-
-
-    await updateLobbyPresence();
-
-
-    renderConferenceRoom();
-
-
-    try {
-
-      await setupRoomChannel(
-        room
-      );
-
-    } catch (error) {
-
-      console.error(
-        "Room channel error:",
-        error
-      );
-
-      showMessage(
-        "Комната открыта, но WebRTC-соединение не запустилось.",
-        "error"
-      );
-
-    }
-
-
-    /*
-     * Не заставляем пользователя включать
-     * микрофон или камеру автоматически.
-     *
-     * Он сам нажимает кнопки.
-     */
-
-    renderConferenceRoom();
-  }
-
-
-  /*
-   * ---------------------------------------------------------
-   * ROOM REALTIME
-   * ---------------------------------------------------------
-   */
-
-  async function setupRoomChannel(
-    room
-  ) {
-
-    await cleanupRoomChannel();
-
-
-    const topic =
-      ROOM_TOPIC_PREFIX +
-      room.id;
-
-
-    const channel =
-      db.channel(
-        topic,
-        {
-          config: {
-            presence: {
-              key: state.user.id
-            },
-            broadcast: {
-              self: false
-            }
-          }
-        }
-      );
-
-
-    state.roomChannel =
-      channel;
-
-
-    channel
-      .on(
-        "presence",
-        {
-          event: "sync"
-        },
-        async () => {
-
-          renderConferenceRoom();
-
-          await syncPeersFromPresence();
-
-        }
-      )
-      .on(
-        "presence",
-        {
-          event: "join"
-        },
-        async payload => {
-
-          renderConferenceRoom();
-
-          await handlePresenceJoin(
-            payload
-          );
-
-        }
-      )
-      .on(
-        "presence",
-        {
-          event: "leave"
-        },
-        async payload => {
-
-          handlePresenceLeave(
-            payload
-          );
-
-          renderConferenceRoom();
-
-        }
-      )
-      .on(
-        "broadcast",
-        {
-          event: "webrtc-signal"
-        },
-        async payload => {
-
-          await handleSignal(
-            payload.payload
-          );
-
-        }
-      );
-
-
-    await new Promise(
-      (resolve, reject) => {
-
-        let done = false;
-
-        const finish = (
-          success,
-          error
-        ) => {
-
-          if (done) {
+    /* =========================================================
+       HTML
+       ========================================================= */
+
+    function createModal() {
+        if (document.getElementById("conference-v2-modal")) {
             return;
-          }
-
-          done = true;
-
-          if (success) {
-            resolve();
-          } else {
-            reject(
-              error ||
-              new Error(
-                "Realtime channel error"
-              )
-            );
-          }
-
-        };
-
-
-        channel.subscribe(
-          async status => {
-
-            if (
-              status ===
-              "SUBSCRIBED"
-            ) {
-
-              try {
-
-                await channel.track({
-
-                  userId:
-                    state.user.id,
-
-                  nickname:
-                    getNickname(
-                      state.profile
-                    ),
-
-                  avatarUrl:
-                    getAvatarUrl(
-                      state.profile
-                    ),
-
-                  status:
-                    state.profile &&
-                    state.profile.status
-                      ? state.profile.status
-                      : "Онлайн",
-
-                  mic:
-                    state.isMicEnabled,
-
-                  camera:
-                    state.isCameraEnabled,
-
-                  screen:
-                    state.isScreenSharing
-
-                });
-
-                finish(true);
-
-              } catch (error) {
-
-                finish(
-                  false,
-                  error
-                );
-
-              }
-
-              return;
-            }
-
-
-            if (
-              status ===
-                "CHANNEL_ERROR" ||
-              status ===
-                "TIMED_OUT"
-            ) {
-
-              finish(
-                false,
-                new Error(
-                  "Realtime status: " +
-                  status
-                )
-              );
-
-            }
-
-          }
-        );
-
-
-        window.setTimeout(
-          () => {
-
-            finish(
-              false,
-              new Error(
-                "Realtime timeout"
-              )
-            );
-
-          },
-          12000
-        );
-
-      }
-    );
-
-  }
-
-
-  async function cleanupRoomChannel() {
-
-    for (
-      const [
-        userId,
-        peer
-      ]
-      of state.peers
-    ) {
-
-      try {
-        peer.close();
-      } catch (error) {
-        console.warn(error);
-      }
-
-    }
-
-
-    state.peers.clear();
-    state.remoteStreams.clear();
-
-
-    if (
-      state.roomChannel &&
-      db
-    ) {
-
-      try {
-
-        await state.roomChannel.untrack();
-
-      } catch (error) {
-        console.warn(error);
-      }
-
-
-      try {
-
-        await db.removeChannel(
-          state.roomChannel
-        );
-
-      } catch (error) {
-        console.warn(error);
-      }
-
-    }
-
-
-    state.roomChannel =
-      null;
-
-
-    removeRemoteTiles();
-  }
-
-
-  async function leaveRoom(
-    showLobby = true
-  ) {
-
-    if (
-      state.screenStream
-    ) {
-
-      stopScreenShare(
-        false
-      );
-
-    }
-
-
-    await cleanupRoomChannel();
-
-
-    stopLocalMedia();
-
-
-    state.currentRoom =
-      null;
-
-
-    await updateLobbyPresence();
-
-
-    if (showLobby) {
-      renderLobby();
-    }
-
-  }
-
-
-  /*
-   * ---------------------------------------------------------
-   * PRESENCE
-   * ---------------------------------------------------------
-   */
-
-  function getRoomPresenceUsers() {
-
-    if (
-      !state.roomChannel
-    ) {
-      return [];
-    }
-
-
-    const presence =
-      state.roomChannel.presenceState();
-
-
-    const users = [];
-
-
-    Object.keys(presence)
-      .forEach(key => {
-
-        const records =
-          presence[key] || [];
-
-        if (!records.length) {
-          return;
         }
 
-        users.push(
-          records[
-            records.length - 1
-          ]
-        );
+        const modal = document.createElement("div");
 
-      });
+        modal.id = "conference-v2-modal";
 
+        modal.innerHTML = `
+            <div class="conference-v2-window">
 
-    return users;
-  }
+                <div class="conference-v2-header">
 
+                    <div class="conference-v2-title">
 
-  async function syncPeersFromPresence() {
+                        <div class="conference-v2-logo">
+                            GP
+                        </div>
 
-    if (
-      !state.roomChannel ||
-      !state.user
-    ) {
-      return;
-    }
+                        <div class="conference-v2-title-text">
+                            <strong>GAME PLATFORM</strong>
+                            <span>Конференция</span>
+                        </div>
 
+                    </div>
 
-    const users =
-      getRoomPresenceUsers();
+                    <button
+                        type="button"
+                        class="conference-v2-close"
+                        id="conference-v2-close"
+                    >×</button>
 
+                </div>
 
-    const remoteIds =
-      new Set(
-        users
-          .map(user => user.userId)
-          .filter(
-            id =>
-              id &&
-              id !== state.user.id
-          )
-      );
+                <div class="conference-v2-body">
 
+                    <section
+                        id="conference-v2-lobby"
+                        class="conference-v2-lobby"
+                    >
 
-    /*
-     * Удаляем peer'ы, которых больше нет.
-     */
+                        <div class="conference-v2-lobby-head">
 
-    for (
-      const [
-        userId,
-        peer
-      ]
-      of state.peers
-    ) {
+                            <h2>Комнаты конференции</h2>
 
-      if (
-        !remoteIds.has(userId)
-      ) {
+                            <p>
+                                Выберите комнату и подключитесь к другим игрокам.
+                            </p>
 
-        try {
-          peer.close();
-        } catch (error) {
-          console.warn(error);
-        }
+                        </div>
 
-        state.peers.delete(
-          userId
-        );
+                        <div
+                            id="conference-v2-lobby-message"
+                        ></div>
 
-        removeRemoteTile(
-          userId
-        );
+                        <div
+                            id="conference-v2-rooms"
+                            class="conference-v2-rooms"
+                        ></div>
 
-      }
+                    </section>
 
-    }
+                    <section
+                        id="conference-v2-room-view"
+                        class="conference-v2-room-view"
+                        style="display:none"
+                    >
 
+                        <div class="conference-v2-room-toolbar">
 
-    /*
-     * Создаем соединения с текущими участниками.
-     */
+                            <div class="conference-v2-room-info">
+                                <strong id="conference-v2-room-name">
+                                    Конференция
+                                </strong>
 
-    for (
-      const user of users
-    ) {
+                                <span id="conference-v2-room-status">
+                                    Подключение...
+                                </span>
+                            </div>
 
-      if (
-        !user.userId ||
-        user.userId === state.user.id
-      ) {
-        continue;
-      }
+                            <div class="conference-v2-toolbar-actions">
 
+                                <button
+                                    type="button"
+                                    class="conference-v2-button"
+                                    id="conference-v2-mic"
+                                >
+                                    🎤 Микрофон
+                                </button>
 
-      if (
-        !state.peers.has(
-          user.userId
-        )
-      ) {
+                                <button
+                                    type="button"
+                                    class="conference-v2-button"
+                                    id="conference-v2-camera"
+                                >
+                                    📷 Камера
+                                </button>
 
-        await createPeerConnection(
-          user.userId,
-          user,
-          shouldInitiate(
-            state.user.id,
-            user.userId
-          )
-        );
+                                <button
+                                    type="button"
+                                    class="conference-v2-button"
+                                    id="conference-v2-screen"
+                                >
+                                    🖥 Экран
+                                </button>
 
-      }
+                                <button
+                                    type="button"
+                                    class="conference-v2-button danger"
+                                    id="conference-v2-leave"
+                                >
+                                    Выйти
+                                </button>
 
-    }
+                            </div>
 
+                        </div>
 
-    renderConferenceRoom();
-  }
+                        <div class="conference-v2-content">
 
+                            <div
+                                id="conference-v2-videos"
+                                class="conference-v2-video-area"
+                            ></div>
 
-  function shouldInitiate(
-    localId,
-    remoteId
-  ) {
+                            <aside class="conference-v2-participants">
 
-    /*
-     * Детерминированное правило.
-     *
-     * Только пользователь с меньшим UUID
-     * создает offer.
-     *
-     * Благодаря этому оба пользователя
-     * не создают offer одновременно.
-     */
+                                <div class="conference-v2-participants-title">
+                                    УЧАСТНИКИ
+                                </div>
 
-    return String(localId) <
-      String(remoteId);
-  }
+                                <div
+                                    id="conference-v2-members"
+                                ></div>
 
+                            </aside>
 
-  async function handlePresenceJoin(
-    payload
-  ) {
+                        </div>
 
-    const joined =
-      payload &&
-      payload.newPresences
-        ? payload.newPresences
-        : [];
+                        <div class="conference-v2-local-controls">
 
+                            <div
+                                id="conference-v2-status"
+                                class="conference-v2-status"
+                            >
+                                Подключение...
+                            </div>
 
-    for (
-      const records of joined
-    ) {
+                        </div>
 
-      const user =
-        Array.isArray(records)
-          ? records[0]
-          : records;
+                    </section>
 
+                </div>
 
-      if (
-        !user ||
-        !user.userId ||
-        user.userId ===
-          state.user.id
-      ) {
-        continue;
-      }
+            </div>
+        `;
 
+        document.body.appendChild(modal);
 
-      if (
-        !state.peers.has(
-          user.userId
-        )
-      ) {
-
-        await createPeerConnection(
-          user.userId,
-          user,
-          shouldInitiate(
-            state.user.id,
-            user.userId
-          )
-        );
-
-      }
-
-    }
-
-
-    renderConferenceRoom();
-  }
-
-
-  function handlePresenceLeave(
-    payload
-  ) {
-
-    const left =
-      payload &&
-      payload.leftPresences
-        ? payload.leftPresences
-        : [];
-
-
-    for (
-      const records of left
-    ) {
-
-      const user =
-        Array.isArray(records)
-          ? records[0]
-          : records;
-
-
-      if (
-        !user ||
-        !user.userId
-      ) {
-        continue;
-      }
-
-
-      const peer =
-        state.peers.get(
-          user.userId
-        );
-
-
-      if (peer) {
-
-        try {
-          peer.close();
-        } catch (error) {
-          console.warn(error);
-        }
-
-      }
-
-
-      state.peers.delete(
-        user.userId
-      );
-
-
-      removeRemoteTile(
-        user.userId
-      );
-
-    }
-
-  }
-
-
-  /*
-   * ---------------------------------------------------------
-   * WEBRTC
-   * ---------------------------------------------------------
-   */
-
-  function createPeerConnection(
-    remoteUserId,
-    remoteUser,
-    initiate
-  ) {
-
-    return new Promise(
-      async resolve => {
-
-        if (
-          state.peers.has(
-            remoteUserId
-          )
-        ) {
-
-          resolve(
-            state.peers.get(
-              remoteUserId
-            )
-          );
-
-          return;
-        }
-
-
-        const configuration = {
-
-          iceServers: [
-
-            {
-              urls: [
-                "stun:stun.l.google.com:19302",
-                "stun:stun1.l.google.com:19302"
-              ]
-            }
-
-          ]
-
-        };
-
-
-        const pc =
-          new RTCPeerConnection(
-            configuration
-          );
-
-
-        state.peers.set(
-          remoteUserId,
-          pc
-        );
-
-
-        pc.__remoteUser =
-          remoteUser;
-
-
-        pc.onicecandidate =
-          async event => {
-
-            if (
-              !event.candidate
-            ) {
-              return;
-            }
-
-
-            await sendSignal({
-
-              type: "ice",
-
-              to:
-                remoteUserId,
-
-              from:
-                state.user.id,
-
-              candidate:
-                event.candidate
-
+        document
+            .getElementById("conference-v2-close")
+            .addEventListener("click", function () {
+                closeConference();
             });
 
-          };
+        document
+            .getElementById("conference-v2-leave")
+            .addEventListener("click", function () {
+                leaveRoom();
+            });
 
+        document
+            .getElementById("conference-v2-mic")
+            .addEventListener("click", function () {
+                toggleMicrophone();
+            });
 
-        pc.ontrack =
-          event => {
+        document
+            .getElementById("conference-v2-camera")
+            .addEventListener("click", function () {
+                toggleCamera();
+            });
 
-            const stream =
-              event.streams &&
-              event.streams[0]
-                ? event.streams[0]
-                : null;
+        document
+            .getElementById("conference-v2-screen")
+            .addEventListener("click", function () {
+                shareScreen();
+            });
+    }
 
+    /* =========================================================
+       AUTH
+       ========================================================= */
 
-            if (!stream) {
-              return;
+    async function getCurrentUser() {
+        const result = await db.auth.getUser();
+
+        if (result.error) {
+            console.error("[Conference] Auth error:", result.error);
+            return null;
+        }
+
+        return result.data.user || null;
+    }
+
+    /* =========================================================
+       OPEN / CLOSE
+       ========================================================= */
+
+    async function openConference() {
+        try {
+            createModal();
+
+            const modal = document.getElementById("conference-v2-modal");
+
+            /*
+             * ВАЖНО:
+             * Мы НЕ трогаем:
+             * #app-shell
+             * #page-content
+             * body.classList
+             * текущую страницу.
+             */
+
+            modal.classList.add("open");
+
+            currentUser = await getCurrentUser();
+
+            if (!currentUser) {
+                showLobbyMessage(
+                    "Не удалось определить пользователя. Сначала войдите в аккаунт."
+                );
+                return;
             }
 
+            await showLobby();
 
-            state.remoteStreams.set(
-              remoteUserId,
-              stream
+        } catch (error) {
+            console.error("[Conference] open error:", error);
+
+            showLobbyMessage(
+                "Ошибка открытия конференции: " +
+                (error.message || error)
+            );
+        }
+    }
+
+    function closeConference() {
+        /*
+         * Если пользователь просто закрыл окно —
+         * не удаляем его из комнаты принудительно.
+         * Но если он находится внутри комнаты,
+         * корректно выходим.
+         */
+
+        if (currentRoom) {
+            leaveRoom();
+        }
+
+        const modal = document.getElementById("conference-v2-modal");
+
+        if (modal) {
+            modal.classList.remove("open");
+        }
+    }
+
+    /* =========================================================
+       LOBBY
+       ========================================================= */
+
+    async function showLobby() {
+        stopMedia();
+
+        currentRoom = null;
+
+        if (roomChannel) {
+            try {
+                await db.removeChannel(roomChannel);
+            } catch (e) {
+                console.warn(e);
+            }
+
+            roomChannel = null;
+        }
+
+        if (memberChannel) {
+            try {
+                await db.removeChannel(memberChannel);
+            } catch (e) {
+                console.warn(e);
+            }
+
+            memberChannel = null;
+        }
+
+        document.getElementById("conference-v2-lobby").style.display = "block";
+        document.getElementById("conference-v2-room-view").style.display = "none";
+
+        await loadRooms();
+    }
+
+    async function loadRooms() {
+        const container = document.getElementById("conference-v2-rooms");
+
+        if (!container) {
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="conference-v2-empty">
+                Загрузка комнат...
+            </div>
+        `;
+
+        const result = await db
+            .from("conference_rooms")
+            .select("id,name,description,is_active,created_at")
+            .eq("is_active", true)
+            .order("created_at", {
+                ascending: true
+            });
+
+        if (result.error) {
+            console.error(
+                "[Conference] rooms error:",
+                result.error
             );
 
+            container.innerHTML = `
+                <div class="conference-v2-error">
+                    Не удалось загрузить комнаты.<br><br>
+                    ${escapeHtml(result.error.message)}
+                </div>
+            `;
 
-            renderRemoteTile(
-              remoteUserId,
-              remoteUser,
-              stream
+            return;
+        }
+
+        const rooms = result.data || [];
+
+        if (!rooms.length) {
+            container.innerHTML = `
+                <div class="conference-v2-empty">
+                    Пока нет доступных комнат.
+                </div>
+            `;
+
+            return;
+        }
+
+        container.innerHTML = "";
+
+        for (const room of rooms) {
+            const card = document.createElement("div");
+
+            card.className = "conference-v2-room";
+
+            card.innerHTML = `
+                <div class="conference-v2-room-name">
+                    ${escapeHtml(room.name)}
+                </div>
+
+                <div class="conference-v2-room-description">
+                    ${escapeHtml(
+                        room.description ||
+                        "Игровая конференция"
+                    )}
+                </div>
+
+                <div class="conference-v2-room-meta">
+                    <span class="conference-v2-online-dot"></span>
+                    <span>Комната доступна</span>
+                </div>
+
+                <div style="margin-top:16px">
+                    <button
+                        type="button"
+                        class="conference-v2-button primary"
+                        data-room-id="${room.id}"
+                        style="width:100%"
+                    >
+                        Войти в комнату
+                    </button>
+                </div>
+            `;
+
+            const button = card.querySelector(
+                "[data-room-id]"
             );
 
-          };
+            button.addEventListener("click", function () {
+                joinRoom(room);
+            });
 
+            container.appendChild(card);
+        }
+    }
 
-        pc.onconnectionstatechange =
-          () => {
+    function showLobbyMessage(message) {
+        const element = document.getElementById(
+            "conference-v2-lobby-message"
+        );
 
-            const status =
-              pc.connectionState;
+        if (!element) {
+            return;
+        }
 
+        element.innerHTML = `
+            <div class="conference-v2-error">
+                ${escapeHtml(message)}
+            </div>
+        `;
+    }
 
-            if (
-              status === "failed" ||
-              status === "closed" ||
-              status === "disconnected"
-            ) {
+    /* =========================================================
+       JOIN ROOM
+       ========================================================= */
 
-              if (
-                status === "failed"
-              ) {
+    async function joinRoom(room) {
+        try {
+            if (!currentUser) {
+                currentUser = await getCurrentUser();
+            }
+
+            if (!currentUser) {
+                throw new Error(
+                    "Пользователь не авторизован."
+                );
+            }
+
+            console.log(
+                "[Conference] JOIN ROOM:",
+                room.id,
+                room.name
+            );
+
+            /*
+             * Сначала удаляем старое присутствие этого пользователя.
+             * Это особенно важно после закрытия вкладки/обновления.
+             */
+
+            await db
+                .from("conference_room_members")
+                .delete()
+                .eq("user_id", currentUser.id);
+
+            /*
+             * Теперь добавляем пользователя
+             * именно в выбранную комнату.
+             */
+
+            const insertResult = await db
+                .from("conference_room_members")
+                .insert({
+                    room_id: room.id,
+                    user_id: currentUser.id
+                });
+
+            if (insertResult.error) {
+                throw insertResult.error;
+            }
+
+            currentRoom = room;
+
+            document.getElementById(
+                "conference-v2-lobby"
+            ).style.display = "none";
+
+            document.getElementById(
+                "conference-v2-room-view"
+            ).style.display = "flex";
+
+            document.getElementById(
+                "conference-v2-room-name"
+            ).textContent = room.name;
+
+            document.getElementById(
+                "conference-v2-room-status"
+            ).textContent = "Подключение к комнате...";
+
+            document.getElementById(
+                "conference-v2-status"
+            ).textContent = "Подключение к комнате...";
+
+            /*
+             * Получаем камеру и микрофон.
+             */
+
+            await startLocalMedia();
+
+            /*
+             * Запускаем realtime именно с UUID комнаты.
+             */
+
+            await startRoomChannel();
+
+            /*
+             * Загружаем участников.
+             */
+
+            await refreshMembers();
+
+            document.getElementById(
+                "conference-v2-room-status"
+            ).textContent = "Вы подключены";
+
+            document.getElementById(
+                "conference-v2-status"
+            ).textContent = "Конференция активна";
+
+        } catch (error) {
+            console.error(
+                "[Conference] join error:",
+                error
+            );
+
+            await cleanupRoomConnection();
+
+            alert(
+                "Не удалось войти в конференцию:\n\n" +
+                (error.message || error)
+            );
+
+            await showLobby();
+        }
+    }
+
+    /* =========================================================
+       REALTIME ROOM CHANNEL
+       ========================================================= */
+
+    async function startRoomChannel() {
+        if (!currentRoom || !currentUser) {
+            return;
+        }
+
+        if (roomChannel) {
+            try {
+                await db.removeChannel(roomChannel);
+            } catch (e) {
+                console.warn(e);
+            }
+
+            roomChannel = null;
+        }
+
+        const topic =
+            "game-platform-conference-room-" +
+            currentRoom.id;
+
+        console.log(
+            "[Conference] realtime topic:",
+            topic
+        );
+
+        roomChannel = db.channel(topic, {
+            config: {
+                broadcast: {
+                    self: false
+                },
+                presence: {
+                    key: currentUser.id
+                }
+            }
+        });
+
+        roomChannel
+            .on(
+                "broadcast",
+                {
+                    event: "webrtc"
+                },
+                async function (payload) {
+                    await handleWebRTCMessage(
+                        payload.payload
+                    );
+                }
+            )
+            .on(
+                "presence",
+                {
+                    event: "sync"
+                },
+                async function () {
+                    console.log(
+                        "[Conference] presence sync"
+                    );
+
+                    await refreshMembers();
+
+                    await createConnectionsForPresentUsers();
+                }
+            )
+            .on(
+                "presence",
+                {
+                    event: "join"
+                },
+                async function (payload) {
+                    console.log(
+                        "[Conference] participant joined:",
+                        payload
+                    );
+
+                    await refreshMembers();
+
+                    await createConnectionsForPresentUsers();
+                }
+            )
+            .on(
+                "presence",
+                {
+                    event: "leave"
+                },
+                async function (payload) {
+                    console.log(
+                        "[Conference] participant left:",
+                        payload
+                    );
+
+                    await refreshMembers();
+
+                    const leftId =
+                        payload?.key;
+
+                    if (leftId) {
+                        closePeer(leftId);
+                    }
+                }
+            );
+
+        const subscribeResult = await new Promise(
+            function (resolve, reject) {
+
+                roomChannel.subscribe(
+                    async function (status) {
+
+                        console.log(
+                            "[Conference] channel status:",
+                            status
+                        );
+
+                        if (status === "SUBSCRIBED") {
+
+                            try {
+
+                                await roomChannel.track({
+                                    user_id:
+                                        currentUser.id,
+                                    room_id:
+                                        currentRoom.id,
+                                    online_at:
+                                        new Date().toISOString()
+                                });
+
+                                resolve();
+
+                            } catch (error) {
+                                reject(error);
+                            }
+
+                        }
+
+                        if (
+                            status === "CHANNEL_ERROR" ||
+                            status === "TIMED_OUT" ||
+                            status === "CLOSED"
+                        ) {
+                            reject(
+                                new Error(
+                                    "Realtime: " + status
+                                )
+                            );
+                        }
+                    }
+                );
+
+            }
+        );
+
+        return subscribeResult;
+    }
+
+    /* =========================================================
+       MEMBERS
+       ========================================================= */
+
+    async function refreshMembers() {
+        if (!currentRoom) {
+            return;
+        }
+
+        const result = await db
+            .from("conference_room_members")
+            .select("user_id,joined_at")
+            .eq("room_id", currentRoom.id)
+            .order("joined_at", {
+                ascending: true
+            });
+
+        if (result.error) {
+            console.error(
+                "[Conference] members error:",
+                result.error
+            );
+
+            return;
+        }
+
+        const members = result.data || [];
+
+        const ids = members.map(
+            function (member) {
+                return member.user_id;
+            }
+        );
+
+        let profiles = [];
+
+        if (ids.length) {
+
+            const profileResult = await db
+                .from("profiles")
+                .select(
+                    "id,nickname,avatar_url,status"
+                )
+                .in("id", ids);
+
+            if (!profileResult.error) {
+                profiles =
+                    profileResult.data || [];
+            }
+        }
+
+        const profileMap = {};
+
+        profiles.forEach(function (profile) {
+            profileMap[profile.id] = profile;
+        });
+
+        const container =
+            document.getElementById(
+                "conference-v2-members"
+            );
+
+        if (!container) {
+            return;
+        }
+
+        container.innerHTML = "";
+
+        if (!members.length) {
+            container.innerHTML = `
+                <div class="conference-v2-empty">
+                    Пока никого нет.
+                </div>
+            `;
+
+            return;
+        }
+
+        members.forEach(function (member) {
+
+            const profile =
+                profileMap[member.user_id] || {};
+
+            const nickname =
+                profile.nickname ||
+                (
+                    member.user_id ===
+                    currentUser.id
+                        ? "Вы"
+                        : "Игрок"
+                );
+
+            const row =
+                document.createElement("div");
+
+            row.className =
+                "conference-v2-member";
+
+            const avatar =
+                profile.avatar_url
+                    ? `
+                        <img
+                            src="${escapeAttribute(
+                                profile.avatar_url
+                            )}"
+                            alt=""
+                        >
+                    `
+                    : "🤖";
+
+            row.innerHTML = `
+                <div class="conference-v2-member-avatar">
+                    ${avatar}
+                </div>
+
+                <div class="conference-v2-member-name">
+                    ${escapeHtml(nickname)}
+
+                    ${
+                        member.user_id ===
+                        currentUser.id
+                            ? "<small>Вы</small>"
+                            : "<small>Участник</small>"
+                    }
+                </div>
+            `;
+
+            container.appendChild(row);
+        });
+    }
+
+    /* =========================================================
+       MEDIA
+       ========================================================= */
+
+    async function startLocalMedia() {
+
+        if (
+            !navigator.mediaDevices ||
+            !navigator.mediaDevices.getUserMedia
+        ) {
+            throw new Error(
+                "Браузер не поддерживает камеру и микрофон."
+            );
+        }
+
+        try {
+
+            localStream =
+                await navigator.mediaDevices.getUserMedia({
+                    audio: true,
+                    video: true
+                });
+
+        } catch (error) {
+
+            console.warn(
+                "[Conference] Camera/mic denied:",
+                error
+            );
+
+            /*
+             * Если камера недоступна,
+             * пробуем хотя бы микрофон.
+             */
+
+            try {
+
+                localStream =
+                    await navigator.mediaDevices.getUserMedia({
+                        audio: true,
+                        video: false
+                    });
+
+            } catch (audioError) {
+
+                console.warn(
+                    "[Conference] Audio denied:",
+                    audioError
+                );
 
                 /*
-                 * Небольшой retry.
+                 * Конференция всё равно может быть открыта.
                  */
 
-                setTimeout(
-                  async () => {
+                localStream = new MediaStream();
+            }
+        }
 
-                    if (
-                      state.currentRoom &&
-                      !state.peers.has(
-                        remoteUserId
-                      )
-                    ) {
+        createLocalVideo();
+    }
 
-                      await createPeerConnection(
-                        remoteUserId,
-                        remoteUser,
-                        shouldInitiate(
-                          state.user.id,
-                          remoteUserId
-                        )
-                      );
+    function createLocalVideo() {
+        const container =
+            document.getElementById(
+                "conference-v2-videos"
+            );
+
+        if (!container) {
+            return;
+        }
+
+        let card =
+            document.getElementById(
+                "conference-local-video"
+            );
+
+        if (!card) {
+
+            card =
+                document.createElement("div");
+
+            card.id =
+                "conference-local-video";
+
+            card.className =
+                "conference-v2-video-card";
+
+            card.innerHTML = `
+                <video
+                    id="conference-local-video-element"
+                    autoplay
+                    muted
+                    playsinline
+                ></video>
+
+                <div class="conference-v2-video-name">
+                    Вы
+                </div>
+            `;
+
+            container.appendChild(card);
+        }
+
+        const video =
+            document.getElementById(
+                "conference-local-video-element"
+            );
+
+        if (video) {
+            video.srcObject = localStream;
+        }
+    }
+
+    function toggleMicrophone() {
+
+        if (!localStream) {
+            return;
+        }
+
+        const tracks =
+            localStream.getAudioTracks();
+
+        if (!tracks.length) {
+            alert(
+                "Микрофон не подключён."
+            );
+
+            return;
+        }
+
+        const enabled =
+            !tracks[0].enabled;
+
+        tracks.forEach(function (track) {
+            track.enabled = enabled;
+        });
+
+        const button =
+            document.getElementById(
+                "conference-v2-mic"
+            );
+
+        button.textContent =
+            enabled
+                ? "🎤 Микрофон"
+                : "🔇 Микрофон выключен";
+    }
+
+    function toggleCamera() {
+
+        if (!localStream) {
+            return;
+        }
+
+        const tracks =
+            localStream.getVideoTracks();
+
+        if (!tracks.length) {
+            alert(
+                "Камера не подключена."
+            );
+
+            return;
+        }
+
+        const enabled =
+            !tracks[0].enabled;
+
+        tracks.forEach(function (track) {
+            track.enabled = enabled;
+        });
+
+        const button =
+            document.getElementById(
+                "conference-v2-camera"
+            );
+
+        button.textContent =
+            enabled
+                ? "📷 Камера"
+                : "🚫 Камера выключена";
+    }
+
+    async function shareScreen() {
+
+        if (!navigator.mediaDevices.getDisplayMedia) {
+            alert(
+                "Ваш браузер не поддерживает демонстрацию экрана."
+            );
+
+            return;
+        }
+
+        try {
+
+            screenStream =
+                await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                    audio: false
+                });
+
+            const screenTrack =
+                screenStream.getVideoTracks()[0];
+
+            if (!screenTrack) {
+                return;
+            }
+
+            screenTrack.onended =
+                function () {
+                    stopScreenShare();
+                };
+
+            for (
+                const peerId in peers
+            ) {
+
+                const peer =
+                    peers[peerId];
+
+                if (!peer) {
+                    continue;
+                }
+
+                const sender =
+                    peer
+                        .getSenders()
+                        .find(function (item) {
+                            return (
+                                item.track &&
+                                item.track.kind ===
+                                "video"
+                            );
+                        });
+
+                if (sender) {
+                    await sender.replaceTrack(
+                        screenTrack
+                    );
+                }
+            }
+
+        } catch (error) {
+
+            console.warn(
+                "[Conference] Screen share:",
+                error
+            );
+        }
+    }
+
+    function stopScreenShare() {
+
+        if (!screenStream) {
+            return;
+        }
+
+        screenStream
+            .getTracks()
+            .forEach(function (track) {
+                track.stop();
+            });
+
+        screenStream = null;
+
+        if (!localStream) {
+            return;
+        }
+
+        const cameraTrack =
+            localStream.getVideoTracks()[0];
+
+        if (!cameraTrack) {
+            return;
+        }
+
+        for (
+            const peerId in peers
+        ) {
+
+            const peer =
+                peers[peerId];
+
+            if (!peer) {
+                continue;
+            }
+
+            const sender =
+                peer
+                    .getSenders()
+                    .find(function (item) {
+                        return (
+                            item.track &&
+                            item.track.kind ===
+                            "video"
+                        );
+                    });
+
+            if (sender) {
+                sender.replaceTrack(
+                    cameraTrack
+                );
+            }
+        }
+    }
+
+    function stopMedia() {
+
+        if (localStream) {
+
+            localStream
+                .getTracks()
+                .forEach(function (track) {
+                    track.stop();
+                });
+
+            localStream = null;
+        }
+
+        if (screenStream) {
+
+            screenStream
+                .getTracks()
+                .forEach(function (track) {
+                    track.stop();
+                });
+
+            screenStream = null;
+        }
+
+        const localVideo =
+            document.getElementById(
+                "conference-local-video-element"
+            );
+
+        if (localVideo) {
+            localVideo.srcObject = null;
+        }
+    }
+
+    /* =========================================================
+       WEBRTC
+       ========================================================= */
+
+    function createPeer(remoteUserId) {
+
+        if (
+            !currentUser ||
+            !remoteUserId ||
+            remoteUserId === currentUser.id
+        ) {
+            return null;
+        }
+
+        if (peers[remoteUserId]) {
+            return peers[remoteUserId];
+        }
+
+        console.log(
+            "[Conference] create peer:",
+            remoteUserId
+        );
+
+        const peer =
+            new RTCPeerConnection({
+                iceServers: [
+                    {
+                        urls:
+                            "stun:stun.l.google.com:19302"
+                    },
+                    {
+                        urls:
+                            "stun:stun1.l.google.com:19302"
+                    }
+                ]
+            });
+
+        peers[remoteUserId] = peer;
+
+        /*
+         * Добавляем локальные tracks.
+         */
+
+        if (localStream) {
+
+            localStream
+                .getTracks()
+                .forEach(function (track) {
+
+                    try {
+
+                        peer.addTrack(
+                            track,
+                            localStream
+                        );
+
+                    } catch (error) {
+
+                        console.warn(
+                            "[Conference] addTrack:",
+                            error
+                        );
 
                     }
 
-                  },
-                  1500
-                );
+                });
 
-              }
+        } else {
 
-            }
-
-          };
-
-
-        pc.onnegotiationneeded =
-          async () => {
-
-            /*
-             * Не делаем автоматический offer
-             * здесь. Инициатор контролируется
-             * shouldInitiate().
-             */
-
-          };
-
-
-        await addLocalTracksToPeer(
-          pc
-        );
-
-
-        if (
-          initiate
-        ) {
-
-          try {
-
-            const offer =
-              await pc.createOffer();
-
-            await pc.setLocalDescription(
-              offer
+            peer.addTransceiver(
+                "audio",
+                {
+                    direction: "recvonly"
+                }
             );
 
+            peer.addTransceiver(
+                "video",
+                {
+                    direction: "recvonly"
+                }
+            );
+        }
 
-            await sendSignal({
+        peer.onicecandidate =
+            async function (event) {
 
-              type: "offer",
+                if (
+                    !event.candidate ||
+                    !roomChannel
+                ) {
+                    return;
+                }
 
-              to:
+                await sendSignal(
+                    remoteUserId,
+                    {
+                        type: "ice",
+                        candidate:
+                            event.candidate
+                    }
+                );
+            };
+
+        peer.ontrack =
+            function (event) {
+
+                const stream =
+                    event.streams &&
+                    event.streams[0];
+
+                if (!stream) {
+                    return;
+                }
+
+                remoteStreams[remoteUserId] =
+                    stream;
+
+                createRemoteVideo(
+                    remoteUserId,
+                    stream
+                );
+            };
+
+        peer.onconnectionstatechange =
+            function () {
+
+                console.log(
+                    "[Conference] peer state:",
+                    remoteUserId,
+                    peer.connectionState
+                );
+
+                if (
+                    peer.connectionState ===
+                    "failed" ||
+                    peer.connectionState ===
+                    "closed"
+                ) {
+
+                    closePeer(
+                        remoteUserId
+                    );
+
+                }
+
+            };
+
+        return peer;
+    }
+
+    async function createOffer(remoteUserId) {
+
+        const peer =
+            createPeer(remoteUserId);
+
+        if (!peer) {
+            return;
+        }
+
+        try {
+
+            const offer =
+                await peer.createOffer();
+
+            await peer.setLocalDescription(
+                offer
+            );
+
+            await sendSignal(
                 remoteUserId,
+                {
+                    type: "offer",
+                    description:
+                        peer.localDescription
+                }
+            );
 
-              from:
-                state.user.id,
-
-              description:
-                pc.localDescription
-
-            });
-
-          } catch (error) {
+        } catch (error) {
 
             console.error(
-              "Create offer error:",
-              error
+                "[Conference] offer error:",
+                error
             );
-
-          }
 
         }
-
-
-        resolve(pc);
-
-      }
-    );
-
-  }
-
-
-  async function addLocalTracksToPeer(
-    pc
-  ) {
-
-    if (
-      !pc
-    ) {
-      return;
     }
 
+    async function handleWebRTCMessage(message) {
 
-    const stream =
-      state.localStream;
-
-
-    if (
-      stream &&
-      stream.getTracks().length
-    ) {
-
-      const existing =
-        pc.getSenders()
-          .map(
-            sender =>
-              sender.track
-                ? sender.track.kind
-                : null
-          )
-          .filter(Boolean);
-
-
-      stream
-        .getTracks()
-        .forEach(track => {
-
-          if (
-            existing.includes(
-              track.kind
-            )
-          ) {
+        if (!message) {
             return;
-          }
+        }
 
-
-          try {
-
-            pc.addTrack(
-              track,
-              stream
-            );
-
-          } catch (error) {
-
-            console.warn(
-              "addTrack error:",
-              error
-            );
-
-          }
-
-        });
-
-      return;
-    }
-
-
-    /*
-     * Если микрофон/камера пока не включены,
-     * добавляем recvonly-трансиверы.
-     *
-     * Это позволяет подключиться к пользователю,
-     * который включит медиа позже.
-     */
-
-    const transceivers =
-      pc.getTransceivers();
-
-
-    const hasAudio =
-      transceivers.some(
-        t =>
-          t.receiver &&
-          t.receiver.track &&
-          t.receiver.track.kind ===
-            "audio"
-      );
-
-
-    const hasVideo =
-      transceivers.some(
-        t =>
-          t.receiver &&
-          t.receiver.track &&
-          t.receiver.track.kind ===
-            "video"
-      );
-
-
-    if (!hasAudio) {
-
-      try {
-
-        pc.addTransceiver(
-          "audio",
-          {
-            direction:
-              "recvonly"
-          }
-        );
-
-      } catch (error) {
-        console.warn(error);
-      }
-
-    }
-
-
-    if (!hasVideo) {
-
-      try {
-
-        pc.addTransceiver(
-          "video",
-          {
-            direction:
-              "recvonly"
-          }
-        );
-
-      } catch (error) {
-        console.warn(error);
-      }
-
-    }
-
-  }
-
-
-  async function sendSignal(
-    payload
-  ) {
-
-    if (
-      !state.roomChannel
-    ) {
-      return;
-    }
-
-
-    try {
-
-      await state.roomChannel.send({
-
-        type: "broadcast",
-
-        event: "webrtc-signal",
-
-        payload
-
-      });
-
-    } catch (error) {
-
-      console.error(
-        "WebRTC signal error:",
-        error
-      );
-
-    }
-
-  }
-
-
-  async function handleSignal(
-    signal
-  ) {
-
-    if (
-      !signal ||
-      !state.user
-    ) {
-      return;
-    }
-
-
-    if (
-      signal.to !==
-      state.user.id
-    ) {
-      return;
-    }
-
-
-    const remoteId =
-      signal.from;
-
-
-    if (
-      !remoteId
-    ) {
-      return;
-    }
-
-
-    let pc =
-      state.peers.get(
-        remoteId
-      );
-
-
-    if (
-      signal.type === "offer"
-    ) {
-
-      if (!pc) {
-
-        pc =
-          await createPeerConnection(
-            remoteId,
-            {
-              userId:
-                remoteId,
-
-              nickname:
-                "Участник",
-
-              avatarUrl:
-                ""
-            },
-            false
-          );
-
-      }
-
-
-      try {
-
-        await pc.setRemoteDescription(
-          new RTCSessionDescription(
-            signal.description
-          )
-        );
-
-
-        const answer =
-          await pc.createAnswer();
-
-
-        await pc.setLocalDescription(
-          answer
-        );
-
-
-        await sendSignal({
-
-          type: "answer",
-
-          to:
-            remoteId,
-
-          from:
-            state.user.id,
-
-          description:
-            pc.localDescription
-
-        });
-
-      } catch (error) {
-
-        console.error(
-          "Offer handling error:",
-          error
-        );
-
-      }
-
-      return;
-    }
-
-
-    if (
-      signal.type === "answer"
-    ) {
-
-      if (!pc) {
-        return;
-      }
-
-
-      try {
-
-        await pc.setRemoteDescription(
-          new RTCSessionDescription(
-            signal.description
-          )
-        );
-
-      } catch (error) {
-
-        console.error(
-          "Answer handling error:",
-          error
-        );
-
-      }
-
-      return;
-    }
-
-
-    if (
-      signal.type === "ice"
-    ) {
-
-      if (!pc) {
-        return;
-      }
-
-
-      try {
+        const from =
+            message.from;
 
         if (
-          pc.remoteDescription
+            !from ||
+            !currentUser ||
+            from === currentUser.id
         ) {
-
-          await pc.addIceCandidate(
-            new RTCIceCandidate(
-              signal.candidate
-            )
-          );
-
-        } else {
-
-          if (
-            !state.pendingOffers.has(
-              remoteId
-            )
-          ) {
-
-            state.pendingOffers.set(
-              remoteId,
-              []
-            );
-
-          }
-
-
-          state.pendingOffers
-            .get(remoteId)
-            .push(
-              signal.candidate
-            );
-
+            return;
         }
 
-      } catch (error) {
-
-        console.warn(
-          "ICE candidate error:",
-          error
-        );
-
-      }
-
-    }
-
-  }
-
-
-  /*
-   * ---------------------------------------------------------
-   * LOCAL MEDIA
-   * ---------------------------------------------------------
-   */
-
-  async function ensureLocalStream(
-    options
-  ) {
-
-    options =
-      options || {};
-
-
-    const wantAudio =
-      !!options.audio;
-
-
-    const wantVideo =
-      !!options.video;
-
-
-    if (
-      !navigator.mediaDevices ||
-      !navigator.mediaDevices.getUserMedia
-    ) {
-
-      throw new Error(
-        "Браузер не поддерживает микрофон/камеру."
-      );
-
-    }
-
-
-    const quality =
-      state.videoQuality;
-
-
-    const videoSize =
-      quality === "1080p"
-        ? {
-            width: {
-              ideal: 1920
-            },
-            height: {
-              ideal: 1080
-            }
-          }
-        : quality === "360p"
-        ? {
-            width: {
-              ideal: 640
-            },
-            height: {
-              ideal: 360
-            }
-          }
-        : {
-            width: {
-              ideal: 1280
-            },
-            height: {
-              ideal: 720
-            }
-          };
-
-
-    const constraints = {
-
-      audio:
-        wantAudio
-          ? (
-              state.selectedMicId
-                ? {
-                    deviceId: {
-                      exact:
-                        state.selectedMicId
-                    },
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true
-                  }
-                : {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true
-                  }
-            )
-          : false,
-
-      video:
-        wantVideo
-          ? (
-              state.selectedCameraId
-                ? {
-                    deviceId: {
-                      exact:
-                        state.selectedCameraId
-                    },
-                    ...videoSize
-                  }
-                : {
-                    ...videoSize
-                  }
-            )
-          : false
-
-    };
-
-
-    const stream =
-      await navigator.mediaDevices
-        .getUserMedia(
-          constraints
-        );
-
-
-    if (
-      !state.localStream
-    ) {
-
-      state.localStream =
-        new MediaStream();
-
-    }
-
-
-    stream
-      .getTracks()
-      .forEach(track => {
-
-        state.localStream.addTrack(
-          track
-        );
-
-      });
-
-
-    if (
-      wantVideo
-    ) {
-
-      state.cameraStream =
-        stream;
-
-      state.isCameraEnabled =
-        true;
-
-    }
-
-
-    if (
-      wantAudio
-    ) {
-
-      state.isMicEnabled =
-        true;
-
-    }
-
-
-    await syncLocalTracksToPeers();
-
-
-    await updateRoomPresence();
-
-
-    renderConferenceRoom();
-
-
-    return stream;
-
-  }
-
-
-  async function syncLocalTracksToPeers() {
-
-    if (
-      !state.localStream
-    ) {
-      return;
-    }
-
-
-    for (
-      const [
-        remoteId,
-        pc
-      ]
-      of state.peers
-    ) {
-
-      const senders =
-        pc.getSenders();
-
-
-      for (
-        const track of
-        state.localStream.getTracks()
-      ) {
-
-        const sender =
-          senders.find(
-            item =>
-              item.track &&
-              item.track.kind ===
-                track.kind
-          );
-
-
-        if (sender) {
-
-          try {
-
-            await sender.replaceTrack(
-              track
-            );
-
-          } catch (error) {
-
-            console.warn(
-              "replaceTrack error:",
-              error
-            );
-
-          }
-
-        } else {
-
-          try {
-
-            pc.addTrack(
-              track,
-              state.localStream
-            );
-
-          } catch (error) {
-
-            console.warn(
-              "addTrack error:",
-              error
-            );
-
-          }
-
+        const data =
+            message.data;
+
+        if (!data) {
+            return;
         }
 
-      }
+        /*
+         * Чтобы не создавать две параллельные
+         * offer-сессии, инициатором становится
+         * пользователь с меньшим UUID.
+         */
 
+        const peer =
+            createPeer(from);
 
-      /*
-       * После добавления нового track
-       * инициатор должен обновить SDP.
-       */
-
-      if (
-        shouldInitiate(
-          state.user.id,
-          remoteId
-        )
-      ) {
+        if (!peer) {
+            return;
+        }
 
         try {
 
-          const offer =
-            await pc.createOffer();
+            if (
+                data.type === "offer"
+            ) {
 
-          await pc.setLocalDescription(
-            offer
-          );
+                await peer.setRemoteDescription(
+                    new RTCSessionDescription(
+                        data.description
+                    )
+                );
 
+                const answer =
+                    await peer.createAnswer();
 
-          await sendSignal({
+                await peer.setLocalDescription(
+                    answer
+                );
 
-            type: "offer",
+                await sendSignal(
+                    from,
+                    {
+                        type: "answer",
+                        description:
+                            peer.localDescription
+                    }
+                );
 
-            to:
-              remoteId,
+            }
 
-            from:
-              state.user.id,
+            else if (
+                data.type === "answer"
+            ) {
 
-            description:
-              pc.localDescription
+                await peer.setRemoteDescription(
+                    new RTCSessionDescription(
+                        data.description
+                    )
+                );
 
-          });
+            }
+
+            else if (
+                data.type === "ice"
+            ) {
+
+                if (
+                    data.candidate
+                ) {
+
+                    try {
+
+                        await peer.addIceCandidate(
+                            new RTCIceCandidate(
+                                data.candidate
+                            )
+                        );
+
+                    } catch (iceError) {
+
+                        console.warn(
+                            "[Conference] ICE error:",
+                            iceError
+                        );
+
+                    }
+
+                }
+
+            }
 
         } catch (error) {
 
-          console.warn(
-            "Renegotiation error:",
-            error
-          );
+            console.error(
+                "[Conference] WebRTC message error:",
+                error
+            );
 
         }
-
-      }
-
     }
 
-  }
-
-
-  async function toggleMicrophone() {
-
-    try {
-
-      if (
-        !state.localStream ||
-        !state.localStream
-          .getAudioTracks()
-          .length
-      ) {
-
-        await ensureLocalStream({
-          audio: true,
-          video: false
-        });
-
-      }
-
-
-      const tracks =
-        state.localStream
-          ? state.localStream
-              .getAudioTracks()
-          : [];
-
-
-      if (!tracks.length) {
-        return;
-      }
-
-
-      const next =
-        !state.isMicEnabled;
-
-
-      tracks.forEach(
-        track => {
-          track.enabled =
-            next;
-        }
-      );
-
-
-      state.isMicEnabled =
-        next;
-
-
-      await updateRoomPresence();
-
-
-      renderConferenceRoom();
-
-    } catch (error) {
-
-      console.error(
-        error
-      );
-
-      showMessage(
-        "Не удалось получить доступ к микрофону: " +
-        (
-          error.message ||
-          "доступ запрещен"
-        ),
-        "error"
-      );
-
-    }
-
-  }
-
-
-  async function toggleCamera() {
-
-    try {
-
-      if (
-        !state.localStream ||
-        !state.localStream
-          .getVideoTracks()
-          .length
-      ) {
-
-        await ensureLocalStream({
-          audio: false,
-          video: true
-        });
-
-      }
-
-
-      const tracks =
-        state.localStream
-          ? state.localStream
-              .getVideoTracks()
-          : [];
-
-
-      if (!tracks.length) {
-        return;
-      }
-
-
-      const next =
-        !state.isCameraEnabled;
-
-
-      tracks.forEach(
-        track => {
-          track.enabled =
-            next;
-        }
-      );
-
-
-      state.isCameraEnabled =
-        next;
-
-
-      await updateRoomPresence();
-
-
-      renderConferenceRoom();
-
-    } catch (error) {
-
-      console.error(
-        error
-      );
-
-      showMessage(
-        "Не удалось получить доступ к камере: " +
-        (
-          error.message ||
-          "доступ запрещен"
-        ),
-        "error"
-      );
-
-    }
-
-  }
-
-
-  function stopLocalMedia() {
-
-    if (
-      state.localStream
+    async function sendSignal(
+        targetUserId,
+        data
     ) {
 
-      state.localStream
-        .getTracks()
-        .forEach(
-          track => {
-            try {
-              track.stop();
-            } catch (error) {
-              console.warn(error);
+        if (!roomChannel || !currentUser) {
+            return;
+        }
+
+        await roomChannel.send({
+            type: "broadcast",
+            event: "webrtc",
+            payload: {
+                from:
+                    currentUser.id,
+
+                target:
+                    targetUserId,
+
+                data:
+                    data
             }
-          }
-        );
-
+        });
     }
 
-
-    state.localStream =
-      null;
-
-    state.cameraStream =
-      null;
-
-    state.isMicEnabled =
-      false;
-
-    state.isCameraEnabled =
-      false;
-
-  }
-
-
-  /*
-   * ---------------------------------------------------------
-   * SCREEN SHARE
-   * ---------------------------------------------------------
-   */
-
-  async function toggleScreenShare() {
-
-    if (
-      state.isScreenSharing
-    ) {
-
-      await stopScreenShare(
-        true
-      );
-
-      return;
-    }
-
-
-    if (
-      !navigator.mediaDevices ||
-      !navigator.mediaDevices
-        .getDisplayMedia
-    ) {
-
-      showMessage(
-        "Демонстрация экрана не поддерживается этим браузером.",
-        "error"
-      );
-
-      return;
-    }
-
-
-    try {
-
-      const stream =
-        await navigator.mediaDevices
-          .getDisplayMedia({
-
-            video: {
-              frameRate: {
-                ideal: 30
-              }
-            },
-
-            audio: false
-
-          });
-
-
-      const track =
-        stream.getVideoTracks()[0];
-
-
-      if (!track) {
-        return;
-      }
-
-
-      state.screenStream =
-        stream;
-
-      state.isScreenSharing =
-        true;
-
-
-      track.onended =
-        async () => {
-
-          await stopScreenShare(
-            true
-          );
-
-        };
-
-
-      for (
-        const [
-          remoteId,
-          pc
-        ]
-        of state.peers
-      ) {
-
-        const sender =
-          pc.getSenders()
-            .find(
-              item =>
-                item.track &&
-                item.track.kind ===
-                  "video"
-            );
-
-
-        if (sender) {
-
-          try {
-
-            await sender.replaceTrack(
-              track
-            );
-
-          } catch (error) {
-
-            console.warn(
-              error
-            );
-
-          }
-
-        } else {
-
-          try {
-
-            pc.addTrack(
-              track,
-              stream
-            );
-
-          } catch (error) {
-
-            console.warn(
-              error
-            );
-
-          }
-
-        }
-
+    async function createConnectionsForPresentUsers() {
 
         if (
-          shouldInitiate(
-            state.user.id,
-            remoteId
-          )
+            !roomChannel ||
+            !currentUser
+        ) {
+            return;
+        }
+
+        const presence =
+            roomChannel.presenceState();
+
+        const users =
+            Object.keys(presence);
+
+        for (
+            const userId of users
         ) {
 
-          try {
+            if (
+                userId ===
+                currentUser.id
+            ) {
+                continue;
+            }
 
-            const offer =
-              await pc.createOffer();
+            /*
+             * Только один из двух участников
+             * создаёт offer.
+             */
 
-            await pc.setLocalDescription(
-              offer
+            if (
+                currentUser.id <
+                userId
+            ) {
+
+                if (!peers[userId]) {
+
+                    await createOffer(
+                        userId
+                    );
+
+                }
+
+            }
+
+        }
+    }
+
+    function createRemoteVideo(
+        userId,
+        stream
+    ) {
+
+        const container =
+            document.getElementById(
+                "conference-v2-videos"
             );
 
+        if (!container) {
+            return;
+        }
 
-            await sendSignal({
+        let card =
+            document.getElementById(
+                "conference-remote-" +
+                userId
+            );
 
-              type: "offer",
+        if (!card) {
 
-              to:
-                remoteId,
+            card =
+                document.createElement("div");
 
-              from:
-                state.user.id,
+            card.id =
+                "conference-remote-" +
+                userId;
 
-              description:
-                pc.localDescription
+            card.className =
+                "conference-v2-video-card";
 
+            card.innerHTML = `
+                <video
+                    autoplay
+                    playsinline
+                ></video>
+
+                <div class="conference-v2-video-name">
+                    Игрок
+                </div>
+            `;
+
+            container.appendChild(card);
+        }
+
+        const video =
+            card.querySelector("video");
+
+        if (video) {
+            video.srcObject = stream;
+        }
+
+        /*
+         * Попробуем получить имя пользователя.
+         */
+
+        loadRemoteUserName(
+            userId,
+            card
+        );
+    }
+
+    async function loadRemoteUserName(
+        userId,
+        card
+    ) {
+
+        const result =
+            await db
+                .from("profiles")
+                .select(
+                    "nickname"
+                )
+                .eq("id", userId)
+                .maybeSingle();
+
+        const nameElement =
+            card.querySelector(
+                ".conference-v2-video-name"
+            );
+
+        if (!nameElement) {
+            return;
+        }
+
+        if (
+            !result.error &&
+            result.data
+        ) {
+
+            nameElement.textContent =
+                result.data.nickname ||
+                "Игрок";
+
+        }
+    }
+
+    function closePeer(userId) {
+
+        const peer =
+            peers[userId];
+
+        if (peer) {
+
+            try {
+                peer.close();
+            } catch (e) {
+                console.warn(e);
+            }
+
+            delete peers[userId];
+        }
+
+        delete remoteStreams[userId];
+
+        const card =
+            document.getElementById(
+                "conference-remote-" +
+                userId
+            );
+
+        if (card) {
+            card.remove();
+        }
+    }
+
+    /* =========================================================
+       LEAVE
+       ========================================================= */
+
+    async function leaveRoom() {
+
+        const room =
+            currentRoom;
+
+        currentRoom = null;
+
+        /*
+         * Закрываем WebRTC.
+         */
+
+        Object.keys(peers)
+            .forEach(function (userId) {
+                closePeer(userId);
             });
 
-          } catch (error) {
+        /*
+         * Останавливаем камеру/микрофон.
+         */
 
-            console.warn(
-              error
-            );
+        stopMedia();
 
-          }
+        /*
+         * Останавливаем Realtime.
+         */
 
-        }
+        if (roomChannel) {
 
-      }
-
-
-      await updateRoomPresence();
-
-
-      renderConferenceRoom();
-
-    } catch (error) {
-
-      console.error(
-        "Screen share error:",
-        error
-      );
-
-      showMessage(
-        "Демонстрация экрана не запущена.",
-        "error"
-      );
-
-    }
-
-  }
-
-
-  async function stopScreenShare(
-    rerender
-  ) {
-
-    if (
-      state.screenStream
-    ) {
-
-      state.screenStream
-        .getTracks()
-        .forEach(
-          track => {
             try {
-              track.stop();
-            } catch (error) {
-              console.warn(error);
-            }
-          }
-        );
-
-    }
-
-
-    state.screenStream =
-      null;
-
-    state.isScreenSharing =
-      false;
-
-
-    /*
-     * Возвращаем камеру,
-     * если она была включена.
-     */
-
-    const cameraTrack =
-      state.cameraStream &&
-      state.cameraStream
-        .getVideoTracks
-        ? state.cameraStream
-            .getVideoTracks()[0]
-        : null;
-
-
-    for (
-      const [
-        remoteId,
-        pc
-      ]
-      of state.peers
-    ) {
-
-      const sender =
-        pc.getSenders()
-          .find(
-            item =>
-              item.track &&
-              item.track.kind ===
-                "video"
-          );
-
-
-      if (
-        sender &&
-        cameraTrack
-      ) {
-
-        try {
-
-          await sender.replaceTrack(
-            cameraTrack
-          );
-
-        } catch (error) {
-
-          console.warn(
-            error
-          );
-
-        }
-
-      }
-
-
-      if (
-        shouldInitiate(
-          state.user.id,
-          remoteId
-        )
-      ) {
-
-        try {
-
-          const offer =
-            await pc.createOffer();
-
-          await pc.setLocalDescription(
-            offer
-          );
-
-
-          await sendSignal({
-
-            type: "offer",
-
-            to:
-              remoteId,
-
-            from:
-              state.user.id,
-
-            description:
-              pc.localDescription
-
-          });
-
-        } catch (error) {
-
-          console.warn(
-            error
-          );
-
-        }
-
-      }
-
-    }
-
-
-    await updateRoomPresence();
-
-
-    if (rerender) {
-      renderConferenceRoom();
-    }
-
-  }
-
-
-  /*
-   * ---------------------------------------------------------
-   * ROOM PRESENCE UPDATE
-   * ---------------------------------------------------------
-   */
-
-  async function updateRoomPresence() {
-
-    if (
-      !state.roomChannel ||
-      !state.user
-    ) {
-      return;
-    }
-
-
-    try {
-
-      await state.roomChannel.track({
-
-        userId:
-          state.user.id,
-
-        nickname:
-          getNickname(
-            state.profile
-          ),
-
-        avatarUrl:
-          getAvatarUrl(
-            state.profile
-          ),
-
-        status:
-          state.profile &&
-          state.profile.status
-            ? state.profile.status
-            : "Онлайн",
-
-        mic:
-          state.isMicEnabled,
-
-        camera:
-          state.isCameraEnabled,
-
-        screen:
-          state.isScreenSharing
-
-      });
-
-    } catch (error) {
-
-      console.warn(
-        "Room presence update error:",
-        error
-      );
-
-    }
-
-
-    await updateLobbyPresence();
-  }
-
-
-  /*
-   * ---------------------------------------------------------
-   * ROOM UI
-   * ---------------------------------------------------------
-   */
-
-  function renderConferenceRoom() {
-
-    const root =
-      getRoot();
-
-    if (!root) {
-      return;
-    }
-
-
-    if (
-      !state.currentRoom
-    ) {
-
-      renderLobby();
-
-      return;
-    }
-
-
-    const participants =
-      getRoomPresenceUsers();
-
-
-    const room =
-      state.currentRoom;
-
-
-    root.innerHTML = `
-
-      <div class="conference-room-view">
-
-        <div class="conference-room-top">
-
-          <div class="conference-room-heading">
-
-            <strong>
-              ${escapeHtml(room.name)}
-            </strong>
-
-            <span>
-              ${
-                escapeHtml(
-                  room.description ||
-                  "Конференция"
-                )
-              }
-              ·
-              участников:
-              ${participants.length}
-            </span>
-
-          </div>
-
-
-          <div class="conference-room-top-actions">
-
-            <button
-              type="button"
-              class="conference-button"
-              id="conference-room-participants-button"
-            >
-              👥 ${participants.length}
-            </button>
-
-            <button
-              type="button"
-              class="conference-button danger"
-              id="conference-leave-button"
-            >
-              Выйти
-            </button>
-
-          </div>
-
-        </div>
-
-
-        <div
-          id="conference-stage"
-          class="conference-stage"
-        ></div>
-
-
-        <div class="conference-controls">
-
-          <button
-            type="button"
-            id="conference-mic-button"
-            class="conference-control ${
-              state.isMicEnabled
-                ? "active"
-                : "off"
-            }"
-            title="Микрофон"
-          >
-            ${
-              state.isMicEnabled
-                ? "🎙"
-                : "🔇"
-            }
-          </button>
-
-
-          <button
-            type="button"
-            id="conference-camera-button"
-            class="conference-control ${
-              state.isCameraEnabled
-                ? "active"
-                : "off"
-            }"
-            title="Камера"
-          >
-            ${
-              state.isCameraEnabled
-                ? "📹"
-                : "📷"
-            }
-          </button>
-
-
-          <button
-            type="button"
-            id="conference-screen-button"
-            class="conference-control ${
-              state.isScreenSharing
-                ? "active"
-                : ""
-            }"
-            title="Демонстрация экрана"
-          >
-            🖥
-          </button>
-
-
-          <button
-            type="button"
-            id="conference-settings-button"
-            class="conference-control"
-            title="Настройки устройств"
-          >
-            ⚙
-          </button>
-
-
-          <button
-            type="button"
-            id="conference-room-leave-bottom"
-            class="conference-control leave"
-          >
-            Выйти из конференции
-          </button>
-
-        </div>
-
-
-        <div class="conference-settings">
-
-          <div
-            id="conference-settings-panel"
-            class="conference-settings-panel"
-          >
-
-            <label class="conference-setting">
-
-              <span>
-                МИКРОФОН
-              </span>
-
-              <select
-                id="conference-mic-select"
-                class="conference-select"
-              >
-                <option value="">
-                  Автоматически
-                </option>
-              </select>
-
-            </label>
-
-
-            <label class="conference-setting">
-
-              <span>
-                КАМЕРА
-              </span>
-
-              <select
-                id="conference-camera-select"
-                class="conference-select"
-              >
-                <option value="">
-                  Автоматически
-                </option>
-              </select>
-
-            </label>
-
-
-            <label class="conference-setting">
-
-              <span>
-                КАЧЕСТВО ВИДЕО
-              </span>
-
-              <select
-                id="conference-quality-select"
-                class="conference-select"
-              >
-
-                <option value="360p">
-                  360p
-                </option>
-
-                <option
-                  value="720p"
-                  selected
-                >
-                  720p
-                </option>
-
-                <option value="1080p">
-                  1080p
-                </option>
-
-              </select>
-
-            </label>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    `;
-
-
-    renderParticipantsOnStage(
-      participants
-    );
-
-
-    bindConferenceRoomEvents();
-
-
-    populateDevices();
-  }
-
-
-  function renderParticipantsOnStage(
-    participants
-  ) {
-
-    const stage =
-      document.getElementById(
-        "conference-stage"
-      );
-
-    if (!stage) {
-      return;
-    }
-
-
-    stage.innerHTML = "";
-
-
-    /*
-     * Сначала текущий пользователь.
-     */
-
-    const self =
-      participants.find(
-        user =>
-          user.userId ===
-          state.user.id
-      );
-
-
-    if (self) {
-
-      createVideoTile(
-        self.userId,
-        self,
-        state.localStream,
-        true
-      );
-
-    } else {
-
-      createVideoTile(
-        state.user.id,
-        {
-          userId:
-            state.user.id,
-
-          nickname:
-            getNickname(
-              state.profile
-            ),
-
-          avatarUrl:
-            getAvatarUrl(
-              state.profile
-            ),
-
-          mic:
-            state.isMicEnabled,
-
-          camera:
-            state.isCameraEnabled,
-
-          screen:
-            state.isScreenSharing
-
-        },
-        state.localStream,
-        true
-      );
-
-    }
-
-
-    /*
-     * Затем остальные.
-     */
-
-    participants
-      .filter(
-        user =>
-          user.userId !==
-          state.user.id
-      )
-      .forEach(
-        user => {
-
-          const stream =
-            state.remoteStreams.get(
-              user.userId
-            ) || null;
-
-
-          createVideoTile(
-            user.userId,
-            user,
-            stream,
-            false
-          );
-
-        }
-      );
-
-  }
-
-
-  function createVideoTile(
-    userId,
-    user,
-    stream,
-    local
-  ) {
-
-    const stage =
-      document.getElementById(
-        "conference-stage"
-      );
-
-    if (!stage) {
-      return;
-    }
-
-
-    const tile =
-      document.createElement("div");
-
-    tile.className =
-      "conference-video-tile";
-
-
-    tile.id =
-      "conference-tile-" +
-      userId;
-
-
-    if (
-      !stream
-    ) {
-
-      tile.classList.add(
-        "audio-only"
-      );
-
-    }
-
-
-    const video =
-      document.createElement("video");
-
-
-    video.autoplay =
-      true;
-
-    video.playsInline =
-      true;
-
-    video.muted =
-      !!local;
-
-
-    if (
-      stream
-    ) {
-
-      video.srcObject =
-        stream;
-
-    }
-
-
-    const fallback =
-      document.createElement("div");
-
-    fallback.className =
-      "conference-avatar-fallback";
-
-
-    const avatar =
-      user.avatarUrl;
-
-
-    if (avatar) {
-
-      fallback.innerHTML =
-        `<img
-          src="${escapeHtml(avatar)}"
-          alt=""
-          style="
-            width:90px;
-            height:90px;
-            border-radius:50%;
-            object-fit:cover;
-          "
-          onerror="this.outerHTML='🤖';"
-        >`;
-
-    } else {
-
-      fallback.textContent =
-        "🤖";
-
-    }
-
-
-    const label =
-      document.createElement("div");
-
-    label.className =
-      "conference-video-label";
-
-
-    const nickname =
-      user.nickname ||
-      "Player";
-
-
-    const status =
-      document.createElement("span");
-
-    status.textContent =
-      local
-        ? nickname + " · Вы"
-        : nickname;
-
-
-    const icons =
-      document.createElement("span");
-
-    icons.className =
-      "conference-video-status";
-
-
-    if (
-      user.mic === false
-    ) {
-
-      icons.innerHTML +=
-        `<span class="conference-mic-off">🔇</span>`;
-
-    } else {
-
-      icons.innerHTML +=
-        `<span>🎙</span>`;
-
-    }
-
-
-    if (
-      user.camera
-    ) {
-
-      icons.innerHTML +=
-        `<span>📹</span>`;
-
-    }
-
-
-    if (
-      user.screen
-    ) {
-
-      icons.innerHTML +=
-        `<span>🖥</span>`;
-
-    }
-
-
-    label.appendChild(
-      status
-    );
-
-    label.appendChild(
-      icons
-    );
-
-
-    tile.appendChild(
-      video
-    );
-
-    tile.appendChild(
-      fallback
-    );
-
-    tile.appendChild(
-      label
-    );
-
-
-    if (
-      stream
-    ) {
-
-      video
-        .play()
-        .catch(
-          () => {}
-        );
-
-      fallback.style.display =
-        "none";
-
-    }
-
-
-    stage.appendChild(
-      tile
-    );
-
-  }
-
-
-  function renderRemoteTile(
-    userId,
-    user,
-    stream
-  ) {
-
-    if (
-      !state.currentRoom
-    ) {
-      return;
-    }
-
-
-    const existing =
-      document.getElementById(
-        "conference-tile-" +
-        userId
-      );
-
-
-    if (
-      existing
-    ) {
-
-      const video =
-        existing.querySelector(
-          "video"
-        );
-
-
-      if (video) {
-
-        video.srcObject =
-          stream;
-
-        video
-          .play()
-          .catch(
-            () => {}
-          );
-
-      }
-
-
-      existing.classList.remove(
-        "audio-only"
-      );
-
-
-      const fallback =
-        existing.querySelector(
-          ".conference-avatar-fallback"
-        );
-
-
-      if (fallback) {
-
-        fallback.style.display =
-          "none";
-
-      }
-
-
-      return;
-    }
-
-
-    createVideoTile(
-      userId,
-      user,
-      stream,
-      false
-    );
-
-  }
-
-
-  function removeRemoteTile(
-    userId
-  ) {
-
-    const tile =
-      document.getElementById(
-        "conference-tile-" +
-        userId
-      );
-
-
-    if (
-      tile
-    ) {
-
-      tile.remove();
-
-    }
-
-
-    state.remoteStreams.delete(
-      userId
-    );
-
-  }
-
-
-  function removeRemoteTiles() {
-
-    const stage =
-      document.getElementById(
-        "conference-stage"
-      );
-
-    if (
-      stage
-    ) {
-
-      stage.innerHTML =
-        "";
-
-    }
-
-    state.remoteStreams.clear();
-
-  }
-
-
-  function bindConferenceRoomEvents() {
-
-    const leave =
-      document.getElementById(
-        "conference-leave-button"
-      );
-
-    const leaveBottom =
-      document.getElementById(
-        "conference-room-leave-bottom"
-      );
-
-
-    if (leave) {
-
-      leave.addEventListener(
-        "click",
-        async () => {
-
-          await leaveRoom();
-
-        }
-      );
-
-    }
-
-
-    if (leaveBottom) {
-
-      leaveBottom.addEventListener(
-        "click",
-        async () => {
-
-          await leaveRoom();
-
-        }
-      );
-
-    }
-
-
-    const mic =
-      document.getElementById(
-        "conference-mic-button"
-      );
-
-
-    if (mic) {
-
-      mic.addEventListener(
-        "click",
-        toggleMicrophone
-      );
-
-    }
-
-
-    const camera =
-      document.getElementById(
-        "conference-camera-button"
-      );
-
-
-    if (camera) {
-
-      camera.addEventListener(
-        "click",
-        toggleCamera
-      );
-
-    }
-
-
-    const screen =
-      document.getElementById(
-        "conference-screen-button"
-      );
-
-
-    if (screen) {
-
-      screen.addEventListener(
-        "click",
-        toggleScreenShare
-      );
-
-    }
-
-
-    const settings =
-      document.getElementById(
-        "conference-settings-button"
-      );
-
-
-    if (settings) {
-
-      settings.addEventListener(
-        "click",
-        () => {
-
-          const panel =
-            document.getElementById(
-              "conference-settings-panel"
-            );
-
-          if (panel) {
-
-            panel.classList.toggle(
-              "open"
-            );
-
-          }
-
-        }
-      );
-
-    }
-
-
-    const quality =
-      document.getElementById(
-        "conference-quality-select"
-      );
-
-
-    if (quality) {
-
-      quality.value =
-        state.videoQuality;
-
-
-      quality.addEventListener(
-        "change",
-        event => {
-
-          state.videoQuality =
-            event.target.value;
-
-        }
-      );
-
-    }
-
-
-    const micSelect =
-      document.getElementById(
-        "conference-mic-select"
-      );
-
-
-    if (micSelect) {
-
-      micSelect.value =
-        state.selectedMicId;
-
-
-      micSelect.addEventListener(
-        "change",
-        event => {
-
-          state.selectedMicId =
-            event.target.value;
-
-        }
-      );
-
-    }
-
-
-    const cameraSelect =
-      document.getElementById(
-        "conference-camera-select"
-      );
-
-
-    if (cameraSelect) {
-
-      cameraSelect.value =
-        state.selectedCameraId;
-
-
-      cameraSelect.addEventListener(
-        "change",
-        event => {
-
-          state.selectedCameraId =
-            event.target.value;
-
-        }
-      );
-
-    }
-
-  }
-
-
-  /*
-   * ---------------------------------------------------------
-   * DEVICES
-   * ---------------------------------------------------------
-   */
-
-  async function populateDevices() {
-
-    if (
-      !navigator.mediaDevices ||
-      !navigator.mediaDevices.enumerateDevices
-    ) {
-      return;
-    }
-
-
-    try {
-
-      const devices =
-        await navigator.mediaDevices
-          .enumerateDevices();
-
-
-      const micSelect =
-        document.getElementById(
-          "conference-mic-select"
-        );
-
-
-      const cameraSelect =
-        document.getElementById(
-          "conference-camera-select"
-        );
-
-
-      if (
-        micSelect
-      ) {
-
-        micSelect.innerHTML =
-          `
-            <option value="">
-              Автоматически
-            </option>
-          `;
-
-
-        devices
-          .filter(
-            device =>
-              device.kind ===
-              "audioinput"
-          )
-          .forEach(
-            device => {
-
-              const option =
-                document.createElement(
-                  "option"
-                );
-
-              option.value =
-                device.deviceId;
-
-              option.textContent =
-                device.label ||
-                "Микрофон";
-
-              micSelect.appendChild(
-                option
-              );
-
-            }
-          );
-
-
-        micSelect.value =
-          state.selectedMicId;
-
-      }
-
-
-      if (
-        cameraSelect
-      ) {
-
-        cameraSelect.innerHTML =
-          `
-            <option value="">
-              Автоматически
-            </option>
-          `;
-
-
-        devices
-          .filter(
-            device =>
-              device.kind ===
-              "videoinput"
-          )
-          .forEach(
-            device => {
-
-              const option =
-                document.createElement(
-                  "option"
-                );
-
-              option.value =
-                device.deviceId;
-
-              option.textContent =
-                device.label ||
-                "Камера";
-
-              cameraSelect.appendChild(
-                option
-              );
-
-            }
-          );
-
-
-        cameraSelect.value =
-          state.selectedCameraId;
-
-      }
-
-    } catch (error) {
-
-      console.warn(
-        "Device enumeration error:",
-        error
-      );
-
-    }
-
-  }
-
-
-  /*
-   * ---------------------------------------------------------
-   * INITIALIZATION
-   * ---------------------------------------------------------
-   */
-
-  async function initialize() {
-
-    if (
-      state.initialized
-    ) {
-      return;
-    }
-
-
-    state.initialized =
-      true;
-
-
-    injectStyles();
-
-
-    /*
-     * Кнопки открытия конференции.
-     */
-
-    document
-      .querySelectorAll(
-        ".conference-open-button"
-      )
-      .forEach(button => {
-
-        button.addEventListener(
-          "click",
-          async () => {
-
-            await openModal();
-
-          }
-        );
-
-      });
-
-
-    /*
-     * Закрытие модального окна.
-     */
-
-    document
-      .querySelectorAll(
-        '[data-close-modal="conference-modal"]'
-      )
-      .forEach(button => {
-
-        button.addEventListener(
-          "click",
-          async () => {
-
-            if (
-              state.currentRoom
-            ) {
-
-              await leaveRoom(
-                false
-              );
-
-            }
-
-            closeModal();
-
-          }
-        );
-
-      });
-
-
-    /*
-     * Если пользователь кликает по фону.
-     */
-
-    const modal =
-      document.getElementById(
-        "conference-modal"
-      );
-
-
-    if (modal) {
-
-      modal.addEventListener(
-        "click",
-        async event => {
-
-          if (
-            event.target ===
-            modal
-          ) {
-
-            if (
-              state.currentRoom
-            ) {
-
-              await leaveRoom(
-                false
-              );
-
-            }
-
-            closeModal();
-
-          }
-
-        }
-      );
-
-    }
-
-
-    /*
-     * Загружаем сессию.
-     */
-
-    await loadSession();
-
-
-    if (
-      state.user
-    ) {
-
-      await loadProfile();
-
-      await startLobbyPresence();
-
-    }
-
-
-    /*
-     * Отслеживаем вход/выход.
-     */
-
-    if (
-      db &&
-      db.auth
-    ) {
-
-      db.auth.onAuthStateChange(
-        async (
-          event,
-          session
-        ) => {
-
-          state.session =
-            session || null;
-
-          state.user =
-            session
-              ? session.user
-              : null;
-
-
-          if (
-            state.user
-          ) {
-
-            await loadProfile();
-
-            await startLobbyPresence();
-
-          } else {
-
-            state.profile =
-              null;
-
-            if (
-              state.currentRoom
-            ) {
-
-              await leaveRoom(
-                false
-              );
-
-            }
-
-
-            if (
-              state.lobbyChannel
-            ) {
-
-              try {
-
                 await db.removeChannel(
-                  state.lobbyChannel
+                    roomChannel
                 );
-
-              } catch (error) {
-                console.warn(error);
-              }
-
+            } catch (e) {
+                console.warn(e);
             }
 
-
-            state.lobbyChannel =
-              null;
-
-            state.lobbyReady =
-              false;
-
-          }
-
-
-          renderLobby();
-
+            roomChannel = null;
         }
-      );
 
-    }
-
-
-    /*
-     * Периодически обновляем список комнат.
-     *
-     * Само присутствие работает через Realtime,
-     * поэтому polling нужен только для новых комнат.
-     */
-
-    state.pollingTimer =
-      window.setInterval(
-        async () => {
-
-          if (
-            state.user
-          ) {
-
-            await loadRooms();
-
-          }
-
-        },
-        ROOM_POLL_INTERVAL
-      );
-
-  }
-
-
-  /*
-   * ---------------------------------------------------------
-   * PAGE UNLOAD
-   * ---------------------------------------------------------
-   */
-
-  window.addEventListener(
-    "beforeunload",
-    () => {
-
-      try {
+        /*
+         * Удаляем пользователя из комнаты.
+         */
 
         if (
-          state.localStream
+            room &&
+            currentUser
         ) {
 
-          state.localStream
-            .getTracks()
-            .forEach(
-              track => track.stop()
+            const result =
+                await db
+                    .from(
+                        "conference_room_members"
+                    )
+                    .delete()
+                    .eq(
+                        "room_id",
+                        room.id
+                    )
+                    .eq(
+                        "user_id",
+                        currentUser.id
+                    );
+
+            if (result.error) {
+
+                console.warn(
+                    "[Conference] member delete:",
+                    result.error
+                );
+
+            }
+        }
+
+        const videos =
+            document.getElementById(
+                "conference-v2-videos"
             );
+
+        if (videos) {
+            videos.innerHTML = "";
+        }
+
+        const roomView =
+            document.getElementById(
+                "conference-v2-room-view"
+            );
+
+        if (roomView) {
+            roomView.style.display = "none";
+        }
+
+        const lobby =
+            document.getElementById(
+                "conference-v2-lobby"
+            );
+
+        if (lobby) {
+            lobby.style.display = "block";
+        }
+
+        await loadRooms();
+    }
+
+    async function cleanupRoomConnection() {
+
+        Object.keys(peers)
+            .forEach(function (userId) {
+                closePeer(userId);
+            });
+
+        stopMedia();
+
+        if (roomChannel) {
+
+            try {
+                await db.removeChannel(
+                    roomChannel
+                );
+            } catch (e) {
+                console.warn(e);
+            }
+
+            roomChannel = null;
+        }
+
+        if (
+            currentRoom &&
+            currentUser
+        ) {
+
+            try {
+
+                await db
+                    .from(
+                        "conference_room_members"
+                    )
+                    .delete()
+                    .eq(
+                        "room_id",
+                        currentRoom.id
+                    )
+                    .eq(
+                        "user_id",
+                        currentUser.id
+                    );
+
+            } catch (e) {
+
+                console.warn(e);
+
+            }
 
         }
 
-      } catch (error) {
-        console.warn(error);
-      }
+        currentRoom = null;
+    }
+
+    /* =========================================================
+       BUTTONS
+       ========================================================= */
+
+    function bindConferenceButtons() {
+
+        const selectors = [
+            "#header-conference-button",
+            "#sidebar-conference-button",
+            "#conference-button",
+            "[data-open-conference]"
+        ];
+
+        selectors.forEach(function (selector) {
+
+            document
+                .querySelectorAll(selector)
+                .forEach(function (button) {
+
+                    if (
+                        button.dataset
+                            .conferenceBound ===
+                        "true"
+                    ) {
+                        return;
+                    }
+
+                    button.dataset
+                        .conferenceBound =
+                        "true";
+
+                    button.addEventListener(
+                        "click",
+                        function (event) {
+
+                            event.preventDefault();
+                            event.stopPropagation();
+
+                            openConference();
+
+                        }
+                    );
+
+                });
+
+        });
+    }
+
+    /* =========================================================
+       PAGE START
+       ========================================================= */
+
+    function init() {
+
+        if (conferenceInitialized) {
+            return;
+        }
+
+        conferenceInitialized = true;
+
+        injectStyles();
+
+        createModal();
+
+        bindConferenceButtons();
+
+        /*
+         * Если app.js создаёт кнопки позже,
+         * проверяем DOM ещё несколько раз.
+         */
+
+        let attempts = 0;
+
+        const timer =
+            setInterval(function () {
+
+                bindConferenceButtons();
+
+                attempts++;
+
+                if (attempts >= 20) {
+                    clearInterval(timer);
+                }
+
+            }, 500);
+
+        /*
+         * Авторизация может измениться.
+         */
+
+        db.auth.onAuthStateChange(
+            function (_event, session) {
+
+                currentUser =
+                    session?.user || null;
+
+            }
+        );
+
+        /*
+         * Если вкладку закрыли —
+         * пытаемся удалить membership.
+         */
+
+        window.addEventListener(
+            "beforeunload",
+            function () {
+
+                if (
+                    currentRoom &&
+                    currentUser
+                ) {
+
+                    /*
+                     * Здесь нельзя гарантировать
+                     * выполнение async-запроса.
+                     * Realtime Presence всё равно
+                     * автоматически исчезнет.
+                     */
+
+                    try {
+
+                        roomChannel?.untrack();
+
+                    } catch (e) {
+                        console.warn(e);
+                    }
+
+                }
+
+            }
+        );
+
+        console.log(
+            "[Conference] GAME PLATFORM conference initialized."
+        );
+    }
+
+    /* =========================================================
+       HELPERS
+       ========================================================= */
+
+    function escapeHtml(value) {
+
+        return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    function escapeAttribute(value) {
+        return escapeHtml(value);
+    }
+
+    /* =========================================================
+       START
+       ========================================================= */
+
+    if (
+        document.readyState ===
+        "loading"
+    ) {
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            init
+        );
+
+    } else {
+
+        init();
 
     }
-  );
 
+    /*
+     * Делаем функцию доступной глобально.
+     * Это позволяет открыть конференцию
+     * из существующего интерфейса.
+     */
 
-  /*
-   * ---------------------------------------------------------
-   * GLOBAL API
-   * ---------------------------------------------------------
-   */
-
-  window.GamePlatformConference = {
-
-    open:
-      openModal,
-
-    close:
-      closeModal,
-
-    joinRoom:
-      joinRoom,
-
-    leaveRoom:
-      leaveRoom,
-
-    refresh:
-      loadRooms,
-
-    getState:
-      () => state
-
-  };
-
-
-  /*
-   * ---------------------------------------------------------
-   * START
-   * ---------------------------------------------------------
-   */
-
-  if (
-    document.readyState ===
-    "loading"
-  ) {
-
-    document.addEventListener(
-      "DOMContentLoaded",
-      initialize
-    );
-
-  } else {
-
-    initialize();
-
-  }
+    window.GamePlatformConference = {
+        open: openConference,
+        close: closeConference,
+        leave: leaveRoom
+    };
 
 })();
