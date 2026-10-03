@@ -1,14 +1,17 @@
 /*
-=================================
+==================================
 GAME PLATFORM CORE
-v1.0.0
-=================================
+VERSION 1.1.0
+==================================
 */
 
 
 let games=[];
 
+
 let user=null;
+
+
 
 
 
@@ -31,6 +34,7 @@ loadGames();
 
 
 
+
 function openAuth(){
 
 
@@ -40,6 +44,7 @@ document
 
 
 }
+
 
 
 
@@ -70,26 +75,45 @@ function register(){
 
 
 
-let name =
-document.getElementById("nickname").value;
+let name=
+
+document
+.getElementById("nickname")
+.value;
 
 
-let email =
-document.getElementById("regEmail").value;
+
+let email=
+
+document
+.getElementById("regEmail")
+.value;
+
 
 
 alert(
-"Регистрация подготовлена: "
+
+"Регистрация пользователя: "
+
 +
+
 name
+
 +
-" "
+
+"\n"
+
 +
+
 email
+
 );
 
 
+
 }
+
+
 
 
 
@@ -101,8 +125,12 @@ function login(){
 
 
 
-let email =
-document.getElementById("email").value;
+let email=
+
+document
+.getElementById("email")
+.value;
+
 
 
 
@@ -114,20 +142,28 @@ email:email
 
 
 
+
 document
 .getElementById("userPanel")
 .innerHTML=
 
 `
+
 <button>
+
 ${email}
+
 </button>
+
 `;
+
+
 
 
 document
 .getElementById("authWindow")
 .hidden=true;
+
 
 
 }
@@ -147,26 +183,43 @@ function createGame(){
 let game={
 
 
+
 id:Date.now(),
 
 
+
 name:
-document.getElementById("gameName").value,
+
+document
+.getElementById("gameName")
+.value,
+
 
 
 description:
-document.getElementById("gameDescription").value,
+
+document
+.getElementById("gameDescription")
+.value,
+
 
 
 image:
-document.getElementById("gameImage").value
+
+document
+.getElementById("gameImage")
+.value
+
 
 
 };
 
 
 
+
+
 games.push(game);
+
 
 
 renderGames();
@@ -186,9 +239,7 @@ renderGames();
 function loadGames(){
 
 
-
 renderGames();
-
 
 
 }
@@ -206,7 +257,11 @@ function renderGames(list=games){
 
 
 let box=
-document.getElementById("gamesList");
+
+document
+.getElementById("gamesList");
+
+
 
 
 box.innerHTML="";
@@ -226,12 +281,19 @@ box.innerHTML+=`
 
 
 ${
+
 game.image
+
 ?
+
 `<img src="${game.image}">`
+
 :
+
 ""
+
 }
+
 
 
 <h3>
@@ -239,7 +301,6 @@ game.image
 ${game.name}
 
 </h3>
-
 
 
 <p>
@@ -269,6 +330,7 @@ ${game.description}
 
 
 
+
 function searchGames(){
 
 
@@ -288,9 +350,9 @@ let result=
 
 games.filter(
 
-g=>
+game=>
 
-g.name
+game.name
 .toLowerCase()
 .includes(text)
 
