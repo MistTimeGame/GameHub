@@ -1,30 +1,29 @@
 /*
-================================
-GAME PLATFORM
-MAIN CORE
-VERSION 1.0.0
-================================
+=================================
+GAME PLATFORM CORE
+CONSOLE STYLE
+VERSION 1.1.0
+=================================
 */
-
 
 
 function openPage(page){
 
 
-document.body.classList.add(
-"page-change"
-);
+document.body.style.opacity="0";
+
+
+document.body.style.transition=".4s";
 
 
 
 setTimeout(()=>{
 
 
-location.href=page;
+window.location.href=page;
 
 
 },400);
-
 
 
 }
