@@ -1,5 +1,6 @@
 "use strict";
 
+
 /* =========================================================
    GAME PLATFORM
    AUTH
@@ -8,10 +9,11 @@
    PRESENCE
    CHAT
    WEBRTC CONFERENCE
-   MULTIPLE ROOMS
-   DISCORD-LIKE VOICE SETTINGS
-   1080P VIDEO
-   PICTURE-IN-PICTURE
+   MULTIPLE CONFERENCE ROOMS
+   VOICE SETTINGS
+   PUSH TO TALK
+   1080P
+   PICTURE IN PICTURE
 ========================================================= */
 
 
@@ -26,7 +28,7 @@ const SUPABASE_PUBLISHABLE_KEY =
     "sb_publishable_yNWxh02tapOVUQN9iJ_2_Q_IPVc60J3";
 
 const APP_VERSION =
-    "1.8.3";
+    "1.8.4";
 
 
 /* =========================================================
@@ -93,14 +95,6 @@ let conferenceChannel = null;
 
 let conferenceJoined = false;
 
-
-/*
-   ВАЖНО:
-   теперь room не привязан к пользователю.
-   Все пользователи с одинаковым названием комнаты
-   получают один и тот же Realtime channel.
-*/
-
 let conferenceRoom =
     localStorage.getItem(
         "gp_conference_room"
@@ -111,8 +105,6 @@ let localStream = null;
 
 let screenStream = null;
 
-let rawAudioTrack = null;
-
 let micEnabled = false;
 
 let cameraEnabled = false;
@@ -122,6 +114,10 @@ let screenSharing = false;
 let peerConnections = {};
 
 let conferenceParticipants = {};
+
+let conferenceRemoteAudio = {};
+
+let conferenceNegotiating = {};
 
 
 /* =========================================================
@@ -140,7 +136,7 @@ let voiceSettings = {
 
     autoGainControl: true,
 
-    inputVolume: 1,
+    inputVolume: 100,
 
     mode: "toggle",
 
@@ -148,30 +144,16 @@ let voiceSettings = {
 
 };
 
+let voiceSettingsOpen = false;
 
-let voiceAudioContext = null;
-
-let voiceAudioSource = null;
-
-let voiceGainNode = null;
-
-let voiceAnalyser = null;
-
-let voiceDestination = null;
-
-let voiceMeterAnimation =
-    null;
-
-let voiceSettingsOpen =
-    false;
+let pushToTalkActive = false;
 
 
 /* =========================================================
    PICTURE IN PICTURE
 ========================================================= */
 
-let documentPiPWindow =
-    null;
+let documentPiPWindow = null;
 
 
 /* =========================================================
@@ -376,64 +358,57 @@ function showInfo(
             "gp-toast";
 
 
-        toast.style.position =
-            "fixed";
+        Object.assign(
+            toast.style,
+            {
 
+                position:
+                    "fixed",
 
-        toast.style.left =
-            "50%";
+                left:
+                    "50%",
 
+                bottom:
+                    "90px",
 
-        toast.style.bottom =
-            "90px";
+                transform:
+                    "translateX(-50%)",
 
+                zIndex:
+                    "99999",
 
-        toast.style.transform =
-            "translateX(-50%)";
+                maxWidth:
+                    "calc(100vw - 30px)",
 
+                padding:
+                    "12px 16px",
 
-        toast.style.zIndex =
-            "99999";
+                border:
+                    "1px solid rgba(30,40,50,0.2)",
 
+                borderRadius:
+                    "14px",
 
-        toast.style.maxWidth =
-            "calc(100vw - 30px)";
+                background:
+                    "rgba(255,255,255,0.96)",
 
+                color:
+                    "#30363d",
 
-        toast.style.padding =
-            "12px 16px";
+                boxShadow:
+                    "0 8px 30px rgba(0,0,0,0.15), 0 0 20px rgba(59,141,245,0.12)",
 
+                fontSize:
+                    "12px",
 
-        toast.style.border =
-            "1px solid rgba(30,40,50,0.2)";
+                lineHeight:
+                    "1.5",
 
+                textAlign:
+                    "center"
 
-        toast.style.borderRadius =
-            "14px";
-
-
-        toast.style.background =
-            "rgba(255,255,255,0.96)";
-
-
-        toast.style.color =
-            "#30363d";
-
-
-        toast.style.boxShadow =
-            "0 8px 30px rgba(0,0,0,0.15), 0 0 20px rgba(59,141,245,0.12)";
-
-
-        toast.style.fontSize =
-            "12px";
-
-
-        toast.style.lineHeight =
-            "1.5";
-
-
-        toast.style.textAlign =
-            "center";
+            }
+        );
 
 
         document.body.appendChild(
@@ -767,7 +742,10 @@ async function loginUser() {
             : "";
 
 
-    if (!email || !password) {
+    if (
+        !email ||
+        !password
+    ) {
 
         showAuthMessage(
             "Введите email и пароль."
@@ -923,7 +901,9 @@ async function registerUser() {
     }
 
 
-    if (password.length < 6) {
+    if (
+        password.length < 6
+    ) {
 
         showAuthMessage(
             "Пароль должен содержать минимум 6 символов."
@@ -934,7 +914,10 @@ async function registerUser() {
     }
 
 
-    if (password !== confirm) {
+    if (
+        password !==
+        confirm
+    ) {
 
         showAuthMessage(
             "Пароли не совпадают."
@@ -997,8 +980,11 @@ async function registerUser() {
         if (!currentSession) {
 
             showAuthMessage(
+
                 "Аккаунт создан. Проверьте email для подтверждения регистрации.",
+
                 "success"
+
             );
 
             return;
@@ -1017,10 +1003,12 @@ async function registerUser() {
 
 
         showAuthMessage(
+
             error &&
             error.message
                 ? error.message
                 : "Не удалось создать аккаунт."
+
         );
 
     }
@@ -1163,7 +1151,10 @@ function normalizeAvatarUrl(
 ) {
 
     let url =
-        String(value || "").trim();
+        String(
+            value ||
+            ""
+        ).trim();
 
 
     if (!url) {
@@ -1243,7 +1234,8 @@ function renderAvatar(
 
     image.alt =
         nickname
-            ? "Аватар " + nickname
+            ? "Аватар " +
+              nickname
             : "Avatar";
 
 
@@ -1382,10 +1374,14 @@ function createVipBadge(
 ) {
 
     const number =
-        Number(level) || 0;
+        Number(
+            level
+        ) || 0;
 
 
-    if (number <= 0) {
+    if (
+        number <= 0
+    ) {
 
         return "";
 
@@ -1393,13 +1389,19 @@ function createVipBadge(
 
 
     return (
-        '<span class="vip-badge">VIP ' +
+
+        '<span class="vip-badge">' +
+
+        "VIP " +
+
         escapeHtml(
             getVipRoman(
                 number
             )
         ) +
+
         "</span>"
+
     );
 
 }
@@ -1461,9 +1463,7 @@ async function ensureProfile() {
                 Object.assign(
 
                     {},
-
                     profileData,
-
                     result.data
 
                 );
@@ -1509,13 +1509,16 @@ async function ensureProfile() {
                             : null,
 
                     age:
-                        metadata.age || null,
+                        metadata.age ||
+                        null,
 
                     city:
-                        metadata.city || null,
+                        metadata.city ||
+                        null,
 
                     about:
-                        metadata.about || null,
+                        metadata.about ||
+                        null,
 
                     vip_level:
                         0
@@ -1534,9 +1537,7 @@ async function ensureProfile() {
                 Object.assign(
 
                     {},
-
                     profileData,
-
                     insertResult.data
 
                 );
@@ -1546,8 +1547,22 @@ async function ensureProfile() {
             profileData.nickname =
                 defaultNickname;
 
+
             profileData.status =
                 defaultStatus;
+
+
+            if (
+                metadata.avatar_url &&
+                !profileData.avatar_url
+            ) {
+
+                profileData.avatar_url =
+                    normalizeAvatarUrl(
+                        metadata.avatar_url
+                    );
+
+            }
 
         }
 
@@ -1684,7 +1699,8 @@ function applyProfile() {
     if ($("profile-age-input")) {
 
         $("profile-age-input").value =
-            profileData.age || "";
+            profileData.age ||
+            "";
 
     }
 
@@ -1692,7 +1708,8 @@ function applyProfile() {
     if ($("profile-city-input")) {
 
         $("profile-city-input").value =
-            profileData.city || "";
+            profileData.city ||
+            "";
 
     }
 
@@ -1700,7 +1717,8 @@ function applyProfile() {
     if ($("profile-avatar-input")) {
 
         $("profile-avatar-input").value =
-            profileData.avatar_url || "";
+            profileData.avatar_url ||
+            "";
 
     }
 
@@ -1708,7 +1726,8 @@ function applyProfile() {
     if ($("profile-about-input")) {
 
         $("profile-about-input").value =
-            profileData.about || "";
+            profileData.about ||
+            "";
 
     }
 
@@ -1837,7 +1856,8 @@ async function saveProfile() {
                 nickname,
 
             status:
-                status || "Онлайн",
+                status ||
+                "Онлайн",
 
             age:
                 age,
@@ -1849,7 +1869,8 @@ async function saveProfile() {
                 about,
 
             avatar_url:
-                avatarUrl || null,
+                avatarUrl ||
+                null,
 
             updated_at:
                 new Date().toISOString()
@@ -1882,9 +1903,7 @@ async function saveProfile() {
             Object.assign(
 
                 {},
-
                 profileData,
-
                 result.data
 
             );
@@ -1900,7 +1919,8 @@ async function saveProfile() {
                         nickname,
 
                     status:
-                        status || "Онлайн",
+                        status ||
+                        "Онлайн",
 
                     age:
                         age,
@@ -1921,7 +1941,7 @@ async function saveProfile() {
         } catch (error) {
 
             console.warn(
-                "Auth metadata update failed:",
+                "Auth metadata update:",
                 error
             );
 
@@ -1931,46 +1951,7 @@ async function saveProfile() {
         applyProfile();
 
 
-        if (
-            presenceChannel &&
-            currentUser
-        ) {
-
-            try {
-
-                await presenceChannel.track({
-
-                    user_id:
-                        currentUser.id,
-
-                    nickname:
-                        profileData.nickname ||
-                        "Player",
-
-                    status:
-                        profileData.status ||
-                        "Онлайн",
-
-                    avatar_url:
-                        profileData.avatar_url ||
-                        "",
-
-                    vip_level:
-                        profileData.vip_level ||
-                        0
-
-                });
-
-            } catch (error) {
-
-                console.warn(
-                    "Presence refresh:",
-                    error
-                );
-
-            }
-
-        }
+        await updateConferencePresenceProfile();
 
 
         showProfileMessage(
@@ -2015,7 +1996,7 @@ async function saveProfile() {
 
 
 /* =========================================================
-   ENTER / LEAVE
+   ENTER APPLICATION
 ========================================================= */
 
 async function enterApplication() {
@@ -2074,6 +2055,10 @@ async function enterApplication() {
 
 }
 
+
+/* =========================================================
+   LEAVE APPLICATION
+========================================================= */
 
 async function leaveApplication() {
 
@@ -2367,7 +2352,7 @@ function renderHome() {
                 <p>
                     Раздел для игровых видео,
                     трансляций и материалов
-                    сообщества.
+                    игрового сообщества.
                 </p>
 
             </section>
@@ -2902,7 +2887,7 @@ async function getGlobalChatRoomId() {
     } catch (error) {
 
         console.error(
-            "Global chat room exception:",
+            "Global room:",
             error
         );
 
@@ -2915,7 +2900,7 @@ async function getGlobalChatRoomId() {
 
 
 /* =========================================================
-   CHAT TEXT
+   CHAT MESSAGE
 ========================================================= */
 
 function getMessageText(
@@ -2962,7 +2947,6 @@ async function renderChat() {
     content.innerHTML = `
 
         <div class="chat-page">
-
 
             <section class="chat-card">
 
@@ -3043,13 +3027,19 @@ async function renderChat() {
                 <div class="conference-room-bar">
 
                     <div class="conference-room-title">
-                        <span>Комната</span>
 
-                        <strong id="conference-room-label">
+                        <span>
+                            Комната
+                        </span>
+
+                        <strong
+                            id="conference-room-label"
+                        >
                             ${escapeHtml(
                                 conferenceRoom
                             )}
                         </strong>
+
                     </div>
 
 
@@ -3091,7 +3081,7 @@ async function renderChat() {
                             id="conference-room-custom"
                             class="conference-room-input"
                             maxlength="60"
-                            placeholder="Или название комнаты..."
+                            placeholder="Название комнаты..."
                         >
 
 
@@ -3126,8 +3116,7 @@ async function renderChat() {
                         </strong>
 
                         <span>
-                            Выберите комнату и войдите.
-                            Камера и микрофон необязательны.
+                            Войти можно без камеры и микрофона.
                         </span>
 
                     </div>
@@ -3138,12 +3127,17 @@ async function renderChat() {
                 <div class="conference-quality-info">
 
                     <span>
-                        Видео до <strong>1080p FHD</strong>
+                        Видео до
+                        <strong>
+                            1080p FHD
+                        </strong>
                     </span>
 
                     <span>
                         Комната:
-                        <strong id="conference-quality-room">
+                        <strong
+                            id="conference-quality-room"
+                        >
                             ${escapeHtml(
                                 conferenceRoom
                             )}
@@ -3236,7 +3230,7 @@ async function renderChat() {
                             </strong>
 
                             <span>
-                                как в Discord
+                                Голосовая панель
                             </span>
 
                         </div>
@@ -3322,9 +3316,7 @@ async function renderChat() {
                                 step="1"
                             >
 
-                            <strong
-                                id="voice-volume-label"
-                            >
+                            <strong id="voice-volume-label">
                                 100%
                             </strong>
 
@@ -3410,28 +3402,10 @@ async function renderChat() {
                             >
 
                             <span>
-                                Автоусиление голоса
+                                Автоусиление
                             </span>
 
                         </label>
-
-                    </div>
-
-
-                    <div class="conference-voice-meter">
-
-                        <div>
-                            Уровень микрофона
-                        </div>
-
-                        <div class="voice-meter-track">
-
-                            <div
-                                id="voice-meter-value"
-                                class="voice-meter-value"
-                            ></div>
-
-                        </div>
 
                     </div>
 
@@ -3451,7 +3425,7 @@ async function renderChat() {
                         </button>
 
                         <span>
-                            Можно также удерживать клавишу V.
+                            Клавиша V тоже работает.
                         </span>
 
                     </div>
@@ -3479,29 +3453,6 @@ async function renderChat() {
         </div>
 
     `;
-
-
-    const select =
-        $("conference-room-select");
-
-
-    if (select) {
-
-        select.value =
-            Array.from(
-                select.options
-            ).some(
-                function (option) {
-
-                    return option.value ===
-                        conferenceRoom;
-
-                }
-            )
-                ? conferenceRoom
-                : "Общая";
-
-    }
 
 
     await loadChatMessages();
@@ -3576,7 +3527,10 @@ function renderPage(
     }
 
 
-    if (page === "home") {
+    if (
+        page ===
+        "home"
+    ) {
 
         title.textContent =
             "Главная";
@@ -3594,7 +3548,10 @@ function renderPage(
     }
 
 
-    if (page === "games") {
+    if (
+        page ===
+        "games"
+    ) {
 
         title.textContent =
             "Игры";
@@ -3612,7 +3569,10 @@ function renderPage(
     }
 
 
-    if (page === "news") {
+    if (
+        page ===
+        "news"
+    ) {
 
         title.textContent =
             "Новости";
@@ -3630,7 +3590,10 @@ function renderPage(
     }
 
 
-    if (page === "online") {
+    if (
+        page ===
+        "online"
+    ) {
 
         title.textContent =
             "Онлайн";
@@ -3648,7 +3611,10 @@ function renderPage(
     }
 
 
-    if (page === "profile") {
+    if (
+        page ===
+        "profile"
+    ) {
 
         title.textContent =
             "Профиль";
@@ -3666,7 +3632,10 @@ function renderPage(
     }
 
 
-    if (page === "chat") {
+    if (
+        page ===
+        "chat"
+    ) {
 
         title.textContent =
             "Чат";
@@ -3793,32 +3762,8 @@ function initModals() {
 
 
 /* =========================================================
-   PROFILE MODAL
+   PROFILE BUTTONS
 ========================================================= */
-
-function openProfileModal() {
-
-    if (!currentUser) {
-
-        return;
-
-    }
-
-
-    applyProfile();
-
-
-    showProfileMessage(
-        ""
-    );
-
-
-    openModal(
-        "profile-modal"
-    );
-
-}
-
 
 function initProfileButtons() {
 
@@ -3843,6 +3788,30 @@ function initProfileButtons() {
 
             }
         );
+
+}
+
+
+function openProfileModal() {
+
+    if (!currentUser) {
+
+        return;
+
+    }
+
+
+    applyProfile();
+
+
+    showProfileMessage(
+        ""
+    );
+
+
+    openModal(
+        "profile-modal"
+    );
 
 }
 
@@ -3941,7 +3910,15 @@ async function logoutUser() {
 
     try {
 
-        await supabaseClient.auth.signOut();
+        const result =
+            await supabaseClient.auth.signOut();
+
+
+        if (result.error) {
+
+            throw result.error;
+
+        }
 
     } catch (error) {
 
@@ -4164,7 +4141,7 @@ function updatePresenceUsers() {
     } catch (error) {
 
         console.error(
-            "Presence sync error:",
+            "Presence sync:",
             error
         );
 
@@ -4196,7 +4173,9 @@ function updateOnlineCounters() {
                 if (element) {
 
                     element.textContent =
-                        String(count);
+                        String(
+                            count
+                        );
 
                 }
 
@@ -4221,7 +4200,9 @@ function renderOnlinePlayers(
     }
 
 
-    if (!presenceUsers.length) {
+    if (
+        !presenceUsers.length
+    ) {
 
         element.innerHTML = `
 
@@ -4333,6 +4314,55 @@ function renderOnlinePlayers(
 }
 
 
+async function updateConferencePresenceProfile() {
+
+    if (
+        !presenceChannel ||
+        !currentUser
+    ) {
+
+        return;
+
+    }
+
+
+    try {
+
+        await presenceChannel.track({
+
+            user_id:
+                currentUser.id,
+
+            nickname:
+                profileData.nickname ||
+                "Player",
+
+            status:
+                profileData.status ||
+                "Онлайн",
+
+            avatar_url:
+                profileData.avatar_url ||
+                "",
+
+            vip_level:
+                profileData.vip_level ||
+                0
+
+        });
+
+    } catch (error) {
+
+        console.warn(
+            "Global presence update:",
+            error
+        );
+
+    }
+
+}
+
+
 async function stopPresence() {
 
     if (
@@ -4387,7 +4417,7 @@ async function stopPresence() {
 
 
 /* =========================================================
-   CHAT DATABASE
+   CHAT
 ========================================================= */
 
 async function loadChatMessages() {
@@ -4404,23 +4434,6 @@ async function loadChatMessages() {
         return;
 
     }
-
-
-    container.innerHTML = `
-
-        <div class="conference-placeholder">
-
-            <strong>
-                Загрузка чата...
-            </strong>
-
-            <span>
-                Подключение к базе данных.
-            </span>
-
-        </div>
-
-    `;
 
 
     const roomId =
@@ -4452,12 +4465,8 @@ async function loadChatMessages() {
     }
 
 
-    /*
-       Резервный вариант для старой таблицы.
-    */
-
     if (
-        !roomId ||
+        !result ||
         result.error
     ) {
 
@@ -4483,12 +4492,6 @@ async function loadChatMessages() {
 
     if (result.error) {
 
-        console.error(
-            "Chat load error:",
-            result.error
-        );
-
-
         container.innerHTML = `
 
             <div class="conference-placeholder">
@@ -4513,7 +4516,8 @@ async function loadChatMessages() {
 
 
     renderChatMessages(
-        result.data || []
+        result.data ||
+        []
     );
 
 }
@@ -4534,7 +4538,9 @@ function renderChatMessages(
     }
 
 
-    if (!messages.length) {
+    if (
+        !messages.length
+    ) {
 
         container.innerHTML = `
 
@@ -4674,10 +4680,6 @@ async function sendChatMessage() {
     }
 
 
-    /*
-       Совместимость со старой структурой.
-    */
-
     if (
         !result ||
         result.error
@@ -4708,17 +4710,10 @@ async function sendChatMessage() {
 
     if (result.error) {
 
-        console.error(
-            "Chat send error:",
-            result.error
-        );
-
-
         showInfo(
             "Не удалось отправить сообщение: " +
             result.error.message
         );
-
 
         return;
 
@@ -4733,10 +4728,6 @@ async function sendChatMessage() {
 
 }
 
-
-/* =========================================================
-   CHAT REALTIME
-========================================================= */
 
 function startChatRealtime() {
 
@@ -4830,7 +4821,7 @@ function stopChatRealtime() {
 
 
 /* =========================================================
-   CONFERENCE EXTRA CSS
+   CONFERENCE STYLES
 ========================================================= */
 
 function injectConferenceStyles() {
@@ -5033,34 +5024,6 @@ function injectConferenceStyles() {
             color:#3f79dd;
         }
 
-        .conference-voice-meter {
-            margin-top:14px;
-            padding-top:12px;
-            border-top:1px solid rgba(30,40,50,.07);
-            color:#66717b;
-            font-size:10px;
-        }
-
-        .voice-meter-track {
-            height:7px;
-            margin-top:7px;
-            overflow:hidden;
-            border-radius:99px;
-            background:#e8edf2;
-        }
-
-        .voice-meter-value {
-            width:0%;
-            height:100%;
-            border-radius:99px;
-            background:linear-gradient(
-                90deg,
-                #74a7ff,
-                #4f8df7
-            );
-            transition:width .08s linear;
-        }
-
         .conference-ptt-wrap {
             display:flex;
             flex-direction:column;
@@ -5119,6 +5082,7 @@ function injectConferenceStyles() {
             gap:6px;
             opacity:0;
             transition:opacity .18s ease;
+            z-index:4;
         }
 
         .video-tile:hover .conference-video-toolbar {
@@ -5139,13 +5103,14 @@ function injectConferenceStyles() {
 
         .video-tile {
             position:relative;
+            overflow:hidden;
         }
 
         .conference-video-quality {
             position:absolute;
             left:8px;
             top:8px;
-            z-index:2;
+            z-index:3;
             padding:4px 7px;
             border-radius:8px;
             background:rgba(20,28,38,.68);
@@ -5158,13 +5123,25 @@ function injectConferenceStyles() {
             position:absolute;
             left:8px;
             bottom:8px;
-            z-index:2;
-            max-width:65%;
+            z-index:3;
+            max-width:70%;
             padding:5px 8px;
             border-radius:8px;
             background:rgba(20,28,38,.72);
             color:#fff;
             font-size:10px;
+            pointer-events:none;
+        }
+
+        .conference-participant-status {
+            position:absolute;
+            left:8px;
+            top:34px;
+            z-index:3;
+            display:flex;
+            gap:4px;
+            font-size:9px;
+            color:#fff;
             pointer-events:none;
         }
 
@@ -5206,305 +5183,25 @@ function injectConferenceStyles() {
 
 
 /* =========================================================
-   CONFERENCE UI
-========================================================= */
-
-function initConferenceUI() {
-
-    const join =
-        $("conference-join");
-
-
-    const leave =
-        $("conference-leave");
-
-
-    const mic =
-        $("conference-mic");
-
-
-    const camera =
-        $("conference-camera");
-
-
-    const screen =
-        $("conference-screen");
-
-
-    const voiceSettingsButton =
-        $("conference-voice-settings");
-
-
-    const refresh =
-        $("conference-refresh");
-
-
-    const roomSelect =
-        $("conference-room-select");
-
-
-    const roomCustom =
-        $("conference-room-custom");
-
-
-    const roomApply =
-        $("conference-room-apply");
-
-
-    if (join) {
-
-        join.addEventListener(
-            "click",
-            startConference
-        );
-
-    }
-
-
-    if (leave) {
-
-        leave.addEventListener(
-            "click",
-            stopConference
-        );
-
-    }
-
-
-    if (mic) {
-
-        mic.addEventListener(
-            "click",
-            async function () {
-
-                if (
-                    voiceSettings.mode ===
-                    "push"
-                ) {
-
-                    showInfo(
-                        "Сейчас включён режим «Зажать кнопку — говорить»."
-                    );
-
-                    openVoiceSettings();
-
-                    return;
-
-                }
-
-
-                await toggleConferenceMic();
-
-            }
-        );
-
-    }
-
-
-    if (camera) {
-
-        camera.addEventListener(
-            "click",
-            async function () {
-
-                await toggleConferenceCamera();
-
-            }
-        );
-
-    }
-
-
-    if (screen) {
-
-        screen.addEventListener(
-            "click",
-            async function () {
-
-                await toggleConferenceScreen();
-
-            }
-        );
-
-    }
-
-
-    if (voiceSettingsButton) {
-
-        voiceSettingsButton.addEventListener(
-            "click",
-            function () {
-
-                toggleVoiceSettings();
-
-            }
-        );
-
-    }
-
-
-    if (refresh) {
-
-        refresh.addEventListener(
-            "click",
-            function () {
-
-                updateConferenceVideos();
-
-                updateConferenceParticipantCount();
-
-            }
-        );
-
-    }
-
-
-    if (roomApply) {
-
-        roomApply.addEventListener(
-            "click",
-            async function () {
-
-                let room =
-                    roomCustom
-                        ? roomCustom.value.trim()
-                        : "";
-
-
-                if (!room && roomSelect) {
-
-                    room =
-                        roomSelect.value;
-
-                }
-
-
-                room =
-                    normalizeConferenceRoom(
-                        room
-                    );
-
-
-                if (!room) {
-
-                    showInfo(
-                        "Введите название комнаты."
-                    );
-
-                    return;
-
-                }
-
-
-                await switchConferenceRoom(
-                    room
-                );
-
-            }
-        );
-
-    }
-
-
-    if (roomSelect) {
-
-        roomSelect.addEventListener(
-            "change",
-            function () {
-
-                if (roomCustom) {
-
-                    roomCustom.value =
-                        "";
-
-                }
-
-            }
-        );
-
-    }
-
-
-    initVoiceSettingsUI();
-
-
-    updateConferenceButtons();
-
-    updateConferenceMediaButtons();
-
-    updateConferenceRoomUI();
-
-}
-
-
-function setConferenceStatus(
-    text
-) {
-
-    const element =
-        $("conference-status");
-
-
-    if (element) {
-
-        element.textContent =
-            text;
-
-    }
-
-}
-
-
-/* =========================================================
-   CONFERENCE ROOM
+   CONFERENCE ROOM HELPERS
 ========================================================= */
 
 function normalizeConferenceRoom(
     value
 ) {
 
-    let room =
-        String(
-            value || ""
-        ).trim();
-
-
-    room =
-        room
-            .replace(
-                /\s+/g,
-                " "
-            )
-            .slice(
-                0,
-                60
-            );
-
-
-    return room;
-
-}
-
-
-function getConferenceChannelName() {
-
-    const normalized =
-        normalizeConferenceRoom(
-            conferenceRoom
+    return String(
+        value || ""
+    )
+        .trim()
+        .replace(
+            /\s+/g,
+            " "
+        )
+        .slice(
+            0,
+            60
         );
-
-
-    const key =
-        encodeURIComponent(
-            normalized
-                .toLowerCase()
-        );
-
-
-    return (
-        "game-platform-conference-" +
-        key
-    );
 
 }
 
@@ -5564,16 +5261,17 @@ function updateConferenceRoomUI() {
         const found =
             Array.from(
                 select.options
-            ).find(
-                function (option) {
+            )
+                .find(
+                    function (option) {
 
-                    return (
-                        option.value ===
-                        conferenceRoom
-                    );
+                        return (
+                            option.value ===
+                            conferenceRoom
+                        );
 
-                }
-            );
+                    }
+                );
 
 
         if (found) {
@@ -5593,6 +5291,53 @@ function updateConferenceRoomUI() {
 }
 
 
+/*
+   Ключевой момент:
+   одинаковая строка комнаты превращается
+   в одинаковый Supabase Realtime topic.
+*/
+
+function getConferenceChannelName() {
+
+    const room =
+        normalizeConferenceRoom(
+            conferenceRoom
+        );
+
+
+    const safeRoom =
+        room
+            .toLowerCase()
+            .normalize("NFKD")
+            .replace(
+                /[\u0300-\u036f]/g,
+                ""
+            )
+            .replace(
+                /[^a-z0-9а-яё]+/gi,
+                "-"
+            )
+            .replace(
+                /^-+|-+$/g,
+                ""
+            );
+
+
+    return (
+        "game-platform-conference-" +
+        (
+            safeRoom ||
+            "common"
+        )
+    );
+
+}
+
+
+/* =========================================================
+   SWITCH ROOM
+========================================================= */
+
 async function switchConferenceRoom(
     room
 ) {
@@ -5605,25 +5350,18 @@ async function switchConferenceRoom(
 
     if (!nextRoom) {
 
+        showInfo(
+            "Введите название комнаты."
+        );
+
         return;
 
     }
 
 
     if (
-        nextRoom ===
-        conferenceRoom &&
-        !conferenceJoined
+        conferenceJoined
     ) {
-
-        updateConferenceRoomUI();
-
-        return;
-
-    }
-
-
-    if (conferenceJoined) {
 
         await stopConference();
 
@@ -5646,12 +5384,312 @@ async function switchConferenceRoom(
         "»."
     );
 
+}
 
-    /*
-       Если пользователь был уже в конференции,
-       снова войти автоматически не будем —
-       человек должен сам нажать «Войти».
-    */
+
+/* =========================================================
+   CONFERENCE UI
+========================================================= */
+
+function initConferenceUI() {
+
+    const join =
+        $("conference-join");
+
+
+    const leave =
+        $("conference-leave");
+
+
+    const mic =
+        $("conference-mic");
+
+
+    const camera =
+        $("conference-camera");
+
+
+    const screen =
+        $("conference-screen");
+
+
+    const settings =
+        $("conference-voice-settings");
+
+
+    const refresh =
+        $("conference-refresh");
+
+
+    const roomApply =
+        $("conference-room-apply");
+
+
+    const roomSelect =
+        $("conference-room-select");
+
+
+    if (join) {
+
+        join.addEventListener(
+            "click",
+            startConference
+        );
+
+    }
+
+
+    if (leave) {
+
+        leave.addEventListener(
+            "click",
+            stopConference
+        );
+
+    }
+
+
+    if (mic) {
+
+        mic.addEventListener(
+            "click",
+            async function () {
+
+                if (
+                    voiceSettings.mode ===
+                    "push"
+                ) {
+
+                    openVoiceSettings();
+
+                    return;
+
+                }
+
+
+                await toggleConferenceMic();
+
+            }
+        );
+
+    }
+
+
+    if (camera) {
+
+        camera.addEventListener(
+            "click",
+            async function () {
+
+                await toggleConferenceCamera();
+
+            }
+        );
+
+    }
+
+
+    if (screen) {
+
+        screen.addEventListener(
+            "click",
+            async function () {
+
+                await toggleConferenceScreen();
+
+            }
+        );
+
+    }
+
+
+    if (settings) {
+
+        settings.addEventListener(
+            "click",
+            toggleVoiceSettings
+        );
+
+    }
+
+
+    if (refresh) {
+
+        refresh.addEventListener(
+            "click",
+            function () {
+
+                updateConferenceVideos();
+
+                updateConferenceParticipantCount();
+
+            }
+        );
+
+    }
+
+
+    if (roomApply) {
+
+        roomApply.addEventListener(
+            "click",
+            async function () {
+
+                const custom =
+                    $("conference-room-custom");
+
+
+                let room =
+                    custom &&
+                    custom.value.trim()
+                        ? custom.value.trim()
+                        : (
+                            roomSelect
+                                ? roomSelect.value
+                                : conferenceRoom
+                        );
+
+
+                await switchConferenceRoom(
+                    room
+                );
+
+            }
+        );
+
+    }
+
+
+    if (roomSelect) {
+
+        roomSelect.value =
+            conferenceRoom;
+
+
+        roomSelect.addEventListener(
+            "change",
+            function () {
+
+                const custom =
+                    $("conference-room-custom");
+
+
+                if (custom) {
+
+                    custom.value =
+                        "";
+
+                }
+
+            }
+        );
+
+    }
+
+
+    initVoiceSettingsUI();
+
+
+    updateConferenceRoomUI();
+
+
+    updateConferenceButtons();
+
+
+    updateConferenceMediaButtons();
+
+}
+
+
+/* =========================================================
+   CONFERENCE STATUS
+========================================================= */
+
+function setConferenceStatus(
+    text
+) {
+
+    const element =
+        $("conference-status");
+
+
+    if (element) {
+
+        element.textContent =
+            text;
+
+    }
+
+}
+
+
+/* =========================================================
+   MEDIA ERROR
+========================================================= */
+
+function getMediaErrorMessage(
+    error
+) {
+
+    if (!error) {
+
+        return "Не удалось получить доступ к устройству.";
+
+    }
+
+
+    switch (
+        error.name
+    ) {
+
+        case "NotAllowedError":
+
+            return (
+                "Доступ к устройству запрещён. " +
+                "Разрешите доступ в настройках браузера."
+            );
+
+
+        case "NotFoundError":
+
+            return (
+                "Запрошенное устройство не найдено."
+            );
+
+
+        case "NotReadableError":
+
+            return (
+                "Устройство уже используется другой программой."
+            );
+
+
+        case "OverconstrainedError":
+
+            return (
+                "Устройство не поддерживает выбранные параметры."
+            );
+
+
+        case "SecurityError":
+
+            return (
+                "Браузер заблокировал доступ к устройству."
+            );
+
+
+        default:
+
+            return (
+                "Ошибка устройства: " +
+                (
+                    error.message ||
+                    error.name ||
+                    "неизвестная ошибка"
+                )
+            );
+
+    }
 
 }
 
@@ -5695,7 +5733,7 @@ function checkMediaEnvironment() {
                 false,
 
             message:
-                "Браузер не предоставил доступ к медиаустройствам."
+                "Браузер не предоставляет доступ к устройствам."
 
         };
 
@@ -5711,62 +5749,7 @@ function checkMediaEnvironment() {
 
 
 /* =========================================================
-   MEDIA ERROR
-========================================================= */
-
-function getMediaErrorMessage(
-    error
-) {
-
-    if (!error) {
-
-        return "Не удалось получить доступ к устройству.";
-
-    }
-
-
-    switch (
-        error.name
-    ) {
-
-        case "NotAllowedError":
-
-            return "Доступ к устройству запрещён. Разрешите его для сайта.";
-
-        case "NotFoundError":
-
-            return "Запрошенное устройство не найдено.";
-
-        case "NotReadableError":
-
-            return "Устройство уже используется другой программой.";
-
-        case "OverconstrainedError":
-
-            return "Устройство не поддерживает выбранные параметры.";
-
-        case "SecurityError":
-
-            return "Браузер заблокировал доступ к устройству.";
-
-        default:
-
-            return (
-                "Ошибка устройства: " +
-                (
-                    error.message ||
-                    error.name ||
-                    "неизвестная ошибка"
-                )
-            );
-
-    }
-
-}
-
-
-/* =========================================================
-   ENUMERATE DEVICES
+   DEVICE ENUMERATION
 ========================================================= */
 
 async function enumerateMediaDevices() {
@@ -5789,7 +5772,6 @@ async function enumerateMediaDevices() {
     } catch (error) {
 
         console.warn(
-            "enumerateDevices error:",
             error
         );
 
@@ -5802,16 +5784,577 @@ async function enumerateMediaDevices() {
 
 
 /* =========================================================
-   VOICE SETTINGS UI
+   VOICE SETTINGS
 ========================================================= */
+
+async function openVoiceSettings() {
+
+    const panel =
+        $("conference-voice-settings-panel");
+
+
+    if (!panel) {
+
+        return;
+
+    }
+
+
+    voiceSettingsOpen =
+        true;
+
+
+    panel.hidden =
+        false;
+
+
+    await populateVoiceSettings();
+
+
+    updatePushToTalkVisibility();
+
+}
+
+
+function closeVoiceSettings() {
+
+    const panel =
+        $("conference-voice-settings-panel");
+
+
+    if (panel) {
+
+        panel.hidden =
+            true;
+
+    }
+
+
+    voiceSettingsOpen =
+        false;
+
+}
+
+
+function toggleVoiceSettings() {
+
+    if (
+        voiceSettingsOpen
+    ) {
+
+        closeVoiceSettings();
+
+    } else {
+
+        openVoiceSettings();
+
+    }
+
+}
+
+
+function updatePushToTalkVisibility() {
+
+    const wrapper =
+        $("conference-ptt-wrap");
+
+
+    const mode =
+        $("voice-mode");
+
+
+    if (wrapper) {
+
+        wrapper.hidden =
+            !(
+                voiceSettings.mode ===
+                "push"
+            );
+
+    }
+
+
+    if (mode) {
+
+        mode.value =
+            voiceSettings.mode;
+
+    }
+
+
+    if (
+        voiceSettings.mode ===
+        "push"
+    ) {
+
+        if (
+            conferenceJoined &&
+            !pushToTalkActive
+        ) {
+
+            setMicTrackState(
+                false
+            );
+
+        }
+
+    }
+
+}
+
+
+async function populateVoiceSettings() {
+
+    const devices =
+        await enumerateMediaDevices();
+
+
+    const microphones =
+        devices.filter(
+            function (device) {
+
+                return (
+                    device.kind ===
+                    "audioinput"
+                );
+
+            }
+        );
+
+
+    const outputs =
+        devices.filter(
+            function (device) {
+
+                return (
+                    device.kind ===
+                    "audiooutput"
+                );
+
+            }
+        );
+
+
+    const micSelect =
+        $("voice-mic-device");
+
+
+    if (micSelect) {
+
+        micSelect.innerHTML =
+            "";
+
+
+        if (!microphones.length) {
+
+            micSelect.innerHTML =
+                `
+                    <option value="">
+                        Микрофон не найден
+                    </option>
+                `;
+
+        } else {
+
+            microphones.forEach(
+                function (
+                    device,
+                    index
+                ) {
+
+                    const option =
+                        document.createElement(
+                            "option"
+                        );
+
+
+                    option.value =
+                        device.deviceId ||
+                        "";
+
+
+                    option.textContent =
+                        device.label ||
+                        (
+                            "Микрофон " +
+                            (
+                                index + 1
+                            )
+                        );
+
+
+                    micSelect.appendChild(
+                        option
+                    );
+
+                }
+            );
+
+
+            if (
+                voiceSettings.microphoneId &&
+                microphones.some(
+                    function (device) {
+
+                        return (
+                            device.deviceId ===
+                            voiceSettings.microphoneId
+                        );
+
+                    }
+                )
+            ) {
+
+                micSelect.value =
+                    voiceSettings.microphoneId;
+
+            }
+
+        }
+
+    }
+
+
+    const outputSelect =
+        $("voice-output-device");
+
+
+    if (outputSelect) {
+
+        outputSelect.innerHTML =
+            "";
+
+
+        if (!outputs.length) {
+
+            outputSelect.innerHTML =
+                `
+                    <option value="">
+                        Вывод по умолчанию
+                    </option>
+                `;
+
+        } else {
+
+            outputs.forEach(
+                function (
+                    device,
+                    index
+                ) {
+
+                    const option =
+                        document.createElement(
+                            "option"
+                        );
+
+
+                    option.value =
+                        device.deviceId ||
+                        "";
+
+
+                    option.textContent =
+                        device.label ||
+                        (
+                            "Динамики " +
+                            (
+                                index + 1
+                            )
+                        );
+
+
+                    outputSelect.appendChild(
+                        option
+                    );
+
+                }
+            );
+
+
+            if (
+                voiceSettings.outputDeviceId &&
+                outputs.some(
+                    function (device) {
+
+                        return (
+                            device.deviceId ===
+                            voiceSettings.outputDeviceId
+                        );
+
+                    }
+                )
+            ) {
+
+                outputSelect.value =
+                    voiceSettings.outputDeviceId;
+
+            }
+
+        }
+
+    }
+
+
+    const noise =
+        $("voice-noise-suppression");
+
+
+    if (noise) {
+
+        noise.checked =
+            voiceSettings.noiseSuppression;
+
+    }
+
+
+    const echo =
+        $("voice-echo-cancellation");
+
+
+    if (echo) {
+
+        echo.checked =
+            voiceSettings.echoCancellation;
+
+    }
+
+
+    const gain =
+        $("voice-auto-gain");
+
+
+    if (gain) {
+
+        gain.checked =
+            voiceSettings.autoGainControl;
+
+    }
+
+
+    const volume =
+        $("voice-volume");
+
+
+    if (volume) {
+
+        volume.value =
+            String(
+                voiceSettings.inputVolume
+            );
+
+    }
+
+
+    const volumeLabel =
+        $("voice-volume-label");
+
+
+    if (volumeLabel) {
+
+        volumeLabel.textContent =
+            voiceSettings.inputVolume +
+            "%";
+
+    }
+
+
+    const mode =
+        $("voice-mode");
+
+
+    if (mode) {
+
+        mode.value =
+            voiceSettings.mode;
+
+    }
+
+
+    const quality =
+        $("voice-video-quality");
+
+
+    if (quality) {
+
+        quality.value =
+            voiceSettings.videoQuality;
+
+    }
+
+
+    updatePushToTalkVisibility();
+
+}
+
+
+/* =========================================================
+   VOICE SETTINGS SAVE
+========================================================= */
+
+async function saveVoiceSettingsFromUI() {
+
+    const mic =
+        $("voice-mic-device");
+
+
+    const output =
+        $("voice-output-device");
+
+
+    const noise =
+        $("voice-noise-suppression");
+
+
+    const echo =
+        $("voice-echo-cancellation");
+
+
+    const gain =
+        $("voice-auto-gain");
+
+
+    const volume =
+        $("voice-volume");
+
+
+    const mode =
+        $("voice-mode");
+
+
+    const quality =
+        $("voice-video-quality");
+
+
+    if (mic) {
+
+        voiceSettings.microphoneId =
+            mic.value ||
+            "";
+
+    }
+
+
+    if (output) {
+
+        voiceSettings.outputDeviceId =
+            output.value ||
+            "";
+
+    }
+
+
+    if (noise) {
+
+        voiceSettings.noiseSuppression =
+            noise.checked;
+
+    }
+
+
+    if (echo) {
+
+        voiceSettings.echoCancellation =
+            echo.checked;
+
+    }
+
+
+    if (gain) {
+
+        voiceSettings.autoGainControl =
+            gain.checked;
+
+    }
+
+
+    if (volume) {
+
+        voiceSettings.inputVolume =
+            Number(
+                volume.value
+            ) || 0;
+
+    }
+
+
+    if (mode) {
+
+        voiceSettings.mode =
+            mode.value;
+
+    }
+
+
+    if (quality) {
+
+        voiceSettings.videoQuality =
+            quality.value;
+
+    }
+
+
+    if (
+        conferenceJoined &&
+        voiceSettings.microphoneId
+    ) {
+
+        await replaceMicrophoneDevice(
+            voiceSettings.microphoneId
+        );
+
+    }
+
+
+    if (
+        conferenceJoined &&
+        getLocalTrack(
+            "video"
+        )
+    ) {
+
+        await applyVideoQualityConstraints();
+
+    }
+
+
+    await applyOutputDevice();
+
+
+    updatePushToTalkVisibility();
+
+
+    const message =
+        $("voice-settings-message");
+
+
+    if (message) {
+
+        message.textContent =
+            "✓ Настройки сохранены";
+
+
+        setTimeout(
+            function () {
+
+                message.textContent =
+                    "";
+
+            },
+            2000
+        );
+
+    }
+
+}
+
 
 function initVoiceSettingsUI() {
 
-    const closeButton =
+    const close =
         $("conference-voice-settings-close");
 
 
-    const saveButton =
+    const save =
         $("voice-settings-save");
 
 
@@ -5827,9 +6370,9 @@ function initVoiceSettingsUI() {
         $("voice-video-quality");
 
 
-    if (closeButton) {
+    if (close) {
 
-        closeButton.addEventListener(
+        close.addEventListener(
             "click",
             closeVoiceSettings
         );
@@ -5837,9 +6380,9 @@ function initVoiceSettingsUI() {
     }
 
 
-    if (saveButton) {
+    if (save) {
 
-        saveButton.addEventListener(
+        save.addEventListener(
             "click",
             saveVoiceSettingsFromUI
         );
@@ -5856,6 +6399,7 @@ function initVoiceSettingsUI() {
                 voiceSettings.mode =
                     mode.value;
 
+
                 updatePushToTalkVisibility();
 
             }
@@ -5870,26 +6414,10 @@ function initVoiceSettingsUI() {
             "input",
             function () {
 
-                const number =
+                voiceSettings.inputVolume =
                     Number(
                         volume.value
                     ) || 0;
-
-
-                const normalized =
-                    number / 100;
-
-
-                voiceSettings.inputVolume =
-                    normalized;
-
-
-                if (voiceGainNode) {
-
-                    voiceGainNode.gain.value =
-                        normalized;
-
-                }
 
 
                 const label =
@@ -5899,7 +6427,8 @@ function initVoiceSettingsUI() {
                 if (label) {
 
                     label.textContent =
-                        number + "%";
+                        voiceSettings.inputVolume +
+                        "%";
 
                 }
 
@@ -5930,60 +6459,37 @@ function initVoiceSettingsUI() {
 
     if (ptt) {
 
-        const start =
+        ptt.addEventListener(
+            "pointerdown",
             async function (event) {
 
                 event.preventDefault();
 
                 await pushToTalkStart();
 
-            };
+            }
+        );
 
 
-        const stop =
+        ptt.addEventListener(
+            "pointerup",
             async function (event) {
 
                 event.preventDefault();
 
                 await pushToTalkStop();
 
-            };
-
-
-        ptt.addEventListener(
-            "pointerdown",
-            start
-        );
-
-
-        ptt.addEventListener(
-            "pointerup",
-            stop
+            }
         );
 
 
         ptt.addEventListener(
             "pointercancel",
-            stop
-        );
+            async function (event) {
 
+                event.preventDefault();
 
-        ptt.addEventListener(
-            "pointerleave",
-            function () {
-
-                if (
-                    ptt.hasPointerCapture &&
-                    ptt.hasPointerCapture(
-                        event.pointerId
-                    )
-                ) {
-
-                    ptt.releasePointerCapture(
-                        event.pointerId
-                    );
-
-                }
+                await pushToTalkStop();
 
             }
         );
@@ -6085,626 +6591,11 @@ function initVoiceSettingsUI() {
 }
 
 
-function toggleVoiceSettings() {
-
-    if (voiceSettingsOpen) {
-
-        closeVoiceSettings();
-
-    } else {
-
-        openVoiceSettings();
-
-    }
-
-}
-
-
-async function openVoiceSettings() {
-
-    const panel =
-        $("conference-voice-settings-panel");
-
-
-    if (!panel) {
-
-        return;
-
-    }
-
-
-    voiceSettingsOpen =
-        true;
-
-
-    panel.hidden =
-        false;
-
-
-    await populateVoiceSettings();
-
-
-    updatePushToTalkVisibility();
-
-}
-
-
-function closeVoiceSettings() {
-
-    const panel =
-        $("conference-voice-settings-panel");
-
-
-    if (panel) {
-
-        panel.hidden =
-            true;
-
-    }
-
-
-    voiceSettingsOpen =
-        false;
-
-}
-
-
-function updatePushToTalkVisibility() {
-
-    const wrapper =
-        $("conference-ptt-wrap");
-
-
-    const mode =
-        $("voice-mode");
-
-
-    if (mode) {
-
-        mode.value =
-            voiceSettings.mode;
-
-    }
-
-
-    if (wrapper) {
-
-        wrapper.hidden =
-            voiceSettings.mode !==
-            "push";
-
-    }
-
-
-    if (
-        voiceSettings.mode ===
-        "push"
-    ) {
-
-        /*
-           В режиме PTT микрофон должен быть
-           выключен между нажатиями.
-        */
-
-        if (conferenceJoined) {
-
-            setMicEnabled(
-                false
-            );
-
-        }
-
-    }
-
-}
-
-
-async function populateVoiceSettings() {
-
-    const micSelect =
-        $("voice-mic-device");
-
-
-    const outputSelect =
-        $("voice-output-device");
-
-
-    const devices =
-        await enumerateMediaDevices();
-
-
-    const microphones =
-        devices.filter(
-            function (device) {
-
-                return (
-                    device.kind ===
-                    "audioinput"
-                );
-
-            }
-        );
-
-
-    const outputs =
-        devices.filter(
-            function (device) {
-
-                return (
-                    device.kind ===
-                    "audiooutput"
-                );
-
-            }
-        );
-
-
-    if (micSelect) {
-
-        const current =
-            voiceSettings.microphoneId;
-
-
-        micSelect.innerHTML =
-            "";
-
-
-        if (!microphones.length) {
-
-            const option =
-                document.createElement(
-                    "option"
-                );
-
-
-            option.value =
-                "";
-
-
-            option.textContent =
-                "Микрофон не найден";
-
-
-            micSelect.appendChild(
-                option
-            );
-
-        } else {
-
-            microphones.forEach(
-                function (device, index) {
-
-                    const option =
-                        document.createElement(
-                            "option"
-                        );
-
-
-                    option.value =
-                        device.deviceId ||
-                        "";
-
-
-                    option.textContent =
-                        device.label ||
-                        (
-                            "Микрофон " +
-                            (
-                                index + 1
-                            )
-                        );
-
-
-                    micSelect.appendChild(
-                        option
-                    );
-
-                }
-            );
-
-
-            if (
-                current &&
-                microphones.some(
-                    function (item) {
-
-                        return (
-                            item.deviceId ===
-                            current
-                        );
-
-                    }
-                )
-            ) {
-
-                micSelect.value =
-                    current;
-
-            }
-
-        }
-
-    }
-
-
-    if (outputSelect) {
-
-        const current =
-            voiceSettings.outputDeviceId;
-
-
-        outputSelect.innerHTML =
-            "";
-
-
-        if (!outputs.length) {
-
-            const option =
-                document.createElement(
-                    "option"
-                );
-
-
-            option.value =
-                "";
-
-
-            option.textContent =
-                "Вывод по умолчанию";
-
-
-            outputSelect.appendChild(
-                option
-            );
-
-        } else {
-
-            outputs.forEach(
-                function (device, index) {
-
-                    const option =
-                        document.createElement(
-                            "option"
-                        );
-
-
-                    option.value =
-                        device.deviceId ||
-                        "";
-
-
-                    option.textContent =
-                        device.label ||
-                        (
-                            "Динамики " +
-                            (
-                                index + 1
-                            )
-                        );
-
-
-                    outputSelect.appendChild(
-                        option
-                    );
-
-                }
-            );
-
-
-            if (
-                current &&
-                outputs.some(
-                    function (item) {
-
-                        return (
-                            item.deviceId ===
-                            current
-                        );
-
-                    }
-                )
-            ) {
-
-                outputSelect.value =
-                    current;
-
-            }
-
-        }
-
-    }
-
-
-    const noise =
-        $("voice-noise-suppression");
-
-
-    if (noise) {
-
-        noise.checked =
-            voiceSettings.noiseSuppression;
-
-    }
-
-
-    const echo =
-        $("voice-echo-cancellation");
-
-
-    if (echo) {
-
-        echo.checked =
-            voiceSettings.echoCancellation;
-
-    }
-
-
-    const gain =
-        $("voice-auto-gain");
-
-
-    if (gain) {
-
-        gain.checked =
-            voiceSettings.autoGainControl;
-
-    }
-
-
-    const volume =
-        $("voice-volume");
-
-
-    if (volume) {
-
-        volume.value =
-            String(
-                Math.round(
-                    voiceSettings.inputVolume *
-                    100
-                )
-            );
-
-    }
-
-
-    const volumeLabel =
-        $("voice-volume-label");
-
-
-    if (volumeLabel) {
-
-        volumeLabel.textContent =
-            Math.round(
-                voiceSettings.inputVolume *
-                100
-            ) +
-            "%";
-
-    }
-
-
-    const mode =
-        $("voice-mode");
-
-
-    if (mode) {
-
-        mode.value =
-            voiceSettings.mode;
-
-    }
-
-
-    const quality =
-        $("voice-video-quality");
-
-
-    if (quality) {
-
-        quality.value =
-            voiceSettings.videoQuality;
-
-    }
-
-
-    updatePushToTalkVisibility();
-
-}
-
-
 /* =========================================================
-   SAVE VOICE SETTINGS
+   AUDIO
 ========================================================= */
 
-async function saveVoiceSettingsFromUI() {
-
-    const message =
-        $("voice-settings-message");
-
-
-    const micSelect =
-        $("voice-mic-device");
-
-
-    const outputSelect =
-        $("voice-output-device");
-
-
-    const noise =
-        $("voice-noise-suppression");
-
-
-    const echo =
-        $("voice-echo-cancellation");
-
-
-    const gain =
-        $("voice-auto-gain");
-
-
-    const volume =
-        $("voice-volume");
-
-
-    const mode =
-        $("voice-mode");
-
-
-    const quality =
-        $("voice-video-quality");
-
-
-    if (micSelect) {
-
-        voiceSettings.microphoneId =
-            micSelect.value || "";
-
-    }
-
-
-    if (outputSelect) {
-
-        voiceSettings.outputDeviceId =
-            outputSelect.value || "";
-
-    }
-
-
-    if (noise) {
-
-        voiceSettings.noiseSuppression =
-            noise.checked;
-
-    }
-
-
-    if (echo) {
-
-        voiceSettings.echoCancellation =
-            echo.checked;
-
-    }
-
-
-    if (gain) {
-
-        voiceSettings.autoGainControl =
-            gain.checked;
-
-    }
-
-
-    if (volume) {
-
-        voiceSettings.inputVolume =
-            Number(
-                volume.value
-            ) / 100;
-
-    }
-
-
-    if (mode) {
-
-        voiceSettings.mode =
-            mode.value;
-
-    }
-
-
-    if (quality) {
-
-        voiceSettings.videoQuality =
-            quality.value;
-
-    }
-
-
-    if (voiceGainNode) {
-
-        voiceGainNode.gain.value =
-            voiceSettings.inputVolume;
-
-    }
-
-
-    if (conferenceJoined) {
-
-        /*
-           Если выбран другой микрофон,
-           создаём новый трек.
-        */
-
-        if (
-            voiceSettings.microphoneId
-        ) {
-
-            await replaceMicrophoneDevice(
-                voiceSettings.microphoneId
-            );
-
-        } else if (
-            getLocalTrack(
-                "audio"
-            )
-        ) {
-
-            await applyCurrentAudioConstraints();
-
-        }
-
-
-        if (
-            voiceSettings.videoQuality !==
-            "auto"
-        ) {
-
-            await changeVideoQuality(
-                voiceSettings.videoQuality
-            );
-
-        } else {
-
-            await applyVideoQualityConstraints();
-
-        }
-
-
-        await applyOutputDevice();
-
-    }
-
-
-    updatePushToTalkVisibility();
-
-
-    if (message) {
-
-        message.textContent =
-            "✓ Настройки сохранены";
-
-
-        setTimeout(
-            function () {
-
-                message.textContent =
-                    "";
-
-            },
-            2200
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   AUDIO REQUEST
-========================================================= */
-
-async function requestRawAudioTrack() {
+async function requestAudioTrack() {
 
     const environment =
         checkMediaEnvironment();
@@ -6719,7 +6610,7 @@ async function requestRawAudioTrack() {
     }
 
 
-    const audio = {
+    const audioConstraints = {
 
         echoCancellation:
             voiceSettings.echoCancellation,
@@ -6737,7 +6628,7 @@ async function requestRawAudioTrack() {
         voiceSettings.microphoneId
     ) {
 
-        audio.deviceId = {
+        audioConstraints.deviceId = {
 
             exact:
                 voiceSettings.microphoneId
@@ -6751,7 +6642,7 @@ async function requestRawAudioTrack() {
         await navigator.mediaDevices.getUserMedia({
 
             audio:
-                audio,
+                audioConstraints,
 
             video:
                 false
@@ -6783,11 +6674,187 @@ async function requestRawAudioTrack() {
     }
 
 
-    voiceSettings.microphoneId =
-        track.getSettings &&
-        track.getSettings().deviceId
-            ? track.getSettings().deviceId
-            : voiceSettings.microphoneId;
+    return track;
+
+}
+
+
+/* =========================================================
+   VIDEO
+========================================================= */
+
+function getVideoConstraints() {
+
+    if (
+        voiceSettings.videoQuality ===
+        "720"
+    ) {
+
+        return {
+
+            width: {
+
+                ideal:
+                    1280,
+
+                max:
+                    1280
+
+            },
+
+            height: {
+
+                ideal:
+                    720,
+
+                max:
+                    720
+
+            },
+
+            frameRate: {
+
+                ideal:
+                    30,
+
+                max:
+                    30
+
+            }
+
+        };
+
+    }
+
+
+    if (
+        voiceSettings.videoQuality ===
+        "1080"
+    ) {
+
+        return {
+
+            width: {
+
+                ideal:
+                    1920,
+
+                max:
+                    1920
+
+            },
+
+            height: {
+
+                ideal:
+                    1080,
+
+                max:
+                    1080
+
+            },
+
+            frameRate: {
+
+                ideal:
+                    30,
+
+                max:
+                    30
+
+            }
+
+        };
+
+    }
+
+
+    return {
+
+        width: {
+
+            ideal:
+                1920,
+
+            max:
+                1920
+
+        },
+
+        height: {
+
+            ideal:
+                1080,
+
+            max:
+                1080
+
+        },
+
+        frameRate: {
+
+            ideal:
+                30,
+
+            max:
+                30
+
+        }
+
+    };
+
+}
+
+
+async function requestVideoTrack() {
+
+    const environment =
+        checkMediaEnvironment();
+
+
+    if (!environment.ok) {
+
+        throw new Error(
+            environment.message
+        );
+
+    }
+
+
+    const stream =
+        await navigator.mediaDevices.getUserMedia({
+
+            video:
+                getVideoConstraints(),
+
+            audio:
+                false
+
+        });
+
+
+    const track =
+        stream.getVideoTracks()[0];
+
+
+    if (!track) {
+
+        stream
+            .getTracks()
+            .forEach(
+                function (item) {
+
+                    item.stop();
+
+                }
+            );
+
+
+        throw new Error(
+            "Камера не вернула видеотрек."
+        );
+
+    }
 
 
     return track;
@@ -6796,358 +6863,50 @@ async function requestRawAudioTrack() {
 
 
 /* =========================================================
-   AUDIO PIPELINE
+   LOCAL TRACK
 ========================================================= */
 
-async function destroyAudioPipeline() {
+function ensureLocalStream() {
 
-    if (
-        voiceMeterAnimation
-    ) {
+    if (!localStream) {
 
-        cancelAnimationFrame(
-            voiceMeterAnimation
-        );
-
-
-        voiceMeterAnimation =
-            null;
+        localStream =
+            new MediaStream();
 
     }
 
 
-    if (rawAudioTrack) {
-
-        try {
-
-            rawAudioTrack.stop();
-
-        } catch (error) {
-
-            console.warn(
-                error
-            );
-
-        }
-
-    }
-
-
-    rawAudioTrack =
-        null;
-
-
-    if (voiceAudioContext) {
-
-        try {
-
-            await voiceAudioContext.close();
-
-        } catch (error) {
-
-            console.warn(
-                error
-            );
-
-        }
-
-    }
-
-
-    voiceAudioContext =
-        null;
-
-    voiceAudioSource =
-        null;
-
-    voiceGainNode =
-        null;
-
-    voiceAnalyser =
-        null;
-
-    voiceDestination =
-        null;
+    return localStream;
 
 }
 
 
-async function buildAudioPipeline(
-    rawTrack
+function getLocalTrack(
+    kind
 ) {
 
-    await destroyAudioPipeline();
+    if (!localStream) {
 
-
-    rawAudioTrack =
-        rawTrack;
-
-
-    /*
-       Web Audio позволяет нам:
-       - регулировать входную громкость;
-       - видеть уровень микрофона;
-       - отправлять уже обработанный трек
-         в WebRTC.
-    */
-
-    try {
-
-        const AudioContextClass =
-            window.AudioContext ||
-            window.webkitAudioContext;
-
-
-        if (!AudioContextClass) {
-
-            return rawTrack;
-
-        }
-
-
-        voiceAudioContext =
-            new AudioContextClass();
-
-
-        voiceAudioSource =
-            voiceAudioContext.createMediaStreamSource(
-
-                new MediaStream([
-                    rawTrack
-                ])
-
-            );
-
-
-        voiceGainNode =
-            voiceAudioContext.createGain();
-
-
-        voiceAnalyser =
-            voiceAudioContext.createAnalyser();
-
-
-        voiceAnalyser.fftSize =
-            256;
-
-
-        voiceDestination =
-            voiceAudioContext.createMediaStreamDestination();
-
-
-        voiceGainNode.gain.value =
-            voiceSettings.inputVolume;
-
-
-        voiceAudioSource.connect(
-            voiceGainNode
-        );
-
-
-        voiceGainNode.connect(
-            voiceAnalyser
-        );
-
-
-        voiceGainNode.connect(
-            voiceDestination
-        );
-
-
-        if (
-            voiceAudioContext.state ===
-            "suspended"
-        ) {
-
-            await voiceAudioContext.resume();
-
-        }
-
-
-        startVoiceMeter();
-
-
-        const processedTrack =
-            voiceDestination
-                .stream
-                .getAudioTracks()[0];
-
-
-        if (processedTrack) {
-
-            return processedTrack;
-
-        }
-
-    } catch (error) {
-
-        console.warn(
-            "Audio pipeline unavailable:",
-            error
-        );
-
-        await destroyAudioPipeline();
-
-        rawAudioTrack =
-            rawTrack;
+        return null;
 
     }
 
 
-    return rawTrack;
+    return (
+        localStream
+            .getTracks()
+            .find(
+                function (track) {
 
-}
+                    return (
+                        track.kind ===
+                        kind
+                    );
 
-
-/* =========================================================
-   VOICE METER
-========================================================= */
-
-function startVoiceMeter() {
-
-    if (
-        !voiceAnalyser
-    ) {
-
-        return;
-
-    }
-
-
-    const meter =
-        $("voice-meter-value");
-
-
-    if (!meter) {
-
-        return;
-
-    }
-
-
-    const buffer =
-        new Uint8Array(
-            voiceAnalyser.fftSize
-        );
-
-
-    function tick() {
-
-        if (
-            !voiceAnalyser ||
-            !meter
-        ) {
-
-            return;
-
-        }
-
-
-        voiceAnalyser.getByteTimeDomainData(
-            buffer
-        );
-
-
-        let sum =
-            0;
-
-
-        for (
-            let i = 0;
-            i < buffer.length;
-            i++
-        ) {
-
-            const value =
-                (
-                    buffer[i] -
-                    128
-                ) / 128;
-
-
-            sum +=
-                value * value;
-
-        }
-
-
-        const rms =
-            Math.sqrt(
-                sum /
-                buffer.length
-            );
-
-
-        const level =
-            Math.min(
-                100,
-                Math.max(
-                    0,
-                    rms * 320
-                )
-            );
-
-
-        meter.style.width =
-            level +
-            "%";
-
-
-        voiceMeterAnimation =
-            requestAnimationFrame(
-                tick
-            );
-
-    }
-
-
-    tick();
-
-}
-
-
-/* =========================================================
-   AUDIO CONSTRAINTS
-========================================================= */
-
-async function applyCurrentAudioConstraints() {
-
-    const track =
-        getLocalTrack(
-            "audio"
-        );
-
-
-    if (!track) {
-
-        return;
-
-    }
-
-
-    try {
-
-        await track.applyConstraints({
-
-            echoCancellation:
-                voiceSettings.echoCancellation,
-
-            noiseSuppression:
-                voiceSettings.noiseSuppression,
-
-            autoGainControl:
-                voiceSettings.autoGainControl
-
-        });
-
-    } catch (error) {
-
-        console.warn(
-            "Audio constraints:",
-            error
-        );
-
-    }
+                }
+            ) ||
+        null
+    );
 
 }
 
@@ -7177,7 +6936,7 @@ async function enableConferenceMic() {
 
     if (existing) {
 
-        await setMicEnabled(
+        await setMicTrackState(
             true
         );
 
@@ -7189,25 +6948,19 @@ async function enableConferenceMic() {
 
     try {
 
-        const rawTrack =
-            await requestRawAudioTrack();
-
-
-        const processedTrack =
-            await buildAudioPipeline(
-                rawTrack
-            );
+        const track =
+            await requestAudioTrack();
 
 
         ensureLocalStream();
 
 
         localStream.addTrack(
-            processedTrack
+            track
         );
 
 
-        processedTrack.enabled =
+        track.enabled =
             true;
 
 
@@ -7215,9 +6968,8 @@ async function enableConferenceMic() {
             true;
 
 
-        await addOrReplaceLocalTrack(
-            "audio",
-            processedTrack
+        await replaceAudioOnPeers(
+            track
         );
 
 
@@ -7229,7 +6981,7 @@ async function enableConferenceMic() {
     } catch (error) {
 
         console.error(
-            "Microphone error:",
+            "Microphone:",
             error
         );
 
@@ -7256,10 +7008,10 @@ async function enableConferenceMic() {
 
 
 /* =========================================================
-   SET MIC STATE
+   MICROPHONE TRACK STATE
 ========================================================= */
 
-async function setMicEnabled(
+async function setMicTrackState(
     enabled
 ) {
 
@@ -7301,7 +7053,7 @@ async function setMicEnabled(
 
 
 /* =========================================================
-   TOGGLE MIC
+   TOGGLE MICROPHONE
 ========================================================= */
 
 async function toggleConferenceMic() {
@@ -7329,13 +7081,13 @@ async function toggleConferenceMic() {
     }
 
 
-    const existing =
+    const track =
         getLocalTrack(
             "audio"
         );
 
 
-    if (!existing) {
+    if (!track) {
 
         await enableConferenceMic();
 
@@ -7344,7 +7096,7 @@ async function toggleConferenceMic() {
     }
 
 
-    await setMicEnabled(
+    await setMicTrackState(
         !micEnabled
     );
 
@@ -7355,31 +7107,13 @@ async function toggleConferenceMic() {
    PUSH TO TALK
 ========================================================= */
 
-let pushToTalkActive =
-    false;
-
-
 async function pushToTalkStart() {
 
     if (
-        pushToTalkActive
-    ) {
-
-        return;
-
-    }
-
-
-    if (!conferenceJoined) {
-
-        return;
-
-    }
-
-
-    if (
+        !conferenceJoined ||
         voiceSettings.mode !==
-        "push"
+            "push" ||
+        pushToTalkActive
     ) {
 
         return;
@@ -7391,20 +7125,18 @@ async function pushToTalkStart() {
         true;
 
 
-    const existing =
-        getLocalTrack(
+    if (
+        !getLocalTrack(
             "audio"
-        );
-
-
-    if (!existing) {
+        )
+    ) {
 
         await enableConferenceMic();
 
     }
 
 
-    await setMicEnabled(
+    await setMicTrackState(
         true
     );
 
@@ -7430,7 +7162,9 @@ async function pushToTalkStart() {
 
 async function pushToTalkStop() {
 
-    if (!pushToTalkActive) {
+    if (
+        !pushToTalkActive
+    ) {
 
         return;
 
@@ -7446,7 +7180,7 @@ async function pushToTalkStop() {
         "push"
     ) {
 
-        await setMicEnabled(
+        await setMicTrackState(
             false
         );
 
@@ -7473,6 +7207,100 @@ async function pushToTalkStop() {
 
 
 /* =========================================================
+   REPLACE AUDIO
+========================================================= */
+
+async function replaceAudioOnPeers(
+    track
+) {
+
+    const peerIds =
+        Object.keys(
+            peerConnections
+        );
+
+
+    for (
+        const peerId of peerIds
+    ) {
+
+        const connection =
+            peerConnections[
+                peerId
+            ];
+
+
+        if (!connection) {
+
+            continue;
+
+        }
+
+
+        let transceiver =
+            connection
+                .getTransceivers()
+                .find(
+                    function (item) {
+
+                        return (
+                            item.receiver &&
+                            item.receiver.track &&
+                            item.receiver.track.kind ===
+                                "audio"
+                        );
+
+                    }
+                );
+
+
+        if (!transceiver) {
+
+            transceiver =
+                connection.addTransceiver(
+
+                    "audio",
+
+                    {
+
+                        direction:
+                            "sendrecv"
+
+                    }
+
+                );
+
+        }
+
+
+        try {
+
+            await transceiver.sender.replaceTrack(
+                track
+            );
+
+
+            transceiver.direction =
+                "sendrecv";
+
+        } catch (error) {
+
+            console.warn(
+                "Audio replace:",
+                error
+            );
+
+        }
+
+    }
+
+
+    await renegotiatePeers();
+
+}
+
+
+/* =========================================================
    REPLACE MICROPHONE DEVICE
 ========================================================= */
 
@@ -7489,20 +7317,7 @@ async function replaceMicrophoneDevice(
 
     try {
 
-        const environment =
-            checkMediaEnvironment();
-
-
-        if (!environment.ok) {
-
-            throw new Error(
-                environment.message
-            );
-
-        }
-
-
-        const rawStream =
+        const stream =
             await navigator.mediaDevices.getUserMedia({
 
                 audio: {
@@ -7531,36 +7346,33 @@ async function replaceMicrophoneDevice(
             });
 
 
-        const newRaw =
-            rawStream.getAudioTracks()[0];
+        const newTrack =
+            stream.getAudioTracks()[0];
 
 
-        if (!newRaw) {
+        if (!newTrack) {
 
             throw new Error(
-                "Новый микрофон не вернул трек."
+                "Не удалось получить новый микрофон."
             );
 
         }
 
 
-        const processed =
-            await buildAudioPipeline(
-                newRaw
-            );
-
-
-        const old =
+        const oldTrack =
             getLocalTrack(
                 "audio"
             );
 
 
-        if (old) {
+        ensureLocalStream();
+
+
+        if (oldTrack) {
 
             try {
 
-                old.stop();
+                oldTrack.stop();
 
             } catch (error) {
 
@@ -7572,32 +7384,31 @@ async function replaceMicrophoneDevice(
 
 
             localStream.removeTrack(
-                old
+                oldTrack
             );
 
         }
 
 
-        ensureLocalStream();
-
-
         localStream.addTrack(
-            processed
+            newTrack
         );
 
 
-        processed.enabled =
+        newTrack.enabled =
             micEnabled;
-
-
-        await addOrReplaceLocalTrack(
-            "audio",
-            processed
-        );
 
 
         voiceSettings.microphoneId =
             deviceId;
+
+
+        await replaceAudioOnPeers(
+            newTrack
+        );
+
+
+        updateConferenceMediaButtons();
 
 
         return true;
@@ -7605,7 +7416,7 @@ async function replaceMicrophoneDevice(
     } catch (error) {
 
         console.error(
-            "Replace microphone error:",
+            "Microphone device:",
             error
         );
 
@@ -7620,194 +7431,6 @@ async function replaceMicrophoneDevice(
         return false;
 
     }
-
-}
-
-
-/* =========================================================
-   VIDEO CONSTRAINTS
-========================================================= */
-
-function getVideoConstraintPreset() {
-
-    switch (
-        voiceSettings.videoQuality
-    ) {
-
-        case "720":
-
-            return {
-
-                width: {
-                    ideal:
-                        1280,
-                    max:
-                        1280
-                },
-
-                height: {
-                    ideal:
-                        720,
-                    max:
-                        720
-                },
-
-                frameRate: {
-                    ideal:
-                        30,
-                    max:
-                        30
-                }
-
-            };
-
-
-        case "1080":
-
-            return {
-
-                width: {
-                    ideal:
-                        1920,
-                    max:
-                        1920
-                },
-
-                height: {
-                    ideal:
-                        1080,
-                    max:
-                        1080
-                },
-
-                frameRate: {
-                    ideal:
-                        30,
-                    max:
-                        30
-                }
-
-            };
-
-
-        default:
-
-            return {
-
-                width: {
-                    ideal:
-                        1920,
-                    max:
-                        1920
-                },
-
-                height: {
-                    ideal:
-                        1080,
-                    max:
-                        1080
-                },
-
-                frameRate: {
-                    ideal:
-                        30,
-                    max:
-                        30
-                }
-
-            };
-
-    }
-
-}
-
-
-function getVideoBitrate() {
-
-    switch (
-        voiceSettings.videoQuality
-    ) {
-
-        case "720":
-
-            return 2800000;
-
-
-        case "1080":
-
-            return 6000000;
-
-
-        default:
-
-            return 6000000;
-
-    }
-
-}
-
-
-/* =========================================================
-   REQUEST VIDEO
-========================================================= */
-
-async function requestVideoTrack() {
-
-    const environment =
-        checkMediaEnvironment();
-
-
-    if (!environment.ok) {
-
-        throw new Error(
-            environment.message
-        );
-
-    }
-
-
-    const constraints = {
-
-        video:
-            getVideoConstraintPreset(),
-
-        audio:
-            false
-
-    };
-
-
-    const stream =
-        await navigator.mediaDevices.getUserMedia(
-            constraints
-        );
-
-
-    const track =
-        stream.getVideoTracks()[0];
-
-
-    if (!track) {
-
-        stream
-            .getTracks()
-            .forEach(
-                function (item) {
-
-                    item.stop();
-
-                }
-            );
-
-
-        throw new Error(
-            "Камера не вернула видеотрек."
-        );
-
-    }
-
-
-    return track;
 
 }
 
@@ -7877,13 +7500,12 @@ async function enableConferenceCamera() {
             true;
 
 
-        await addOrReplaceLocalTrack(
-            "video",
+        await replaceVideoOnPeers(
             track
         );
 
 
-        await configureAllVideoSenders();
+        await applyVideoQualityConstraints();
 
 
         updateLocalVideo();
@@ -7897,7 +7519,7 @@ async function enableConferenceCamera() {
     } catch (error) {
 
         console.error(
-            "Camera error:",
+            "Camera:",
             error
         );
 
@@ -7924,7 +7546,7 @@ async function enableConferenceCamera() {
 
 
 /* =========================================================
-   CAMERA
+   TOGGLE CAMERA
 ========================================================= */
 
 async function toggleConferenceCamera() {
@@ -7940,13 +7562,13 @@ async function toggleConferenceCamera() {
     }
 
 
-    const existing =
+    const track =
         getLocalTrack(
             "video"
         );
 
 
-    if (!existing) {
+    if (!track) {
 
         await enableConferenceCamera();
 
@@ -7959,7 +7581,7 @@ async function toggleConferenceCamera() {
         !cameraEnabled;
 
 
-    existing.enabled =
+    track.enabled =
         cameraEnabled;
 
 
@@ -7972,316 +7594,21 @@ async function toggleConferenceCamera() {
 
 
 /* =========================================================
-   LOCAL STREAM
+   REPLACE VIDEO
 ========================================================= */
 
-function ensureLocalStream() {
-
-    if (!localStream) {
-
-        localStream =
-            new MediaStream();
-
-    }
-
-
-    return localStream;
-
-}
-
-
-function getLocalTrack(
-    kind
-) {
-
-    if (!localStream) {
-
-        return null;
-
-    }
-
-
-    return (
-        localStream
-            .getTracks()
-            .find(
-                function (track) {
-
-                    return (
-                        track.kind ===
-                        kind
-                    );
-
-                }
-            ) ||
-        null
-    );
-
-}
-
-
-/* =========================================================
-   PEER CONNECTION
-========================================================= */
-
-function createPeerConnection(
-    peerId
-) {
-
-    if (peerConnections[peerId]) {
-
-        return peerConnections[peerId];
-
-    }
-
-
-    const connection =
-        new RTCPeerConnection({
-
-            iceServers: [
-
-                {
-                    urls:
-                        "stun:stun.l.google.com:19302"
-                },
-
-                {
-                    urls:
-                        "stun:stun1.l.google.com:19302"
-                }
-
-            ]
-
-        });
-
-
-    peerConnections[peerId] =
-        connection;
-
-
-    /*
-       Аудио.
-       Если своего микрофона нет —
-       только принимаем аудио.
-    */
-
-    const localAudio =
-        getLocalTrack(
-            "audio"
-        );
-
-
-    if (localAudio) {
-
-        connection.addTrack(
-            localAudio,
-            localStream
-        );
-
-    } else {
-
-        connection.addTransceiver(
-            "audio",
-            {
-                direction:
-                    "recvonly"
-            }
-        );
-
-    }
-
-
-    /*
-       Видео.
-    */
-
-    const localVideo =
-        getLocalTrack(
-            "video"
-        );
-
-
-    if (localVideo) {
-
-        connection.addTrack(
-            localVideo,
-            localStream
-        );
-
-    } else {
-
-        connection.addTransceiver(
-            "video",
-            {
-                direction:
-                    "recvonly"
-            }
-        );
-
-    }
-
-
-    connection.onicecandidate =
-        async function (event) {
-
-            if (
-                !event.candidate ||
-                !conferenceChannel ||
-                !currentUser
-            ) {
-
-                return;
-
-            }
-
-
-            await conferenceChannel.send({
-
-                type:
-                    "broadcast",
-
-                event:
-                    "ice",
-
-                payload: {
-
-                    from:
-                        currentUser.id,
-
-                    to:
-                        peerId,
-
-                    candidate:
-                        event.candidate
-
-                }
-
-            });
-
-        };
-
-
-    connection.ontrack =
-        function (event) {
-
-            const stream =
-                event.streams &&
-                event.streams[0]
-                    ? event.streams[0]
-                    : null;
-
-
-            if (!stream) {
-
-                return;
-
-            }
-
-
-            const participant =
-                conferenceParticipants[
-                    peerId
-                ] || {};
-
-
-            participant.stream =
-                stream;
-
-
-            participant.nickname =
-                participant.nickname ||
-                "Участник";
-
-
-            participant.avatar_url =
-                participant.avatar_url ||
-                "";
-
-
-            conferenceParticipants[
-                peerId
-            ] =
-                participant;
-
-
-            addRemoteVideo(
-                peerId,
-                stream,
-                participant.nickname,
-                participant.avatar_url
-            );
-
-        };
-
-
-    connection.onconnectionstatechange =
-        function () {
-
-            console.log(
-                "Peer state",
-                peerId,
-                connection.connectionState
-            );
-
-
-            if (
-                connection.connectionState ===
-                "failed"
-            ) {
-
-                try {
-
-                    connection.restartIce();
-
-                } catch (error) {
-
-                    console.warn(
-                        error
-                    );
-
-                }
-
-            }
-
-
-            if (
-                connection.connectionState ===
-                    "closed" ||
-                connection.connectionState ===
-                    "disconnected"
-            ) {
-
-                removePeer(
-                    peerId
-                );
-
-            }
-
-        };
-
-
-    return connection;
-
-}
-
-
-/* =========================================================
-   ADD / REPLACE TRACK
-========================================================= */
-
-async function addOrReplaceLocalTrack(
-    kind,
+async function replaceVideoOnPeers(
     track
 ) {
 
-    const peers =
+    const peerIds =
         Object.keys(
             peerConnections
         );
 
 
     for (
-        const peerId of peers
+        const peerId of peerIds
     ) {
 
         const connection =
@@ -8297,38 +7624,43 @@ async function addOrReplaceLocalTrack(
         }
 
 
+        let transceiver =
+            connection
+                .getTransceivers()
+                .find(
+                    function (item) {
+
+                        return (
+                            item.receiver &&
+                            item.receiver.track &&
+                            item.receiver.track.kind ===
+                                "video"
+                        );
+
+                    }
+                );
+
+
+        if (!transceiver) {
+
+            transceiver =
+                connection.addTransceiver(
+
+                    "video",
+
+                    {
+
+                        direction:
+                            "sendrecv"
+
+                    }
+
+                );
+
+        }
+
+
         try {
-
-            let transceiver =
-                connection
-                    .getTransceivers()
-                    .find(
-                        function (item) {
-
-                            return (
-                                item.receiver &&
-                                item.receiver.track &&
-                                item.receiver.track.kind ===
-                                    kind
-                            );
-
-                        }
-                    );
-
-
-            if (!transceiver) {
-
-                transceiver =
-                    connection.addTransceiver(
-                        kind,
-                        {
-                            direction:
-                                "sendrecv"
-                        }
-                    );
-
-            }
-
 
             await transceiver.sender.replaceTrack(
                 track
@@ -8341,7 +7673,7 @@ async function addOrReplaceLocalTrack(
         } catch (error) {
 
             console.warn(
-                "Replace track error:",
+                "Video replace:",
                 error
             );
 
@@ -8352,7 +7684,6 @@ async function addOrReplaceLocalTrack(
 
     await configureAllVideoSenders();
 
-    updateLocalVideo();
 
     await renegotiatePeers();
 
@@ -8360,106 +7691,25 @@ async function addOrReplaceLocalTrack(
 
 
 /* =========================================================
-   RENEGOTIATE
+   VIDEO QUALITY
 ========================================================= */
 
-async function renegotiatePeers() {
+function getVideoBitrate() {
 
     if (
-        !conferenceJoined ||
-        !conferenceChannel ||
-        !currentUser
+        voiceSettings.videoQuality ===
+        "720"
     ) {
 
-        return;
+        return 2800000;
 
     }
 
 
-    const peers =
-        Object.keys(
-            peerConnections
-        );
-
-
-    for (
-        const peerId of peers
-    ) {
-
-        const connection =
-            peerConnections[
-                peerId
-            ];
-
-
-        if (!connection) {
-
-            continue;
-
-        }
-
-
-        if (
-            connection.signalingState !==
-            "stable"
-        ) {
-
-            continue;
-
-        }
-
-
-        try {
-
-            const offer =
-                await connection.createOffer();
-
-
-            await connection.setLocalDescription(
-                offer
-            );
-
-
-            await conferenceChannel.send({
-
-                type:
-                    "broadcast",
-
-                event:
-                    "offer",
-
-                payload: {
-
-                    from:
-                        currentUser.id,
-
-                    to:
-                        peerId,
-
-                    offer:
-                        offer
-
-                }
-
-            });
-
-        } catch (error) {
-
-            console.error(
-                "Renegotiation error:",
-                error
-            );
-
-        }
-
-    }
+    return 6000000;
 
 }
 
-
-/* =========================================================
-   CONFIGURE VIDEO SENDERS
-========================================================= */
 
 async function configureVideoSender(
     sender
@@ -8488,30 +7738,12 @@ async function configureVideoSender(
         }
 
 
-        const encoding =
-            parameters.encodings[0];
-
-
-        encoding.maxBitrate =
+        parameters.encodings[0].maxBitrate =
             getVideoBitrate();
 
 
-        encoding.maxFramerate =
+        parameters.encodings[0].maxFramerate =
             30;
-
-
-        encoding.scaleResolutionDownBy =
-            1;
-
-
-        if (
-            "priority" in encoding
-        ) {
-
-            encoding.priority =
-                "high";
-
-        }
 
 
         await sender.setParameters(
@@ -8556,8 +7788,7 @@ async function configureAllVideoSenders() {
 
 
         const senders =
-            connection
-                .getSenders();
+            connection.getSenders();
 
 
         for (
@@ -8583,59 +7814,6 @@ async function configureAllVideoSenders() {
 }
 
 
-/* =========================================================
-   CHANGE VIDEO QUALITY
-========================================================= */
-
-async function changeVideoQuality(
-    quality
-) {
-
-    voiceSettings.videoQuality =
-        quality;
-
-
-    const track =
-        getLocalTrack(
-            "video"
-        );
-
-
-    if (!track) {
-
-        return;
-
-    }
-
-
-    try {
-
-        await track.applyConstraints(
-            getVideoConstraintPreset()
-        );
-
-    } catch (error) {
-
-        console.warn(
-            "Video quality constraints:",
-            error
-        );
-
-    }
-
-
-    await configureAllVideoSenders();
-
-
-    updateConferenceVideos();
-
-}
-
-
-/* =========================================================
-   APPLY VIDEO QUALITY
-========================================================= */
-
 async function applyVideoQualityConstraints() {
 
     const track =
@@ -8654,12 +7832,13 @@ async function applyVideoQualityConstraints() {
     try {
 
         await track.applyConstraints(
-            getVideoConstraintPreset()
+            getVideoConstraints()
         );
 
     } catch (error) {
 
         console.warn(
+            "Video constraints:",
             error
         );
 
@@ -8672,25 +7851,523 @@ async function applyVideoQualityConstraints() {
 
 
 /* =========================================================
-   CHANGE CAMERA QUALITY
+   PEER CREATION
 ========================================================= */
 
-async function changeVideoQualityAndRestart() {
+function createPeerConnection(
+    peerId
+) {
 
-    if (!conferenceJoined) {
+    if (
+        peerConnections[
+            peerId
+        ]
+    ) {
+
+        return peerConnections[
+            peerId
+        ];
+
+    }
+
+
+    const connection =
+        new RTCPeerConnection({
+
+            iceServers: [
+
+                {
+                    urls:
+                        "stun:stun.l.google.com:19302"
+                },
+
+                {
+                    urls:
+                        "stun:stun1.l.google.com:19302"
+                }
+
+            ]
+
+        });
+
+
+    peerConnections[
+        peerId
+    ] =
+        connection;
+
+
+    const localAudio =
+        getLocalTrack(
+            "audio"
+        );
+
+
+    const localVideo =
+        getLocalTrack(
+            "video"
+        );
+
+
+    /*
+       Даже когда своих устройств нет,
+       создаём receive-only направления.
+    */
+
+    if (localAudio) {
+
+        connection.addTrack(
+            localAudio,
+            localStream
+        );
+
+    } else {
+
+        connection.addTransceiver(
+
+            "audio",
+
+            {
+
+                direction:
+                    "recvonly"
+
+            }
+
+        );
+
+    }
+
+
+    if (localVideo) {
+
+        connection.addTrack(
+            localVideo,
+            localStream
+        );
+
+    } else {
+
+        connection.addTransceiver(
+
+            "video",
+
+            {
+
+                direction:
+                    "recvonly"
+
+            }
+
+        );
+
+    }
+
+
+    connection.onicecandidate =
+        async function (event) {
+
+            if (
+                !event.candidate ||
+                !conferenceChannel ||
+                !currentUser
+            ) {
+
+                return;
+
+            }
+
+
+            try {
+
+                await conferenceChannel.send({
+
+                    type:
+                        "broadcast",
+
+                    event:
+                        "ice",
+
+                    payload: {
+
+                        from:
+                            currentUser.id,
+
+                        to:
+                            peerId,
+
+                        candidate:
+                            event.candidate
+
+                    }
+
+                });
+
+            } catch (error) {
+
+                console.warn(
+                    "ICE send:",
+                    error
+                );
+
+            }
+
+        };
+
+
+    connection.ontrack =
+        function (event) {
+
+            const stream =
+                event.streams &&
+                event.streams[0]
+                    ? event.streams[0]
+                    : null;
+
+
+            if (!stream) {
+
+                return;
+
+            }
+
+
+            const participant =
+                conferenceParticipants[
+                    peerId
+                ] ||
+                {
+
+                    nickname:
+                        "Участник",
+
+                    avatar_url:
+                        ""
+
+                };
+
+
+            participant.stream =
+                stream;
+
+
+            conferenceParticipants[
+                peerId
+            ] =
+                participant;
+
+
+            addRemoteVideo(
+
+                peerId,
+
+                stream,
+
+                participant.nickname,
+
+                participant.avatar_url
+
+            );
+
+        };
+
+
+    connection.onconnectionstatechange =
+        function () {
+
+            console.log(
+                "Peer",
+                peerId,
+                connection.connectionState
+            );
+
+
+            if (
+                connection.connectionState ===
+                "failed"
+            ) {
+
+                try {
+
+                    connection.restartIce();
+
+                } catch (error) {
+
+                    console.warn(
+                        error
+                    );
+
+                }
+
+            }
+
+
+            if (
+                connection.connectionState ===
+                    "closed" ||
+                connection.connectionState ===
+                    "disconnected"
+            ) {
+
+                removePeer(
+                    peerId
+                );
+
+            }
+
+        };
+
+
+    connection.onnegotiationneeded =
+        function () {
+
+            renegotiatePeer(
+                peerId
+            );
+
+        };
+
+
+    return connection;
+
+}
+
+
+/* =========================================================
+   DETERMINISTIC INITIATOR
+========================================================= */
+
+function shouldInitiatePeer(
+    localId,
+    remoteId
+) {
+
+    if (
+        !localId ||
+        !remoteId
+    ) {
+
+        return false;
+
+    }
+
+
+    /*
+       Всегда инициирует пользователь
+       с лексикографически меньшим UUID.
+       Поэтому два клиента не создают offer одновременно.
+    */
+
+    return (
+        String(localId) <
+        String(remoteId)
+    );
+
+}
+
+
+/* =========================================================
+   RENEGOTIATE ONE PEER
+========================================================= */
+
+async function renegotiatePeer(
+    peerId
+) {
+
+    if (
+        !conferenceJoined ||
+        !conferenceChannel ||
+        !currentUser ||
+        !peerId
+    ) {
 
         return;
 
     }
 
 
-    const oldTrack =
-        getLocalTrack(
-            "video"
+    /*
+       Не запускаем renegotiation одновременно
+       для одного peer.
+    */
+
+    if (
+        conferenceNegotiating[
+            peerId
+        ]
+    ) {
+
+        return;
+
+    }
+
+
+    const connection =
+        peerConnections[
+            peerId
+        ];
+
+
+    if (!connection) {
+
+        return;
+
+    }
+
+
+    if (
+        connection.signalingState !==
+        "stable"
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        !shouldInitiatePeer(
+            currentUser.id,
+            peerId
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    conferenceNegotiating[
+        peerId
+    ] =
+        true;
+
+
+    try {
+
+        const offer =
+            await connection.createOffer();
+
+
+        await connection.setLocalDescription(
+            offer
         );
 
 
-    if (!oldTrack) {
+        await conferenceChannel.send({
+
+            type:
+                "broadcast",
+
+            event:
+                "offer",
+
+            payload: {
+
+                from:
+                    currentUser.id,
+
+                to:
+                    peerId,
+
+                offer:
+                    offer
+
+            }
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Renegotiate peer:",
+            error
+        );
+
+    } finally {
+
+        setTimeout(
+            function () {
+
+                delete conferenceNegotiating[
+                    peerId
+                ];
+
+            },
+            500
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   RENEGOTIATE ALL
+========================================================= */
+
+async function renegotiatePeers() {
+
+    const peers =
+        Object.keys(
+            peerConnections
+        );
+
+
+    for (
+        const peerId of peers
+    ) {
+
+        await renegotiatePeer(
+            peerId
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   OFFER
+========================================================= */
+
+async function createPeerOffer(
+    peerId
+) {
+
+    if (
+        !conferenceJoined ||
+        !currentUser ||
+        !peerId
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        !shouldInitiatePeer(
+            currentUser.id,
+            peerId
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    const connection =
+        createPeerConnection(
+            peerId
+        );
+
+
+    if (
+        connection.signalingState !==
+        "stable"
+    ) {
 
         return;
 
@@ -8699,50 +8376,42 @@ async function changeVideoQualityAndRestart() {
 
     try {
 
-        const newTrack =
-            await requestVideoTrack();
+        const offer =
+            await connection.createOffer();
 
 
-        newTrack.enabled =
-            cameraEnabled;
-
-
-        localStream.removeTrack(
-            oldTrack
+        await connection.setLocalDescription(
+            offer
         );
 
 
-        try {
+        await conferenceChannel.send({
 
-            oldTrack.stop();
+            type:
+                "broadcast",
 
-        } catch (error) {
+            event:
+                "offer",
 
-            console.warn(
-                error
-            );
+            payload: {
 
-        }
+                from:
+                    currentUser.id,
 
+                to:
+                    peerId,
 
-        localStream.addTrack(
-            newTrack
-        );
+                offer:
+                    offer
 
+            }
 
-        await addOrReplaceLocalTrack(
-            "video",
-            newTrack
-        );
-
-
-        updateLocalVideo();
-
+        });
 
     } catch (error) {
 
-        console.warn(
-            "Video restart:",
+        console.error(
+            "Create offer:",
             error
         );
 
@@ -8752,69 +8421,1146 @@ async function changeVideoQualityAndRestart() {
 
 
 /* =========================================================
-   VIDEO TILE
+   HANDLE OFFER
 ========================================================= */
 
-function getVideoResolutionLabel(
-    video
+async function handleOffer(
+    data
 ) {
 
     if (
-        !video ||
-        !video.videoWidth ||
-        !video.videoHeight
+        !data ||
+        !data.from ||
+        !data.offer ||
+        !currentUser
     ) {
 
-        return "";
-
-    }
-
-
-    const width =
-        video.videoWidth;
-
-
-    const height =
-        video.videoHeight;
-
-
-    if (
-        width >= 1900 &&
-        height >= 1000
-    ) {
-
-        return "1080p";
+        return;
 
     }
 
 
     if (
-        width >= 1200 &&
-        height >= 650
+        data.to !==
+        currentUser.id
     ) {
 
-        return "720p";
+        return;
+
+    }
+
+
+    const peerId =
+        data.from;
+
+
+    /*
+       Если offer уже пришёл от правильного инициатора,
+       принимаем его.
+    */
+
+    const connection =
+        createPeerConnection(
+            peerId
+        );
+
+
+    try {
+
+        if (
+            connection.signalingState ===
+            "have-local-offer"
+        ) {
+
+            await connection.setLocalDescription({
+
+                type:
+                    "rollback"
+
+            });
+
+        }
+
+
+        await connection.setRemoteDescription(
+
+            new RTCSessionDescription(
+                data.offer
+            )
+
+        );
+
+
+        const answer =
+            await connection.createAnswer();
+
+
+        await connection.setLocalDescription(
+            answer
+        );
+
+
+        await conferenceChannel.send({
+
+            type:
+                "broadcast",
+
+            event:
+                "answer",
+
+            payload: {
+
+                from:
+                    currentUser.id,
+
+                to:
+                    peerId,
+
+                answer:
+                    answer
+
+            }
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Handle offer:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   HANDLE ANSWER
+========================================================= */
+
+async function handleAnswer(
+    data
+) {
+
+    if (
+        !data ||
+        !data.from ||
+        !data.answer ||
+        !currentUser
+    ) {
+
+        return;
 
     }
 
 
     if (
-        width >= 900
+        data.to !==
+        currentUser.id
     ) {
 
-        return "HD";
+        return;
 
     }
 
 
-    return (
-        width +
-        "×" +
-        height
+    const connection =
+        peerConnections[
+            data.from
+        ];
+
+
+    if (!connection) {
+
+        return;
+
+    }
+
+
+    try {
+
+        if (
+            connection.signalingState !==
+            "have-local-offer"
+        ) {
+
+            return;
+
+        }
+
+
+        await connection.setRemoteDescription(
+
+            new RTCSessionDescription(
+                data.answer
+            )
+
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Handle answer:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   HANDLE ICE
+========================================================= */
+
+async function handleIceCandidate(
+    data
+) {
+
+    if (
+        !data ||
+        !data.from ||
+        !data.candidate ||
+        !currentUser
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        data.to !==
+        currentUser.id
+    ) {
+
+        return;
+
+    }
+
+
+    const connection =
+        peerConnections[
+            data.from
+        ];
+
+
+    if (!connection) {
+
+        return;
+
+    }
+
+
+    try {
+
+        await connection.addIceCandidate(
+
+            new RTCIceCandidate(
+                data.candidate
+            )
+
+        );
+
+    } catch (error) {
+
+        console.warn(
+            "ICE candidate:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   CONFERENCE PRESENCE
+========================================================= */
+
+function extractConferencePresence(
+    state
+) {
+
+    const users =
+        [];
+
+
+    Object.keys(state || {})
+        .forEach(
+            function (key) {
+
+                const entries =
+                    state[key] || [];
+
+
+                entries.forEach(
+                    function (entry) {
+
+                        if (!entry) {
+
+                            return;
+
+                        }
+
+
+                        const userId =
+                            entry.userId ||
+                            entry.user_id ||
+                            key;
+
+
+                        if (!userId) {
+
+                            return;
+
+                        }
+
+
+                        if (
+                            currentUser &&
+                            userId ===
+                                currentUser.id
+                        ) {
+
+                            return;
+
+                        }
+
+
+                        users.push({
+
+                            userId:
+                                userId,
+
+                            nickname:
+                                entry.nickname ||
+                                "Участник",
+
+                            avatar_url:
+                                entry.avatar_url ||
+                                ""
+
+                        });
+
+                    }
+                );
+
+            }
+        );
+
+
+    const unique =
+        {};
+
+
+    users.forEach(
+        function (user) {
+
+            unique[
+                user.userId
+            ] =
+                user;
+
+        }
+    );
+
+
+    return Object.values(
+        unique
     );
 
 }
 
+
+/* =========================================================
+   SYNC CONFERENCE PEERS
+========================================================= */
+
+async function syncConferencePeers() {
+
+    if (
+        !conferenceChannel ||
+        !conferenceJoined ||
+        !currentUser
+    ) {
+
+        return;
+
+    }
+
+
+    const state =
+        conferenceChannel.presenceState();
+
+
+    const users =
+        extractConferencePresence(
+            state
+        );
+
+
+    updateConferenceParticipantCount(
+        users.length + 1
+    );
+
+
+    for (
+        const user of users
+    ) {
+
+        conferenceParticipants[
+            user.userId
+        ] =
+            Object.assign(
+
+                {},
+
+                conferenceParticipants[
+                    user.userId
+                ] || {},
+
+                {
+
+                    nickname:
+                        user.nickname,
+
+                    avatar_url:
+                        user.avatar_url
+
+                }
+
+            );
+
+
+        /*
+           Важное исправление:
+           уже присутствующий участник тоже
+           становится обнаруживаемым после sync.
+        */
+
+        if (
+            shouldInitiatePeer(
+                currentUser.id,
+                user.userId
+            )
+        ) {
+
+            await createPeerOffer(
+                user.userId
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   CONFERENCE START
+========================================================= */
+
+async function startConference() {
+
+    if (
+        conferenceJoined ||
+        !currentUser ||
+        !supabaseClient
+    ) {
+
+        return;
+
+    }
+
+
+    if (!conferenceRoom) {
+
+        conferenceRoom =
+            "Общая";
+
+    }
+
+
+    setConferenceStatus(
+        "ПОДКЛЮЧЕНИЕ..."
+    );
+
+
+    conferenceJoined =
+        true;
+
+
+    localStream =
+        null;
+
+
+    screenStream =
+        null;
+
+
+    micEnabled =
+        false;
+
+
+    cameraEnabled =
+        false;
+
+
+    screenSharing =
+        false;
+
+
+    peerConnections =
+        {};
+
+
+    conferenceParticipants =
+        {};
+
+
+    conferenceNegotiating =
+        {};
+
+
+    try {
+
+        const channelName =
+            getConferenceChannelName();
+
+
+        console.log(
+            "Joining conference room:",
+            conferenceRoom,
+            channelName
+        );
+
+
+        /*
+           ВОТ ГЛАВНОЕ ИЗМЕНЕНИЕ:
+           Presence включён непосредственно
+           на конференционном канале.
+        */
+
+        conferenceChannel =
+            supabaseClient.channel(
+
+                channelName,
+
+                {
+
+                    config: {
+
+                        broadcast: {
+
+                            self:
+                                false
+
+                        },
+
+                        presence: {
+
+                            key:
+                                currentUser.id
+
+                        }
+
+                    }
+
+                }
+
+            );
+
+
+        /*
+           Полная синхронизация уже присутствующих.
+        */
+
+        conferenceChannel.on(
+
+            "presence",
+
+            {
+                event:
+                    "sync"
+            },
+
+            async function () {
+
+                console.log(
+                    "Conference Presence SYNC",
+                    conferenceRoom
+                );
+
+
+                await syncConferencePeers();
+
+            }
+
+        );
+
+
+        /*
+           Новый участник.
+        */
+
+        conferenceChannel.on(
+
+            "presence",
+
+            {
+                event:
+                    "join"
+            },
+
+            async function (payload) {
+
+                const key =
+                    payload &&
+                    payload.key
+                        ? payload.key
+                        : null;
+
+
+                const entries =
+                    payload &&
+                    payload.newPresences
+                        ? payload.newPresences
+                        : [];
+
+
+                if (!key) {
+
+                    return;
+
+                }
+
+
+                if (
+                    key ===
+                    currentUser.id
+                ) {
+
+                    return;
+
+                }
+
+
+                const entry =
+                    entries[0] ||
+                    {};
+
+
+                conferenceParticipants[
+                    key
+                ] =
+                    {
+
+                        nickname:
+                            entry.nickname ||
+                            "Участник",
+
+                        avatar_url:
+                            entry.avatar_url ||
+                            ""
+
+                    };
+
+
+                updateConferenceParticipantCount();
+
+
+                if (
+                    shouldInitiatePeer(
+                        currentUser.id,
+                        key
+                    )
+                ) {
+
+                    await createPeerOffer(
+                        key
+                    );
+
+                }
+
+            }
+
+        );
+
+
+        /*
+           Выход участника.
+        */
+
+        conferenceChannel.on(
+
+            "presence",
+
+            {
+                event:
+                    "leave"
+            },
+
+            function (payload) {
+
+                const key =
+                    payload &&
+                    payload.key
+                        ? payload.key
+                        : null;
+
+
+                if (key) {
+
+                    removePeer(
+                        key
+                    );
+
+                }
+
+            }
+
+        );
+
+
+        /*
+           Broadcast signaling.
+        */
+
+        conferenceChannel.on(
+
+            "broadcast",
+
+            {
+                event:
+                    "offer"
+            },
+
+            async function (payload) {
+
+                const data =
+                    payload &&
+                    payload.payload
+                        ? payload.payload
+                        : null;
+
+
+                await handleOffer(
+                    data
+                );
+
+            }
+
+        );
+
+
+        conferenceChannel.on(
+
+            "broadcast",
+
+            {
+                event:
+                    "answer"
+            },
+
+            async function (payload) {
+
+                const data =
+                    payload &&
+                    payload.payload
+                        ? payload.payload
+                        : null;
+
+
+                await handleAnswer(
+                    data
+                );
+
+            }
+
+        );
+
+
+        conferenceChannel.on(
+
+            "broadcast",
+
+            {
+                event:
+                    "ice"
+            },
+
+            async function (payload) {
+
+                const data =
+                    payload &&
+                    payload.payload
+                        ? payload.payload
+                        : null;
+
+
+                await handleIceCandidate(
+                    data
+                );
+
+            }
+
+        );
+
+
+        conferenceChannel.subscribe(
+            async function (
+                status,
+                error
+            ) {
+
+                console.log(
+                    "Conference subscribe:",
+                    status,
+                    error || ""
+                );
+
+
+                if (
+                    status ===
+                    "SUBSCRIBED"
+                ) {
+
+                    /*
+                       Сначала публикуем себя.
+                    */
+
+                    await conferenceChannel.track({
+
+                        userId:
+                            currentUser.id,
+
+                        nickname:
+                            profileData.nickname ||
+                            "Player",
+
+                        avatar_url:
+                            profileData.avatar_url ||
+                            "",
+
+                        status:
+                            profileData.status ||
+                            "Онлайн",
+
+                        room:
+                            conferenceRoom,
+
+                        camera:
+                            false,
+
+                        microphone:
+                            false
+
+                    });
+
+
+                    setConferenceStatus(
+                        "ПОДКЛЮЧЕНО"
+                    );
+
+
+                    updateConferenceButtons();
+
+
+                    updateConferenceMediaButtons();
+
+
+                    updateConferenceParticipantCount();
+
+
+                    updateLocalVideo();
+
+
+                    /*
+                       Сразу после track() запрашиваем
+                       актуальное Presence состояние.
+                    */
+
+                    setTimeout(
+                        async function () {
+
+                            await syncConferencePeers();
+
+                        },
+                        150
+                    );
+
+
+                    showInfo(
+                        "Вы вошли в комнату «" +
+                        conferenceRoom +
+                        "»."
+                    );
+
+                }
+
+
+                if (
+                    status ===
+                        "CHANNEL_ERROR" ||
+                    status ===
+                        "TIMED_OUT" ||
+                    status ===
+                        "CLOSED"
+                ) {
+
+                    setConferenceStatus(
+                        "ОШИБКА"
+                    );
+
+
+                    showInfo(
+                        "Не удалось подключиться к комнате «" +
+                        conferenceRoom +
+                        "»."
+                    );
+
+                }
+
+            }
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Conference start:",
+            error
+        );
+
+
+        await stopConference();
+
+
+        setConferenceStatus(
+            "ОШИБКА"
+        );
+
+
+        showInfo(
+            "Не удалось подключить конференцию."
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   UPDATE CONFERENCE PRESENCE
+========================================================= */
+
+async function updateConferencePresence() {
+
+    if (
+        !conferenceChannel ||
+        !conferenceJoined ||
+        !currentUser
+    ) {
+
+        return;
+
+    }
+
+
+    try {
+
+        await conferenceChannel.track({
+
+            userId:
+                currentUser.id,
+
+            nickname:
+                profileData.nickname ||
+                "Player",
+
+            avatar_url:
+                profileData.avatar_url ||
+                "",
+
+            status:
+                profileData.status ||
+                "Онлайн",
+
+            room:
+                conferenceRoom,
+
+            camera:
+                cameraEnabled,
+
+            microphone:
+                micEnabled
+
+        });
+
+    } catch (error) {
+
+        console.warn(
+            "Conference presence track:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   LOCAL VIDEO
+========================================================= */
+
+function updateLocalVideo() {
+
+    const container =
+        $("conference-videos");
+
+
+    if (
+        !container ||
+        !conferenceJoined ||
+        !currentUser
+    ) {
+
+        return;
+
+    }
+
+
+    const existing =
+        container.querySelector(
+            '[data-peer-id="' +
+            currentUser.id +
+            '"]'
+        );
+
+
+    if (existing) {
+
+        existing.remove();
+
+    }
+
+
+    const localVideo =
+        getLocalTrack(
+            "video"
+        );
+
+
+    if (
+        localVideo &&
+        cameraEnabled
+    ) {
+
+        const tile =
+            createVideoTile(
+
+                currentUser.id,
+
+                localStream,
+
+                profileData.nickname ||
+                    "Вы",
+
+                true,
+
+                profileData.avatar_url ||
+                    ""
+
+            );
+
+
+        container.appendChild(
+            tile
+        );
+
+    } else {
+
+        const tile =
+            document.createElement(
+                "div"
+            );
+
+
+        tile.className =
+            "video-tile";
+
+
+        tile.dataset.peerId =
+            currentUser.id;
+
+
+        tile.innerHTML = `
+
+            <div
+                style="
+                    width:100%;
+                    height:100%;
+                    min-height:130px;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    flex-direction:column;
+                    gap:9px;
+                    background:
+                        linear-gradient(
+                            180deg,
+                            rgba(255,255,255,.94),
+                            rgba(237,241,245,.98)
+                        );
+                    border-radius:12px;
+                "
+            >
+
+                <div
+                    style="
+                        font-size:42px;
+                    "
+                >
+                    🤖
+                </div>
+
+                <strong>
+                    ${escapeHtml(
+                        profileData.nickname ||
+                        "Вы"
+                    )}
+                </strong>
+
+                <span
+                    style="
+                        font-size:10px;
+                        color:#7e8994;
+                    "
+                >
+                    Камера выключена
+                </span>
+
+            </div>
+
+        `;
+
+
+        container.appendChild(
+            tile
+        );
+
+    }
+
+
+    applyOutputDevice();
+
+}
+
+
+/* =========================================================
+   VIDEO TILE
+========================================================= */
 
 function createVideoTile(
     id,
@@ -8886,10 +9632,8 @@ function createVideoTile(
 
     label.textContent =
         local
-            ? (
-                name +
-                " · Вы"
-            )
+            ? name +
+              " · Вы"
             : name;
 
 
@@ -8903,25 +9647,25 @@ function createVideoTile(
         "conference-video-toolbar";
 
 
-    const pipButton =
+    const pip =
         document.createElement(
             "button"
         );
 
 
-    pipButton.type =
+    pip.type =
         "button";
 
 
-    pipButton.title =
-        "Открыть видео отдельно";
+    pip.title =
+        "Открыть отдельно";
 
 
-    pipButton.textContent =
+    pip.textContent =
         "⛶";
 
 
-    pipButton.addEventListener(
+    pip.addEventListener(
         "click",
         function () {
 
@@ -8933,25 +9677,25 @@ function createVideoTile(
     );
 
 
-    const fullscreenButton =
+    const fullscreen =
         document.createElement(
             "button"
         );
 
 
-    fullscreenButton.type =
+    fullscreen.type =
         "button";
 
 
-    fullscreenButton.title =
-        "На весь экран";
+    fullscreen.title =
+        "Полный экран";
 
 
-    fullscreenButton.textContent =
+    fullscreen.textContent =
         "↗";
 
 
-    fullscreenButton.addEventListener(
+    fullscreen.addEventListener(
         "click",
         async function () {
 
@@ -8978,12 +9722,12 @@ function createVideoTile(
 
 
     toolbar.appendChild(
-        pipButton
+        pip
     );
 
 
     toolbar.appendChild(
-        fullscreenButton
+        fullscreen
     );
 
 
@@ -9011,16 +9755,10 @@ function createVideoTile(
         "loadedmetadata",
         function () {
 
-            const resolution =
+            quality.textContent =
                 getVideoResolutionLabel(
                     video
                 );
-
-
-            quality.textContent =
-                resolution
-                    ? resolution
-                    : "LIVE";
 
 
             applyVideoOutputDevice(
@@ -9031,185 +9769,63 @@ function createVideoTile(
     );
 
 
-    if (!local) {
-
-        /*
-           В некоторых стилях можно использовать
-           аватар при отсутствии видео.
-        */
-
-        if (!stream) {
-
-            renderAvatar(
-                tile,
-                name,
-                avatarUrl
-            );
-
-        }
-
-    }
-
-
     return tile;
 
 }
 
 
 /* =========================================================
-   LOCAL VIDEO
+   VIDEO RESOLUTION LABEL
 ========================================================= */
 
-function updateLocalVideo() {
+function getVideoResolutionLabel(
+    video
+) {
 
-    const container =
-        $("conference-videos");
+    if (
+        !video ||
+        !video.videoWidth ||
+        !video.videoHeight
+    ) {
+
+        return "LIVE";
+
+    }
 
 
-    if (!container) {
+    const width =
+        video.videoWidth;
 
-        return;
+
+    const height =
+        video.videoHeight;
+
+
+    if (
+        width >= 1900 &&
+        height >= 1000
+    ) {
+
+        return "1080p";
 
     }
 
 
     if (
-        !conferenceJoined ||
-        !currentUser
+        width >= 1200 &&
+        height >= 650
     ) {
 
-        return;
+        return "720p";
 
     }
 
 
-    const localId =
-        currentUser.id;
-
-
-    const existing =
-        container.querySelector(
-            '[data-peer-id="' +
-            localId +
-            '"]'
-        );
-
-
-    if (existing) {
-
-        existing.remove();
-
-    }
-
-
-    const videoTrack =
-        getLocalTrack(
-            "video"
-        );
-
-
-    if (
-        videoTrack &&
-        cameraEnabled
-    ) {
-
-        const tile =
-            createVideoTile(
-
-                localId,
-
-                localStream,
-
-                profileData.nickname ||
-                    "Вы",
-
-                true,
-
-                profileData.avatar_url ||
-                    ""
-
-            );
-
-
-        container.appendChild(
-            tile
-        );
-
-    } else {
-
-        const tile =
-            document.createElement(
-                "div"
-            );
-
-
-        tile.className =
-            "video-tile";
-
-
-        tile.dataset.peerId =
-            localId;
-
-
-        tile.innerHTML = `
-
-            <div
-                style="
-                    width:100%;
-                    height:100%;
-                    min-height:130px;
-                    display:flex;
-                    align-items:center;
-                    justify-content:center;
-                    flex-direction:column;
-                    gap:9px;
-                    background:
-                        linear-gradient(
-                            180deg,
-                            rgba(255,255,255,.94),
-                            rgba(237,241,245,.98)
-                        );
-                    border-radius:12px;
-                "
-            >
-
-                <div
-                    style="font-size:42px;"
-                >
-                    🤖
-                </div>
-
-                <strong>
-                    ${escapeHtml(
-                        profileData.nickname ||
-                        "Вы"
-                    )}
-                </strong>
-
-                <span
-                    style="
-                        font-size:10px;
-                        color:#7e8994;
-                    "
-                >
-                    Камера выключена
-                </span>
-
-            </div>
-
-        `;
-
-
-        container.appendChild(
-            tile
-        );
-
-    }
-
-
-    applyOutputDevice();
-
-    updateConferenceParticipantCount();
+    return (
+        width +
+        "×" +
+        height
+    );
 
 }
 
@@ -9270,25 +9886,6 @@ function addRemoteVideo(
     }
 
 
-    conferenceParticipants[
-        peerId
-    ] =
-        {
-
-            stream:
-                stream,
-
-            nickname:
-                name ||
-                "Участник",
-
-            avatar_url:
-                avatarUrl ||
-                ""
-
-        };
-
-
     const placeholder =
         container.querySelector(
             ".conference-placeholder"
@@ -9325,7 +9922,7 @@ function addRemoteVideo(
     );
 
 
-    applyVideoOutputDevice();
+    applyOutputDevice();
 
 
     updateConferenceParticipantCount();
@@ -9334,7 +9931,7 @@ function addRemoteVideo(
 
 
 /* =========================================================
-   VIDEO OUTPUT DEVICE
+   OUTPUT DEVICE
 ========================================================= */
 
 async function applyVideoOutputDevice(
@@ -9353,7 +9950,7 @@ async function applyVideoOutputDevice(
 
     if (
         typeof video.setSinkId !==
-        "function"
+            "function"
     ) {
 
         return;
@@ -9370,7 +9967,7 @@ async function applyVideoOutputDevice(
     } catch (error) {
 
         console.warn(
-            "Output device:",
+            "setSinkId:",
             error
         );
 
@@ -9401,7 +9998,7 @@ async function applyOutputDevice() {
 
 
 /* =========================================================
-   VIDEO WINDOW
+   PICTURE IN PICTURE
 ========================================================= */
 
 async function openVideoWindow(
@@ -9428,10 +10025,6 @@ async function openVideoWindow(
     }
 
 
-    /*
-       Сначала стандартный Picture-in-Picture.
-    */
-
     if (
         document.pictureInPictureEnabled &&
         typeof video.requestPictureInPicture ===
@@ -9440,24 +10033,14 @@ async function openVideoWindow(
 
         try {
 
-            if (
-                document.pictureInPictureElement
-            ) {
-
-                await document.exitPictureInPicture();
-
-            }
-
-
             await video.requestPictureInPicture();
-
 
             return;
 
         } catch (error) {
 
             console.warn(
-                "Picture-in-Picture failed:",
+                "PiP:",
                 error
             );
 
@@ -9465,12 +10048,6 @@ async function openVideoWindow(
 
     }
 
-
-    /*
-       Затем Document Picture-in-Picture.
-       В поддерживаемых браузерах это отдельное
-       плавающее окно с нашим видео.
-    */
 
     if (
         "documentPictureInPicture" in
@@ -9506,7 +10083,6 @@ async function openVideoWindow(
                 html,
                 body {
                     margin:0;
-                    padding:0;
                     width:100%;
                     height:100%;
                     background:#11151b;
@@ -9528,11 +10104,11 @@ async function openVideoWindow(
             );
 
 
-            const originalParent =
+            const parent =
                 video.parentNode;
 
 
-            const originalNextSibling =
+            const nextSibling =
                 video.nextSibling;
 
 
@@ -9545,28 +10121,29 @@ async function openVideoWindow(
                 "pagehide",
                 function () {
 
+                    if (!parent) {
+
+                        return;
+
+                    }
+
+
                     if (
-                        originalParent
+                        nextSibling &&
+                        nextSibling.parentNode ===
+                            parent
                     ) {
 
-                        if (
-                            originalNextSibling &&
-                            originalNextSibling.parentNode ===
-                                originalParent
-                        ) {
+                        parent.insertBefore(
+                            video,
+                            nextSibling
+                        );
 
-                            originalParent.insertBefore(
-                                video,
-                                originalNextSibling
-                            );
+                    } else {
 
-                        } else {
-
-                            originalParent.appendChild(
-                                video
-                            );
-
-                        }
+                        parent.appendChild(
+                            video
+                        );
 
                     }
 
@@ -9583,7 +10160,7 @@ async function openVideoWindow(
         } catch (error) {
 
             console.warn(
-                "Document PiP failed:",
+                "Document PiP:",
                 error
             );
 
@@ -9593,14 +10170,14 @@ async function openVideoWindow(
 
 
     showInfo(
-        "Отдельное видео не поддерживается этим браузером."
+        "Этот браузер не поддерживает отдельное окно видео."
     );
 
 }
 
 
 /* =========================================================
-   UPDATE VIDEOS
+   UPDATE CONFERENCE VIDEOS
 ========================================================= */
 
 function updateConferenceVideos() {
@@ -9628,46 +10205,64 @@ function updateConferenceVideos() {
 
 
                 if (
-                    !participant ||
-                    !participant.stream
+                    participant &&
+                    participant.stream
                 ) {
 
-                    return;
+                    addRemoteVideo(
+
+                        peerId,
+
+                        participant.stream,
+
+                        participant.nickname,
+
+                        participant.avatar_url
+
+                    );
 
                 }
-
-
-                addRemoteVideo(
-
-                    peerId,
-
-                    participant.stream,
-
-                    participant.nickname,
-
-                    participant.avatar_url
-
-                );
 
             }
         );
 
 
-    applyOutputDevice();
-
-
     updateConferenceParticipantCount();
+
+
+    applyOutputDevice();
 
 }
 
 
-function updateConferenceParticipantCount() {
+/* =========================================================
+   PARTICIPANT COUNT
+========================================================= */
+
+function updateConferenceParticipantCount(
+    explicitCount
+) {
 
     const element =
         $("conference-participants-count");
 
 
     if (!element) {
+
+        return;
+
+    }
+
+
+    if (
+        typeof explicitCount ===
+        "number"
+    ) {
+
+        element.textContent =
+            String(
+                explicitCount
+            );
 
         return;
 
@@ -9689,344 +10284,6 @@ function updateConferenceParticipantCount() {
         String(
             count
         );
-
-}
-
-
-/* =========================================================
-   OFFER
-========================================================= */
-
-async function createPeerOffer(
-    peerId,
-    meta
-) {
-
-    if (
-        !conferenceJoined ||
-        !peerId ||
-        !currentUser ||
-        peerId ===
-            currentUser.id
-    ) {
-
-        return;
-
-    }
-
-
-    if (meta) {
-
-        conferenceParticipants[
-            peerId
-        ] =
-            Object.assign(
-
-                {},
-
-                conferenceParticipants[
-                    peerId
-                ] || {},
-
-                {
-
-                    nickname:
-                        meta.nickname ||
-                        "Участник",
-
-                    avatar_url:
-                        meta.avatar_url ||
-                        ""
-
-                }
-
-            );
-
-    }
-
-
-    try {
-
-        const connection =
-            createPeerConnection(
-                peerId
-            );
-
-
-        const offer =
-            await connection.createOffer();
-
-
-        await connection.setLocalDescription(
-            offer
-        );
-
-
-        await conferenceChannel.send({
-
-            type:
-                "broadcast",
-
-            event:
-                "offer",
-
-            payload: {
-
-                from:
-                    currentUser.id,
-
-                to:
-                    peerId,
-
-                offer:
-                    offer
-
-            }
-
-        });
-
-    } catch (error) {
-
-        console.error(
-            "Offer error:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   HANDLE OFFER
-========================================================= */
-
-async function handleOffer(
-    data
-) {
-
-    try {
-
-        const peerId =
-            data.from;
-
-
-        if (!peerId) {
-
-            return;
-
-        }
-
-
-        if (
-            data.nickname ||
-            data.avatar_url
-        ) {
-
-            conferenceParticipants[
-                peerId
-            ] =
-                Object.assign(
-
-                    {},
-
-                    conferenceParticipants[
-                        peerId
-                    ] || {},
-
-                    {
-
-                        nickname:
-                            data.nickname ||
-                            "Участник",
-
-                        avatar_url:
-                            data.avatar_url ||
-                            ""
-
-                    }
-
-                );
-
-        }
-
-
-        const connection =
-            createPeerConnection(
-                peerId
-            );
-
-
-        /*
-           Если возникла glare-ситуация,
-           аккуратно делаем rollback.
-        */
-
-        if (
-            connection.signalingState ===
-            "have-local-offer"
-        ) {
-
-            try {
-
-                await connection.setLocalDescription({
-
-                    type:
-                        "rollback"
-
-                });
-
-            } catch (error) {
-
-                console.warn(
-                    "Rollback:",
-                    error
-                );
-
-            }
-
-        }
-
-
-        await connection.setRemoteDescription(
-            new RTCSessionDescription(
-                data.offer
-            )
-        );
-
-
-        const answer =
-            await connection.createAnswer();
-
-
-        await connection.setLocalDescription(
-            answer
-        );
-
-
-        await conferenceChannel.send({
-
-            type:
-                "broadcast",
-
-            event:
-                "answer",
-
-            payload: {
-
-                from:
-                    currentUser.id,
-
-                to:
-                    peerId,
-
-                answer:
-                    answer
-
-            }
-
-        });
-
-    } catch (error) {
-
-        console.error(
-            "Handle offer error:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   HANDLE ANSWER
-========================================================= */
-
-async function handleAnswer(
-    data
-) {
-
-    try {
-
-        const connection =
-            peerConnections[
-                data.from
-            ];
-
-
-        if (!connection) {
-
-            return;
-
-        }
-
-
-        if (
-            connection.signalingState !==
-            "have-local-offer"
-        ) {
-
-            return;
-
-        }
-
-
-        await connection.setRemoteDescription(
-            new RTCSessionDescription(
-                data.answer
-            )
-        );
-
-    } catch (error) {
-
-        console.error(
-            "Answer error:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   HANDLE ICE
-========================================================= */
-
-async function handleIceCandidate(
-    data
-) {
-
-    try {
-
-        const connection =
-            peerConnections[
-                data.from
-            ];
-
-
-        if (!connection) {
-
-            return;
-
-        }
-
-
-        await connection.addIceCandidate(
-            new RTCIceCandidate(
-                data.candidate
-            )
-        );
-
-    } catch (error) {
-
-        console.error(
-            "ICE error:",
-            error
-        );
-
-    }
 
 }
 
@@ -10072,6 +10329,11 @@ function removePeer(
     ];
 
 
+    delete conferenceNegotiating[
+        peerId
+    ];
+
+
     const tile =
         document.querySelector(
             '[data-peer-id="' +
@@ -10088,19 +10350,6 @@ function removePeer(
 
 
     updateConferenceParticipantCount();
-
-
-    if (
-        conferenceJoined &&
-        Object.keys(
-            conferenceParticipants
-        ).length ===
-            0
-    ) {
-
-        updateLocalVideo();
-
-    }
 
 }
 
@@ -10209,11 +10458,16 @@ async function toggleConferenceScreen() {
 
                     transceiver =
                         connection.addTransceiver(
+
                             "video",
+
                             {
+
                                 direction:
                                     "sendrecv"
+
                             }
+
                         );
 
                 }
@@ -10232,6 +10486,7 @@ async function toggleConferenceScreen() {
                 } catch (error) {
 
                     console.warn(
+                        "Screen replace:",
                         error
                     );
 
@@ -10241,14 +10496,12 @@ async function toggleConferenceScreen() {
 
 
             const localVideo =
-                $("conference-videos")
-                    ? $("conference-videos")
-                        .querySelector(
-                            '[data-peer-id="' +
-                            currentUser.id +
-                            '"] video'
-                        )
-                    : null;
+                document
+                    .querySelector(
+                        '[data-peer-id="' +
+                        currentUser.id +
+                        '"] video'
+                    );
 
 
             if (localVideo) {
@@ -10284,7 +10537,7 @@ async function toggleConferenceScreen() {
     } catch (error) {
 
         console.error(
-            "Screen share error:",
+            "Screen share:",
             error
         );
 
@@ -10409,6 +10662,7 @@ async function stopScreenShare() {
         } catch (error) {
 
             console.warn(
+                "Restore screen:",
                 error
             );
 
@@ -10541,448 +10795,7 @@ function updateConferenceMediaButtons() {
     }
 
 
-    updatePushToTalkVisibility();
-
-}
-
-
-/* =========================================================
-   CONFERENCE START
-========================================================= */
-
-async function startConference() {
-
-    if (
-        conferenceJoined ||
-        !currentUser ||
-        !supabaseClient
-    ) {
-
-        return;
-
-    }
-
-
-    setConferenceStatus(
-        "ПОДКЛЮЧЕНИЕ..."
-    );
-
-
-    conferenceJoined =
-        true;
-
-
-    localStream =
-        null;
-
-
-    screenStream =
-        null;
-
-
-    micEnabled =
-        false;
-
-
-    cameraEnabled =
-        false;
-
-
-    screenSharing =
-        false;
-
-
-    peerConnections =
-        {};
-
-
-    conferenceParticipants =
-        {};
-
-
-    try {
-
-        const channelName =
-            getConferenceChannelName();
-
-
-        conferenceChannel =
-            supabaseClient.channel(
-
-                channelName,
-
-                {
-
-                    config: {
-
-                        broadcast: {
-
-                            self:
-                                false
-
-                        }
-
-                    }
-
-                }
-
-            );
-
-
-        /*
-           Новый участник.
-           Все уже находящиеся в комнате увидят его.
-        */
-
-        conferenceChannel.on(
-
-            "broadcast",
-
-            {
-                event:
-                    "join"
-            },
-
-            async function (event) {
-
-                const data =
-                    event &&
-                    event.payload
-                        ? event.payload
-                        : null;
-
-
-                if (!data) {
-
-                    return;
-
-                }
-
-
-                if (
-                    !data.userId ||
-                    data.userId ===
-                        currentUser.id
-                ) {
-
-                    return;
-
-                }
-
-
-                conferenceParticipants[
-                    data.userId
-                ] =
-                    Object.assign(
-
-                        {},
-
-                        conferenceParticipants[
-                            data.userId
-                        ] || {},
-
-                        {
-
-                            nickname:
-                                data.nickname ||
-                                "Участник",
-
-                            avatar_url:
-                                data.avatar_url ||
-                                ""
-
-                        }
-
-                    );
-
-
-                await createPeerOffer(
-                    data.userId,
-                    data
-                );
-
-            }
-
-        );
-
-
-        conferenceChannel.on(
-
-            "broadcast",
-
-            {
-                event:
-                    "offer"
-            },
-
-            async function (event) {
-
-                const data =
-                    event &&
-                    event.payload
-                        ? event.payload
-                        : null;
-
-
-                if (!data) {
-
-                    return;
-
-                }
-
-
-                if (
-                    data.to !==
-                    currentUser.id
-                ) {
-
-                    return;
-
-                }
-
-
-                await handleOffer(
-                    data
-                );
-
-            }
-
-        );
-
-
-        conferenceChannel.on(
-
-            "broadcast",
-
-            {
-                event:
-                    "answer"
-            },
-
-            async function (event) {
-
-                const data =
-                    event &&
-                    event.payload
-                        ? event.payload
-                        : null;
-
-
-                if (!data) {
-
-                    return;
-
-                }
-
-
-                if (
-                    data.to !==
-                    currentUser.id
-                ) {
-
-                    return;
-
-                }
-
-
-                await handleAnswer(
-                    data
-                );
-
-            }
-
-        );
-
-
-        conferenceChannel.on(
-
-            "broadcast",
-
-            {
-                event:
-                    "ice"
-            },
-
-            async function (event) {
-
-                const data =
-                    event &&
-                    event.payload
-                        ? event.payload
-                        : null;
-
-
-                if (!data) {
-
-                    return;
-
-                }
-
-
-                if (
-                    data.to !==
-                    currentUser.id
-                ) {
-
-                    return;
-
-                }
-
-
-                await handleIceCandidate(
-                    data
-                );
-
-            }
-
-        );
-
-
-        conferenceChannel.on(
-
-            "broadcast",
-
-            {
-                event:
-                    "leave"
-            },
-
-            function (event) {
-
-                const data =
-                    event &&
-                    event.payload
-                        ? event.payload
-                        : null;
-
-
-                if (
-                    data &&
-                    data.userId
-                ) {
-
-                    removePeer(
-                        data.userId
-                    );
-
-                }
-
-            }
-
-        );
-
-
-        conferenceChannel.subscribe(
-            async function (status) {
-
-                console.log(
-                    "Conference:",
-                    status,
-                    "Room:",
-                    conferenceRoom
-                );
-
-
-                if (
-                    status ===
-                    "SUBSCRIBED"
-                ) {
-
-                    setConferenceStatus(
-                        "ПОДКЛЮЧЕНО"
-                    );
-
-
-                    await conferenceChannel.send({
-
-                        type:
-                            "broadcast",
-
-                        event:
-                            "join",
-
-                        payload: {
-
-                            userId:
-                                currentUser.id,
-
-                            nickname:
-                                profileData.nickname ||
-                                "Player",
-
-                            avatar_url:
-                                profileData.avatar_url ||
-                                "",
-
-                            room:
-                                conferenceRoom
-
-                        }
-
-                    });
-
-
-                    updateConferenceButtons();
-
-                    updateConferenceMediaButtons();
-
-                    updateConferenceParticipantCount();
-
-                    updateLocalVideo();
-
-                    showInfo(
-                        "Вы вошли в комнату «" +
-                        conferenceRoom +
-                        "»."
-                    );
-
-                }
-
-
-                if (
-                    status ===
-                        "CHANNEL_ERROR" ||
-                    status ===
-                        "TIMED_OUT"
-                ) {
-
-                    setConferenceStatus(
-                        "ОШИБКА ПОДКЛЮЧЕНИЯ"
-                    );
-
-
-                    showInfo(
-                        "Не удалось подключиться к комнате «" +
-                        conferenceRoom +
-                        "»."
-                    );
-
-                }
-
-            }
-        );
-
-    } catch (error) {
-
-        console.error(
-            "Conference start error:",
-            error
-        );
-
-
-        await stopConference();
-
-
-        setConferenceStatus(
-            "ОШИБКА"
-        );
-
-
-        showInfo(
-            "Не удалось подключить конференцию."
-        );
-
-    }
+    updateConferencePresence();
 
 }
 
@@ -11000,26 +10813,12 @@ async function stopConference() {
 
         try {
 
-            await conferenceChannel.send({
-
-                type:
-                    "broadcast",
-
-                event:
-                    "leave",
-
-                payload: {
-
-                    userId:
-                        currentUser.id
-
-                }
-
-            });
+            await conferenceChannel.untrack();
 
         } catch (error) {
 
             console.warn(
+                "Conference untrack:",
                 error
             );
 
@@ -11076,9 +10875,6 @@ async function stopConference() {
         null;
 
 
-    await destroyAudioPipeline();
-
-
     Object.keys(
         peerConnections
     )
@@ -11108,6 +10904,10 @@ async function stopConference() {
 
 
     conferenceParticipants =
+        {};
+
+
+    conferenceNegotiating =
         {};
 
 
@@ -11166,7 +10966,9 @@ async function stopConference() {
 
     updateConferenceMediaButtons();
 
-    updateConferenceParticipantCount();
+    updateConferenceParticipantCount(
+        0
+    );
 
 
     const videos =
