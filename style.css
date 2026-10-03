@@ -15,10 +15,10 @@
     --accent-soft: #e9edff;
 
     --blue-glow:
-        rgba(64, 126, 255, 0.72);
+        rgba(45, 115, 255, 0.95);
 
     --blue-glow-soft:
-        rgba(64, 126, 255, 0.26);
+        rgba(35, 105, 255, 0.38);
 
     --line: #e3e7ef;
 
@@ -451,7 +451,7 @@ button {
 
 
 /* =====================================================
-   MAIN
+   MAIN LAYOUT
 ===================================================== */
 
 .dashboard-layout {
@@ -500,7 +500,7 @@ button {
         column;
 
     background:
-        rgba(255,255,255,.76);
+        rgba(255,255,255,.80);
 
     border:
         1px solid
@@ -544,20 +544,30 @@ button {
         column;
 
     gap:
-        6px;
+        8px;
+
+    perspective:
+        800px;
 }
 
+
+/* =====================================================
+   BLACK GLOSSY 3D TILES
+===================================================== */
 
 .side-tile {
 
     min-height:
-        54px;
+        56px;
 
     width:
         100%;
 
     position:
         relative;
+
+    overflow:
+        hidden;
 
     display:
         grid;
@@ -572,17 +582,23 @@ button {
         8px;
 
     padding:
-        8px 10px;
+        8px 11px;
 
     color:
-        var(--text-secondary);
+        #bfc5d2;
 
     background:
-        transparent;
+
+        linear-gradient(
+            145deg,
+            #2a2e38 0%,
+            #11141b 42%,
+            #05070b 100%
+        );
 
     border:
         1px solid
-        transparent;
+        rgba(103, 133, 205, .18);
 
     border-radius:
         14px;
@@ -593,54 +609,232 @@ button {
     text-align:
         left;
 
+    transform-style:
+        preserve-3d;
+
+    box-shadow:
+
+        0 12px 20px
+        rgba(4, 7, 13, .26),
+
+        0 2px 0
+        rgba(255,255,255,.10)
+        inset,
+
+        0 -1px 0
+        rgba(0,0,0,.95)
+        inset;
+
     transition:
-        transform .28s ease,
-        color .28s ease,
-        background .28s ease,
-        box-shadow .28s ease;
+
+        transform .35s
+        cubic-bezier(.2,.8,.2,1),
+
+        box-shadow .35s ease,
+
+        border-color .35s ease,
+
+        color .25s ease;
+}
+
+
+/* верхний стеклянный слой */
+
+.side-tile::before {
+
+    content:
+        "";
+
+    position:
+        absolute;
+
+    width:
+        150%;
+
+    height:
+        55%;
+
+    top:
+        -65%;
+
+    left:
+        -35%;
+
+    background:
+
+        linear-gradient(
+            105deg,
+            transparent 22%,
+            rgba(255,255,255,.09) 38%,
+            rgba(130,170,255,.32) 48%,
+            rgba(63,130,255,.10) 54%,
+            transparent 68%
+        );
+
+    transform:
+        rotate(-12deg)
+        translateX(-25%);
+
+    opacity:
+        .75;
+
+    pointer-events:
+        none;
+
+    transition:
+        transform .7s
+        cubic-bezier(.2,.7,.2,1);
+}
+
+
+/* синее свечение снизу */
+
+.side-tile::after {
+
+    content:
+        "";
+
+    position:
+        absolute;
+
+    width:
+        90px;
+
+    height:
+        90px;
+
+    right:
+        -55px;
+
+    bottom:
+        -55px;
+
+    border-radius:
+        50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(47,120,255,.60),
+            rgba(30,90,255,.15) 45%,
+            transparent 72%
+        );
+
+    filter:
+        blur(4px);
+
+    opacity:
+        .7;
+
+    pointer-events:
+        none;
+
+    transition:
+        transform .35s ease,
+        opacity .35s ease;
 }
 
 
 .side-tile:hover {
 
     transform:
-        perspective(600px)
-        rotateY(-5deg)
-        translateX(3px);
-
-    background:
-        linear-gradient(
-            135deg,
-            #ffffff,
-            #f1f4ff
-        );
+        perspective(700px)
+        rotateY(-7deg)
+        rotateX(2deg)
+        translateX(5px)
+        translateZ(8px);
 
     color:
-        var(--text-main);
+        #ffffff;
 
     border-color:
-        #dfe4ef;
+        rgba(78,142,255,.72);
 
     box-shadow:
-        0 12px 28px
-        rgba(53,67,106,.10);
+
+        12px 18px 28px
+        rgba(5, 10, 22, .34),
+
+        0 0 0 1px
+        rgba(50,125,255,.20),
+
+        0 0 24px
+        rgba(38,119,255,.25),
+
+        0 2px 0
+        rgba(255,255,255,.12)
+        inset,
+
+        0 -2px 0
+        rgba(0,0,0,.95)
+        inset;
+}
+
+
+.side-tile:hover::before {
+
+    transform:
+        rotate(-12deg)
+        translateX(72%);
+}
+
+
+.side-tile:hover::after {
+
+    transform:
+        scale(1.5);
+
+    opacity:
+        1;
 }
 
 
 .side-tile.active {
 
     color:
-        var(--accent);
+        #ffffff;
 
     background:
+
         linear-gradient(
-            135deg,
-            #edf1ff,
-            #e5eaff
+            145deg,
+            #202638 0%,
+            #0c1018 44%,
+            #030508 100%
         );
 
     border-color:
-        #dce3ff;
+        rgba(74,137,255,.82);
+
+    box-shadow:
+
+        0 15px 26px
+        rgba(7,12,25,.34),
+
+        0 0 22px
+        rgba(43,119,255,.28),
+
+        0 0 0 1px
+        rgba(50,126,255,.18),
+
+        0 2px 0
+        rgba(255,255,255,.12)
+        inset,
+
+        0 -2px 0
+        rgba(0,0,0,.95)
+        inset;
+}
+
+
+.side-tile.active::before {
+
+    transform:
+        rotate(-12deg)
+        translateX(35%);
+
+    opacity:
+        .95;
 }
 
 
@@ -661,19 +855,42 @@ button {
     justify-content:
         center;
 
+    position:
+        relative;
+
+    z-index:
+        2;
+
+    color:
+        #74a0ff;
+
     font-size:
         17px;
+
+    text-shadow:
+        0 0 12px
+        rgba(82,143,255,.7);
 }
 
 
 .online-side-icon {
 
     color:
-        var(--green);
+        #52e49a;
+
+    text-shadow:
+        0 0 12px
+        rgba(52,220,140,.65);
 }
 
 
 .side-text {
+
+    position:
+        relative;
+
+    z-index:
+        2;
 
     font-size:
         11px;
@@ -688,8 +905,14 @@ button {
 
 .side-number {
 
+    position:
+        relative;
+
+    z-index:
+        2;
+
     color:
-        var(--text-light);
+        #636c7e;
 
     font-size:
         8px;
@@ -702,13 +925,19 @@ button {
 .side-counter {
 
     min-width:
-        18px;
+        19px;
 
     height:
-        18px;
+        19px;
 
     padding:
         0 5px;
+
+    position:
+        relative;
+
+    z-index:
+        2;
 
     display:
         flex;
@@ -719,14 +948,22 @@ button {
     justify-content:
         center;
 
+    border:
+        1px solid
+        rgba(63,224,147,.22);
+
     border-radius:
         999px;
 
     background:
-        #e7f8ef;
+        rgba(45,201,126,.10);
 
     color:
-        #23a667;
+        #58e8a0;
+
+    box-shadow:
+        0 0 12px
+        rgba(39,214,136,.12);
 
     font-size:
         8px;
@@ -1258,7 +1495,8 @@ button {
         var(--radius);
 
     box-shadow:
-        var(--shadow);
+        0 20px 50px
+        rgba(44,54,83,.08);
 }
 
 
@@ -1413,7 +1651,7 @@ button {
         21px;
 
     background:
-        rgba(255,255,255,.8);
+        rgba(255,255,255,.80);
 
     border:
         1px solid
@@ -1539,7 +1777,7 @@ button {
 
 
 /* =====================================================
-   ONLINE / PROFILE MODALS
+   MODALS
 ===================================================== */
 
 .modal-backdrop {
