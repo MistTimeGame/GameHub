@@ -1,16 +1,22 @@
 "use strict";
 
 
-const APP_VERSION = "1.5.0";
+const APP_VERSION = "1.5.1";
 
 
 const DEFAULT_PROFILE = {
-    nickname: "Player",
-    status: "Добро пожаловать на Game Platform"
+
+    nickname:
+        "Player",
+
+    status:
+        "Добро пожаловать на Game Platform"
+
 };
 
 
-let profile = loadProfile();
+let profile =
+    loadProfile();
 
 
 document.addEventListener(
@@ -27,12 +33,9 @@ document.addEventListener(
 );
 
 
-/*
-====================================================
-PROFILE
-====================================================
-*/
-
+/* =========================================
+   PROFILE
+========================================= */
 
 function loadProfile() {
 
@@ -82,6 +85,7 @@ function loadProfile() {
         };
 
     }
+
 }
 
 
@@ -115,71 +119,71 @@ function renderProfile() {
         "P";
 
 
-    const elements = {
-
-        profileName:
-            document.getElementById(
-                "profile-name"
-            ),
-
-        profileStatus:
-            document.getElementById(
-                "profile-status"
-            ),
-
-        profileAvatar:
-            document.getElementById(
-                "profile-avatar"
-            ),
-
-        headerNickname:
-            document.getElementById(
-                "header-nickname"
-            ),
-
-        headerAvatar:
-            document.getElementById(
-                "header-avatar"
-            )
-
-    };
+    const profileName =
+        document.getElementById(
+            "profile-name"
+        );
 
 
-    if (elements.profileName) {
+    const profileStatus =
+        document.getElementById(
+            "profile-status"
+        );
 
-        elements.profileName.textContent =
+
+    const profileAvatar =
+        document.getElementById(
+            "profile-avatar"
+        );
+
+
+    const headerNickname =
+        document.getElementById(
+            "header-nickname"
+        );
+
+
+    const headerAvatar =
+        document.getElementById(
+            "header-avatar"
+        );
+
+
+    if (profileName) {
+
+        profileName.textContent =
             nickname;
 
     }
 
 
-    if (elements.profileStatus) {
+    if (profileStatus) {
 
-        elements.profileStatus.textContent =
+        profileStatus.textContent =
             status;
 
     }
 
 
-    if (elements.profileAvatar) {
+    if (profileAvatar) {
 
-        elements.profileAvatar.textContent =
+        profileAvatar.textContent =
             letter;
 
     }
 
 
-    if (elements.headerNickname) {
+    if (headerNickname) {
 
-        elements.headerNickname.textContent =
+        headerNickname.textContent =
             nickname;
 
     }
 
 
-    if (elements.headerAvatar) {
+    if (headerAvatar) {
 
-        elements.headerAvatar.textContent =
+        headerAvatar.textContent =
             letter;
 
     }
@@ -187,12 +191,9 @@ function renderProfile() {
 }
 
 
-/*
-====================================================
-PROFILE MODAL
-====================================================
-*/
-
+/* =========================================
+   PROFILE WINDOW
+========================================= */
 
 function openProfile() {
 
@@ -215,7 +216,9 @@ function openProfile() {
 
 
     if (!modal) {
+
         return;
+
     }
 
 
@@ -317,18 +320,16 @@ function saveProfile() {
 }
 
 
-/*
-====================================================
-ONLINE
-====================================================
-*/
-
+/* =========================================
+   ONLINE
+========================================= */
 
 function getOnlinePlayers() {
 
     return [
 
         {
+
             nickname:
                 profile.nickname ||
                 "Player",
@@ -413,12 +414,9 @@ function renderOnline() {
 }
 
 
-/*
-====================================================
-ONLINE WINDOW
-====================================================
-*/
-
+/* =========================================
+   ONLINE WINDOW
+========================================= */
 
 function openOnlinePlayers() {
 
@@ -435,7 +433,9 @@ function openOnlinePlayers() {
 
 
     if (!modal || !list) {
+
         return;
+
     }
 
 
@@ -530,6 +530,7 @@ function openOnlinePlayers() {
                 nickname
             );
 
+
             details.appendChild(
                 status
             );
@@ -539,9 +540,11 @@ function openOnlinePlayers() {
                 avatar
             );
 
+
             row.appendChild(
                 details
             );
+
 
             row.appendChild(
                 indicator
@@ -590,12 +593,9 @@ function closeOnlinePlayers(event) {
 }
 
 
-/*
-====================================================
-NAVIGATION
-====================================================
-*/
-
+/* =========================================
+   NAVIGATION
+========================================= */
 
 function openPage(page) {
 
@@ -657,12 +657,9 @@ function openPage(page) {
 }
 
 
-/*
-====================================================
-SOCIAL
-====================================================
-*/
-
+/* =========================================
+   SOCIAL
+========================================= */
 
 function openSocial(type) {
 
@@ -670,7 +667,9 @@ function openSocial(type) {
         "";
 
 
-    if (type === "youtube") {
+    if (
+        type === "youtube"
+    ) {
 
         url =
             "https://www.youtube.com/";
@@ -678,7 +677,9 @@ function openSocial(type) {
     }
 
 
-    if (type === "twitch") {
+    if (
+        type === "twitch"
+    ) {
 
         url =
             "https://www.twitch.tv/";
@@ -687,7 +688,9 @@ function openSocial(type) {
 
 
     if (!url) {
+
         return;
+
     }
 
 
@@ -700,12 +703,9 @@ function openSocial(type) {
 }
 
 
-/*
-====================================================
-VERSION
-====================================================
-*/
-
+/* =========================================
+   VERSION
+========================================= */
 
 function updatePageVersion() {
 
@@ -725,12 +725,9 @@ function updatePageVersion() {
 }
 
 
-/*
-====================================================
-ESC
-====================================================
-*/
-
+/* =========================================
+   ESC
+========================================= */
 
 document.addEventListener(
     "keydown",
