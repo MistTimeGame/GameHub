@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
     <meta charset="UTF-8">
 
@@ -9,7 +8,19 @@
         content="width=device-width, initial-scale=1.0"
     >
 
+    <meta
+        name="description"
+        content="Game Platform — игровое сообщество"
+    >
+
     <title>Game Platform</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
 
     <link
         rel="stylesheet"
@@ -19,441 +30,957 @@
 
 <body>
 
-<div class="site-shell">
-
-    <header class="top-header">
-
-        <a
-            class="brand"
-            href="index.html"
-        >
-            <div class="brand-mark">
-                GP
-            </div>
-
-            <div class="brand-text">
-                <strong>Game Platform</strong>
-                <span>Community Network</span>
-            </div>
-        </a>
-
-
-        <div class="header-right">
-
-            <button
-                class="online-mini"
-                type="button"
-                onclick="openOnlinePlayers()"
-            >
-                <span class="online-mini-dot"></span>
-
-                <span>
-                    <strong id="online-header-count">1</strong>
-                    онлайн
-                </span>
-            </button>
-
-
-            <button
-                class="profile-mini"
-                type="button"
-                onclick="openProfile()"
-            >
-
-                <span
-                    class="profile-mini-avatar"
-                    id="header-avatar"
-                >
-                    P
-                </span>
-
-                <span
-                    class="profile-mini-name"
-                    id="header-nickname"
-                >
-                    Player
-                </span>
-
-            </button>
-
-        </div>
-
-    </header>
-
-
-    <main class="dashboard-layout">
-
-
-        <aside class="sidebar">
-
-            <div class="sidebar-label">
-                NAVIGATION
-            </div>
-
-
-            <nav class="side-navigation">
-
-                <button
-                    class="side-tile active"
-                    type="button"
-                    onclick="openPage('index.html')"
-                >
-                    <span class="side-icon">
-                        ◈
-                    </span>
-
-                    <span class="side-text">
-                        Главная
-                    </span>
-
-                    <span class="side-number">
-                        01
-                    </span>
-                </button>
-
-
-                <button
-                    class="side-tile"
-                    type="button"
-                    onclick="openPage('games.html')"
-                >
-                    <span class="side-icon">
-                        ◇
-                    </span>
-
-                    <span class="side-text">
-                        Игры
-                    </span>
-
-                    <span class="side-number">
-                        02
-                    </span>
-                </button>
-
-
-                <button
-                    class="side-tile"
-                    type="button"
-                    onclick="openPage('news.html')"
-                >
-                    <span class="side-icon">
-                        ▱
-                    </span>
-
-                    <span class="side-text">
-                        Новости
-                    </span>
-
-                    <span class="side-number">
-                        03
-                    </span>
-                </button>
-
-
-                <button
-                    class="side-tile"
-                    type="button"
-                    onclick="openOnlinePlayers()"
-                >
-                    <span class="side-icon online-side-icon">
-                        ●
-                    </span>
-
-                    <span class="side-text">
-                        Онлайн
-                    </span>
-
-                    <span
-                        class="side-counter"
-                        id="online-side-count"
-                    >
-                        1
-                    </span>
-                </button>
-
-
-                <button
-                    class="side-tile"
-                    type="button"
-                    onclick="openProfile()"
-                >
-                    <span class="side-icon">
-                        ◎
-                    </span>
-
-                    <span class="side-text">
-                        Профиль
-                    </span>
-
-                    <span class="side-number">
-                        05
-                    </span>
-                </button>
-
-
-                <button
-                    class="side-tile"
-                    type="button"
-                    onclick="openSocial('youtube')"
-                >
-                    <span class="side-icon">
-                        ▶
-                    </span>
-
-                    <span class="side-text">
-                        YouTube
-                    </span>
-
-                    <span class="side-number">
-                        06
-                    </span>
-                </button>
-
-
-                <button
-                    class="side-tile"
-                    type="button"
-                    onclick="openSocial('twitch')"
-                >
-                    <span class="side-icon">
-                        ▣
-                    </span>
-
-                    <span class="side-text">
-                        Twitch
-                    </span>
-
-                    <span class="side-number">
-                        07
-                    </span>
-                </button>
-
-            </nav>
-
-
-            <div class="sidebar-footer">
-                <span>PLATFORM</span>
-                <strong>CORE</strong>
-            </div>
-
-        </aside>
-
-
-        <section class="hero-stage">
-
-            <div class="hero-grid"></div>
-
-            <div class="hero-orbit orbit-one"></div>
-            <div class="hero-orbit orbit-two"></div>
-            <div class="hero-orbit orbit-three"></div>
-
-
-            <div class="hero-content">
-
-                <span class="hero-small-title">
-                    GAME PLATFORM
-                </span>
-
-                <h1>
-                    YOUR
-                    <br>
-                    GAME WORLD
-                </h1>
-
-                <p>
-                    Игры, игроки и сообщества
-                    в одном пространстве.
-                </p>
-
-
-                <div class="hero-actions">
-
-                    <button
-                        class="hero-action primary"
-                        type="button"
-                        onclick="openPage('games.html')"
-                    >
-                        Открыть игры
-                        <span>→</span>
-                    </button>
-
-
-                    <button
-                        class="hero-action secondary"
-                        type="button"
-                        onclick="openOnlinePlayers()"
-                    >
-                        Игроки онлайн
-
-                        <span id="hero-online-count">
-                            1
-                        </span>
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            <div class="hero-corner hero-corner-top">
-                SYSTEM 01
-            </div>
-
-            <div class="hero-corner hero-corner-bottom">
-                COMMUNITY NETWORK
-            </div>
-
-        </section>
-
-
-        <aside class="right-column">
-
-
-            <section class="welcome-card">
-
-                <span class="eyebrow">
-                    PROFILE
-                </span>
-
-                <div class="welcome-avatar-wrap">
-
-                    <div
-                        class="welcome-avatar"
-                        id="profile-avatar"
-                    >
-                        P
-                    </div>
-
-                    <span class="online-dot"></span>
-
-                </div>
-
-                <h2 id="profile-name">
-                    Player
-                </h2>
-
-                <p id="profile-status">
-                    Добро пожаловать
-                    на Game Platform
-                </p>
-
-                <button
-                    class="profile-action"
-                    type="button"
-                    onclick="openProfile()"
-                >
-                    Настроить профиль
-                </button>
-
-            </section>
-
-
-            <section class="small-news-card">
-
-                <div class="small-card-heading">
-
-                    <span class="eyebrow">
-                        NEWS
-                    </span>
-
-                    <button
-                        type="button"
-                        onclick="openPage('news.html')"
-                    >
-                        →
-                    </button>
-
-                </div>
-
-                <h3>
-                    Последние события
-                </h3>
-
-                <p>
-                    Здесь появятся новости
-                    платформы и ваших игр.
-                </p>
-
-            </section>
-
-
-            <section class="social-card">
-
-                <div class="eyebrow">
-                    MEDIA
-                </div>
-
-                <button
-                    type="button"
-                    onclick="openSocial('youtube')"
-                >
-                    <span>YouTube</span>
-                    <span>↗</span>
-                </button>
-
-                <button
-                    type="button"
-                    onclick="openSocial('twitch')"
-                >
-                    <span>Twitch</span>
-                    <span>↗</span>
-                </button>
-
-            </section>
-
-        </aside>
-
-    </main>
-
+    <!-- =========================================================
+         AUTH SCREEN
+    ========================================================== -->
 
     <div
-        class="modal-backdrop"
-        id="online-modal"
-        hidden
-        onclick="closeOnlinePlayers(event)"
+        class="auth-screen"
+        id="auth-screen"
     >
 
-        <div
-            class="modal-window online-window"
-            onclick="event.stopPropagation()"
-        >
+        <div class="auth-background"></div>
 
-            <div class="modal-header">
+        <div class="auth-orbit orbit-one"></div>
+        <div class="auth-orbit orbit-two"></div>
+
+        <div class="auth-card">
+
+            <div class="auth-brand">
+
+                <div class="auth-brand-mark">
+                    GP
+                </div>
 
                 <div>
 
-                    <span class="eyebrow">
-                        LIVE
-                    </span>
+                    <div class="auth-brand-title">
+                        GAME PLATFORM
+                    </div>
 
-                    <h2>
-                        Игроки онлайн
-                    </h2>
+                    <div class="auth-brand-subtitle">
+                        COMMUNITY NETWORK
+                    </div>
 
                 </div>
 
+            </div>
+
+
+            <div class="auth-heading">
+
+                <h1 id="auth-title">
+                    Добро пожаловать
+                </h1>
+
+                <p id="auth-subtitle">
+                    Войдите в свой игровой профиль
+                </p>
+
+            </div>
+
+
+            <div class="auth-tabs">
+
                 <button
-                    class="modal-close"
                     type="button"
-                    onclick="closeOnlinePlayers()"
+                    class="auth-tab active"
+                    id="login-tab"
                 >
-                    ×
+                    Войти
+                </button>
+
+                <button
+                    type="button"
+                    class="auth-tab"
+                    id="register-tab"
+                >
+                    Регистрация
                 </button>
 
             </div>
 
 
-            <div
-                class="online-modal-count"
-                id="online-modal-count"
+            <!-- =================================================
+                 LOGIN
+            ================================================== -->
+
+            <form
+                class="auth-form"
+                id="login-form"
             >
-                1 игрок
+
+                <label class="auth-label">
+
+                    Электронная почта
+
+                    <input
+                        type="email"
+                        id="login-email"
+                        class="auth-input"
+                        placeholder="you@example.com"
+                        autocomplete="email"
+                        required
+                    >
+
+                </label>
+
+
+                <label class="auth-label">
+
+                    Пароль
+
+                    <input
+                        type="password"
+                        id="login-password"
+                        class="auth-input"
+                        placeholder="Введите пароль"
+                        autocomplete="current-password"
+                        required
+                    >
+
+                </label>
+
+
+                <button
+                    type="submit"
+                    class="auth-submit"
+                >
+                    <span>
+                        Войти
+                    </span>
+                </button>
+
+            </form>
+
+
+            <!-- =================================================
+                 REGISTER
+            ================================================== -->
+
+            <form
+                class="auth-form hidden"
+                id="register-form"
+            >
+
+                <label class="auth-label">
+
+                    Никнейм
+
+                    <input
+                        type="text"
+                        id="register-nickname"
+                        class="auth-input"
+                        placeholder="Ваш игровой ник"
+                        autocomplete="nickname"
+                        minlength="3"
+                        maxlength="24"
+                        required
+                    >
+
+                </label>
+
+
+                <label class="auth-label">
+
+                    Электронная почта
+
+                    <input
+                        type="email"
+                        id="register-email"
+                        class="auth-input"
+                        placeholder="you@example.com"
+                        autocomplete="email"
+                        required
+                    >
+
+                </label>
+
+
+                <label class="auth-label">
+
+                    Пароль
+
+                    <input
+                        type="password"
+                        id="register-password"
+                        class="auth-input"
+                        placeholder="Минимум 6 символов"
+                        autocomplete="new-password"
+                        minlength="6"
+                        required
+                    >
+
+                </label>
+
+
+                <label class="auth-label">
+
+                    Повторите пароль
+
+                    <input
+                        type="password"
+                        id="register-password-confirm"
+                        class="auth-input"
+                        placeholder="Повторите пароль"
+                        autocomplete="new-password"
+                        minlength="6"
+                        required
+                    >
+
+                </label>
+
+
+                <button
+                    type="submit"
+                    class="auth-submit"
+                >
+                    <span>
+                        Создать аккаунт
+                    </span>
+                </button>
+
+            </form>
+
+
+            <div
+                class="auth-message"
+                id="auth-message"
+            ></div>
+
+
+            <div class="auth-footer">
+
+                GAME PLATFORM
+
+                <span>
+                    •
+                </span>
+
+                v1.6.1
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================================
+         APPLICATION
+    ========================================================== -->
+
+    <div
+        class="app-shell"
+        id="app-shell"
+    >
+
+        <!-- =====================================================
+             HEADER
+        ====================================================== -->
+
+        <header class="top-header">
+
+            <div class="brand-block">
+
+                <div class="brand-mark">
+                    GP
+                </div>
+
+                <div class="brand-copy">
+
+                    <div class="brand-title">
+                        GAME PLATFORM
+                    </div>
+
+                    <div class="brand-subtitle">
+                        COMMUNITY NETWORK
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="header-actions">
+
+                <button
+                    type="button"
+                    class="header-online"
+                    id="header-online-button"
+                >
+
+                    <span class="status-dot"></span>
+
+                    <span>
+                        Онлайн
+                    </span>
+
+                    <strong id="online-header-count">
+                        0
+                    </strong>
+
+                </button>
+
+
+                <button
+                    type="button"
+                    class="header-profile"
+                    id="header-profile-button"
+                >
+
+                    <div
+                        class="mini-avatar"
+                        id="header-avatar"
+                    >
+                        ?
+                    </div>
+
+                    <div class="header-profile-copy">
+
+                        <strong id="header-nickname">
+                            Player
+                        </strong>
+
+                        <span id="header-status">
+                            Онлайн
+                        </span>
+
+                    </div>
+
+                </button>
+
+            </div>
+
+        </header>
+
+
+        <!-- =====================================================
+             MAIN LAYOUT
+        ====================================================== -->
+
+        <main class="main-layout">
+
+            <!-- =================================================
+                 SIDEBAR
+            ================================================== -->
+
+            <aside class="sidebar">
+
+                <div class="sidebar-title">
+                    NAVIGATION
+                </div>
+
+
+                <nav class="side-navigation">
+
+                    <button
+                        type="button"
+                        class="side-tile active"
+                        data-page="home"
+                    >
+
+                        <span class="side-icon">
+                            ⌂
+                        </span>
+
+                        <span class="side-text">
+                            Главная
+                        </span>
+
+                        <span class="side-number">
+                            01
+                        </span>
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="side-tile"
+                        data-page="games"
+                    >
+
+                        <span class="side-icon">
+                            ◈
+                        </span>
+
+                        <span class="side-text">
+                            Игры
+                        </span>
+
+                        <span class="side-number">
+                            02
+                        </span>
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="side-tile"
+                        data-page="news"
+                    >
+
+                        <span class="side-icon">
+                            ◫
+                        </span>
+
+                        <span class="side-text">
+                            Новости
+                        </span>
+
+                        <span class="side-number">
+                            03
+                        </span>
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="side-tile"
+                        data-page="online"
+                    >
+
+                        <span class="side-icon">
+                            ◉
+                        </span>
+
+                        <span class="side-text">
+                            Онлайн
+                        </span>
+
+                        <span
+                            class="side-counter"
+                            id="online-side-count"
+                        >
+                            0
+                        </span>
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="side-tile"
+                        data-page="profile"
+                    >
+
+                        <span class="side-icon">
+                            ◎
+                        </span>
+
+                        <span class="side-text">
+                            Профиль
+                        </span>
+
+                        <span class="side-number">
+                            05
+                        </span>
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="side-tile"
+                        data-page="chat"
+                    >
+
+                        <span class="side-icon">
+                            ◌
+                        </span>
+
+                        <span class="side-text">
+                            Чат
+                        </span>
+
+                        <span class="side-number">
+                            06
+                        </span>
+
+                    </button>
+
+                </nav>
+
+
+                <div class="sidebar-bottom">
+
+                    <button
+                        type="button"
+                        class="side-tile social-tile"
+                        id="youtube-button"
+                    >
+
+                        <span class="side-icon">
+                            ▶
+                        </span>
+
+                        <span class="side-text">
+                            YouTube
+                        </span>
+
+                        <span class="side-number">
+                            ↗
+                        </span>
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="side-tile social-tile"
+                        id="twitch-button"
+                    >
+
+                        <span class="side-icon">
+                            ◧
+                        </span>
+
+                        <span class="side-text">
+                            Twitch
+                        </span>
+
+                        <span class="side-number">
+                            ↗
+                        </span>
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="side-tile logout-tile"
+                        id="logout-button"
+                    >
+
+                        <span class="side-icon">
+                            ↪
+                        </span>
+
+                        <span class="side-text">
+                            Выйти
+                        </span>
+
+                        <span class="side-number">
+                            —
+                        </span>
+
+                    </button>
+
+                </div>
+
+            </aside>
+
+
+            <!-- =================================================
+                 CENTER
+            ================================================== -->
+
+            <section class="content-area">
+
+                <section
+                    class="hero-stage"
+                    id="hero-stage"
+                >
+
+                    <div class="hero-grid"></div>
+
+                    <div class="hero-glow hero-glow-one"></div>
+                    <div class="hero-glow hero-glow-two"></div>
+
+                    <div class="hero-orbit hero-orbit-one"></div>
+                    <div class="hero-orbit hero-orbit-two"></div>
+                    <div class="hero-orbit hero-orbit-three"></div>
+
+
+                    <div class="hero-content">
+
+                        <div class="hero-kicker">
+                            COMMUNITY HUB
+                        </div>
+
+                        <h1>
+                            YOUR
+                            <span>
+                                GAME
+                            </span>
+                            WORLD
+                        </h1>
+
+                        <p>
+                            Игры, игроки, сообщества и общение
+                            в одном пространстве.
+                        </p>
+
+
+                        <div class="hero-actions">
+
+                            <button
+                                type="button"
+                                class="hero-button primary"
+                                id="hero-games-button"
+                            >
+                                Открыть игры
+                            </button>
+
+
+                            <button
+                                type="button"
+                                class="hero-button secondary"
+                                id="hero-online-button"
+                            >
+
+                                Игроки онлайн
+
+                                <strong id="hero-online-count">
+                                    0
+                                </strong>
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- =================================================
+                     PAGE PANEL
+                ================================================== -->
+
+                <section
+                    class="page-panel"
+                    id="page-panel"
+                >
+
+                    <div class="page-panel-header">
+
+                        <div>
+
+                            <div
+                                class="panel-kicker"
+                                id="page-kicker"
+                            >
+                                PLATFORM
+                            </div>
+
+                            <h2 id="page-title">
+                                Главная
+                            </h2>
+
+                        </div>
+
+
+                        <div
+                            class="page-panel-badge"
+                            id="page-badge"
+                        >
+                            HOME
+                        </div>
+
+                    </div>
+
+
+                    <div id="page-content">
+
+                        <div class="welcome-grid">
+
+                            <article class="info-card">
+
+                                <div class="info-card-icon">
+                                    ◈
+                                </div>
+
+                                <div>
+
+                                    <strong>
+                                        Игры
+                                    </strong>
+
+                                    <p>
+                                        Выбирайте игру и переходите
+                                        в её игровое сообщество.
+                                    </p>
+
+                                </div>
+
+                            </article>
+
+
+                            <article class="info-card">
+
+                                <div class="info-card-icon">
+                                    ◎
+                                </div>
+
+                                <div>
+
+                                    <strong>
+                                        Игроки
+                                    </strong>
+
+                                    <p>
+                                        Здесь появятся реальные
+                                        пользователи платформы.
+                                    </p>
+
+                                </div>
+
+                            </article>
+
+
+                            <article class="info-card">
+
+                                <div class="info-card-icon">
+                                    ◌
+                                </div>
+
+                                <div>
+
+                                    <strong>
+                                        Общение
+                                    </strong>
+
+                                    <p>
+                                        Онлайн-чат будет подключён
+                                        через Supabase Realtime.
+                                    </p>
+
+                                </div>
+
+                            </article>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </section>
+
+
+            <!-- =================================================
+                 RIGHT COLUMN
+            ================================================== -->
+
+            <aside class="right-column">
+
+                <!-- PROFILE -->
+
+                <section class="profile-card card">
+
+                    <div class="card-topline">
+
+                        <span>
+                            PROFILE
+                        </span>
+
+                        <span class="live-label">
+                            LIVE
+                        </span>
+
+                    </div>
+
+
+                    <div class="profile-main">
+
+                        <div
+                            class="profile-avatar"
+                            id="profile-avatar"
+                        >
+                            ?
+                        </div>
+
+
+                        <div class="profile-copy">
+
+                            <h3 id="profile-nickname">
+                                Player
+                            </h3>
+
+                            <span id="profile-status">
+                                Онлайн
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <button
+                        type="button"
+                        class="profile-edit-button"
+                        id="profile-edit-button"
+                    >
+                        Редактировать профиль
+                    </button>
+
+                </section>
+
+
+                <!-- NEWS -->
+
+                <section class="news-card card">
+
+                    <div class="card-topline">
+
+                        <span>
+                            NEWS
+                        </span>
+
+                        <span>
+                            03
+                        </span>
+
+                    </div>
+
+
+                    <div class="news-item">
+
+                        <div class="news-date">
+                            2026
+                        </div>
+
+                        <strong>
+                            Платформа запускается
+                        </strong>
+
+                        <p>
+                            Здесь будут отображаться
+                            новости сообщества.
+                        </p>
+
+                    </div>
+
+
+                    <div class="news-item">
+
+                        <div class="news-date">
+                            LIVE
+                        </div>
+
+                        <strong>
+                            Realtime
+                        </strong>
+
+                        <p>
+                            Онлайн и чат будут работать
+                            через Supabase.
+                        </p>
+
+                    </div>
+
+                </section>
+
+
+                <!-- SOCIAL -->
+
+                <section class="social-card card">
+
+                    <div class="card-topline">
+
+                        <span>
+                            SOCIAL
+                        </span>
+
+                    </div>
+
+
+                    <p>
+                        Следите за новостями и
+                        игровым контентом.
+                    </p>
+
+
+                    <div class="social-buttons">
+
+                        <button
+                            type="button"
+                            id="right-youtube-button"
+                        >
+                            YouTube
+                        </button>
+
+
+                        <button
+                            type="button"
+                            id="right-twitch-button"
+                        >
+                            Twitch
+                        </button>
+
+                    </div>
+
+                </section>
+
+            </aside>
+
+        </main>
+
+
+        <!-- =====================================================
+             VERSION
+        ====================================================== -->
+
+        <div class="site-version">
+            v1.6.1
+        </div>
+
+    </div>
+
+
+    <!-- =========================================================
+         ONLINE MODAL
+    ========================================================== -->
+
+    <div
+        class="modal-overlay"
+        id="online-modal"
+    >
+
+        <div class="modal-card online-modal-card">
+
+            <button
+                type="button"
+                class="modal-close"
+                data-close-modal="online-modal"
+            >
+                ×
+            </button>
+
+
+            <div class="modal-kicker">
+                COMMUNITY
+            </div>
+
+
+            <h2>
+                Игроки онлайн
+            </h2>
+
+
+            <p class="modal-description">
+                Пользователи, находящиеся на платформе.
+            </p>
+
+
+            <div class="online-modal-status">
+
+                Сейчас онлайн:
+
+                <strong id="online-modal-count">
+                    0
+                </strong>
+
             </div>
 
 
             <div
-                class="players-list"
-                id="players-list"
+                class="online-player-list"
+                id="online-player-list"
             ></div>
 
         </div>
@@ -461,103 +988,116 @@
     </div>
 
 
+    <!-- =========================================================
+         PROFILE MODAL
+    ========================================================== -->
+
     <div
-        class="modal-backdrop"
+        class="modal-overlay"
         id="profile-modal"
-        hidden
-        onclick="closeProfileModal(event)"
     >
 
-        <div
-            class="modal-window"
-            onclick="event.stopPropagation()"
-        >
+        <div class="modal-card profile-modal-card">
 
-            <div class="modal-header">
+            <button
+                type="button"
+                class="modal-close"
+                data-close-modal="profile-modal"
+            >
+                ×
+            </button>
 
-                <div>
 
-                    <span class="eyebrow">
-                        PROFILE
-                    </span>
+            <div class="modal-kicker">
+                PROFILE
+            </div>
 
-                    <h2>
-                        Профиль
-                    </h2>
+
+            <h2>
+                Мой профиль
+            </h2>
+
+
+            <form id="profile-form">
+
+                <label class="auth-label">
+
+                    Никнейм
+
+                    <input
+                        type="text"
+                        class="auth-input"
+                        id="profile-nickname-input"
+                        minlength="3"
+                        maxlength="24"
+                        required
+                    >
+
+                </label>
+
+
+                <label class="auth-label">
+
+                    Статус
+
+                    <input
+                        type="text"
+                        class="auth-input"
+                        id="profile-status-input"
+                        maxlength="80"
+                        placeholder="Например: Играю в World of Sea Battle"
+                    >
+
+                </label>
+
+
+                <div class="modal-actions">
+
+                    <button
+                        type="submit"
+                        class="modal-primary-button"
+                    >
+                        Сохранить
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="modal-secondary-button"
+                        data-close-modal="profile-modal"
+                    >
+                        Отмена
+                    </button>
 
                 </div>
 
-                <button
-                    class="modal-close"
-                    type="button"
-                    onclick="closeProfileModal()"
-                >
-                    ×
-                </button>
 
-            </div>
+                <div
+                    class="modal-message"
+                    id="profile-message"
+                ></div>
 
-
-            <label class="form-label">
-                Никнейм
-            </label>
-
-            <input
-                id="nickname-input"
-                class="form-input"
-                type="text"
-                maxlength="32"
-                placeholder="Введите никнейм"
-            >
-
-
-            <label class="form-label">
-                Статус
-            </label>
-
-            <input
-                id="status-input"
-                class="form-input"
-                type="text"
-                maxlength="80"
-                placeholder="Ваш статус"
-            >
-
-
-            <div class="modal-actions">
-
-                <button
-                    class="primary-action"
-                    type="button"
-                    onclick="saveProfile()"
-                >
-                    Сохранить
-                </button>
-
-                <button
-                    class="secondary-action"
-                    type="button"
-                    onclick="closeProfileModal()"
-                >
-                    Отмена
-                </button>
-
-            </div>
+            </form>
 
         </div>
 
     </div>
 
 
-    <div class="site-version">
-        v1.5.2
-    </div>
+    <!-- =========================================================
+         SUPABASE
+    ========================================================== -->
 
-</div>
+    <script
+        src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+    ></script>
 
 
-<script src="app.js"></script>
+    <!-- =========================================================
+         APPLICATION
+    ========================================================== -->
+
+    <script src="app.js"></script>
 
 </body>
-
 </html>
