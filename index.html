@@ -46,9 +46,6 @@
 
     <!-- =====================================================
          PROFILE + VIP CSS
-
-         Файл должен лежать рядом с index.html:
-         profile-vip.css
     ====================================================== -->
 
     <link
@@ -342,10 +339,6 @@
 
             </button>
 
-
-            <!-- =============================================
-                 КНОПКА МОЕГО ПРОФИЛЯ
-            ============================================== -->
 
             <button
                 type="button"
@@ -827,10 +820,6 @@
                 </div>
 
 
-                <!-- =============================================
-                     НОВАЯ КНОПКА VIP-ПРОФИЛЯ
-                ============================================== -->
-
                 <button
                     type="button"
                     class="profile-edit-button"
@@ -997,9 +986,7 @@
 
 
 <!-- =========================================================
-     СТАРОЕ PROFILE MODAL
-     
-     ОСТАВЛЯЕМ ДЛЯ СОВМЕСТИМОСТИ С app.js
+     PROFILE MODAL
 ========================================================= -->
 
 <div
@@ -1258,6 +1245,11 @@
 
 <!-- =========================================================
      SUPABASE JS
+     
+     Библиотека загружается первой.
+     СОЗДАНИЕ КЛИЕНТА ЗДЕСЬ НЕ ДЕЛАЕМ.
+     
+     Клиент создаёт app.js.
 ========================================================= -->
 
 <script
@@ -1266,113 +1258,139 @@
 
 
 <!-- =========================================================
-     SUPABASE CONFIG
+     APP.JS
      
      ВАЖНО:
-     ЗАМЕНИ ДВА ЗНАЧЕНИЯ НИЖЕ НА СВОИ.
-========================================================= -->
-
-<script>
-
-    const SUPABASE_URL =
-        'YOUR_SUPABASE_URL';
-
-    const SUPABASE_ANON_KEY =
-        'YOUR_SUPABASE_ANON_KEY';
-
-
-    /*
-     * Создаём клиент Supabase.
-     */
-
-    const supabaseClient =
-        window.supabase.createClient(
-            SUPABASE_URL,
-            SUPABASE_ANON_KEY
-        );
-
-
-    /*
-     * profile-vip.js использует
-     * window.supabaseClient.
-     */
-
-    window.supabaseClient =
-        supabaseClient;
-
-
-    /*
-     * Также оставляем глобальный
-     * объект для совместимости
-     * с существующим app.js.
-     */
-
-    window.gamePlatformSupabase =
-        supabaseClient;
-
-</script>
-
-
-<!-- =========================================================
-     APP
+     Именно app.js содержит:
      
-     ТВОЙ СУЩЕСТВУЮЩИЙ app.js
+     const SUPABASE_URL =
+         "https://tpdpciooxfulythevhgw.supabase.co";
+     
+     const SUPABASE_PUBLISHABLE_KEY =
+         "sb_publishable_yNWxh02tapOVUQN9iJ_2_Q_IPVc60J3";
+     
+     Поэтому второй createClient здесь НЕ нужен.
 ========================================================= -->
 
 <script src="app.js"></script>
 
 
 <!-- =========================================================
+     SUPABASE BRIDGE
+     
+     app.js хранит supabaseClient внутри своего
+     глобального lexical scope.
+     
+     profile-vip.js и кнопки профиля используют
+     window.supabaseClient.
+     
+     Getter получает актуальный клиент из app.js,
+     в том числе после инициализации на DOMContentLoaded.
+========================================================= -->
+
+<script>
+
+    Object.defineProperty(
+        window,
+        "supabaseClient",
+        {
+            configurable: true,
+
+            get: function () {
+
+                return typeof supabaseClient !== "undefined"
+                    ? supabaseClient
+                    : null;
+
+            }
+        }
+    );
+
+
+    Object.defineProperty(
+        window,
+        "gamePlatformSupabase",
+        {
+            configurable: true,
+
+            get: function () {
+
+                return typeof supabaseClient !== "undefined"
+                    ? supabaseClient
+                    : null;
+
+            }
+        }
+    );
+
+</script>
+
+
+<!-- =========================================================
      PROFILE + VIP
      
-     ДОЛЖЕН ИДТИ ПОСЛЕ:
-     1. Supabase
-     2. window.supabaseClient
-     3. app.js
+     Загружается после app.js.
 ========================================================= -->
 
 <script src="profile-vip.js"></script>
 
 
 <!-- =========================================================
-     КНОПКА "ОТКРЫТЬ ПРОФИЛЬ"
-     
-     Используем отдельный обработчик, чтобы не ломать
-     существующий app.js.
+     PROFILE BUTTONS
 ========================================================= -->
 
 <script>
 
     document.addEventListener(
-        'DOMContentLoaded',
+        "DOMContentLoaded",
         function () {
+
+            /*
+             * Кнопка "Открыть профиль"
+             */
 
             const profileButton =
                 document.getElementById(
-                    'profile-edit-button'
+                    "profile-edit-button"
                 );
 
 
             if (profileButton) {
 
                 profileButton.addEventListener(
-                    'click',
+                    "click",
                     async function () {
 
                         try {
 
+                            const client =
+                                window.supabaseClient;
+
+
+                            if (!client) {
+
+                                alert(
+                                    "Supabase ещё не инициализирован. Обновите страницу."
+                                );
+
+                                return;
+                            }
+
+
                             const result =
-                                await window.supabaseClient
-                                    .auth
-                                    .getUser();
+                                await client.auth.getUser();
 
 
-                            if (
-                                result.error
-                            ) {
+                            if (result.error) {
 
                                 console.error(
+                                    "Ошибка получения пользователя:",
                                     result.error
+                                );
+
+                                alert(
+                                    result.error.message ||
+                                    "Не удалось получить пользователя."
                                 );
 
                                 return;
@@ -1386,32 +1404,44 @@
                             if (!user) {
 
                                 alert(
-                                    'Сначала войдите в аккаунт.'
+                                    "Сначала войдите в аккаунт."
                                 );
 
                                 return;
                             }
 
 
-                            /*
-                             * Открываем новую систему
-                             * Profile + VIP.
-                             */
+                            if (
+                                typeof window.openVipProfile ===
+                                "function"
+                            ) {
 
-                            window.openVipProfile(
-                                user.id
-                            );
+                                window.openVipProfile(
+                                    user.id
+                                );
+
+                            } else {
+
+                                console.error(
+                                    "Функция openVipProfile не найдена."
+                                );
+
+                                alert(
+                                    "Модуль профиля ещё не загрузился."
+                                );
+
+                            }
 
                         } catch (error) {
 
                             console.error(
-                                'Не удалось открыть профиль:',
+                                "Не удалось открыть профиль:",
                                 error
                             );
 
                             alert(
                                 error.message ||
-                                'Не удалось открыть профиль.'
+                                "Не удалось открыть профиль."
                             );
 
                         }
@@ -1423,33 +1453,45 @@
 
 
             /*
-             * Кнопка профиля в HEADER.
+             * Кнопка профиля в HEADER
              */
 
             const headerProfile =
                 document.getElementById(
-                    'header-profile-button'
+                    "header-profile-button"
                 );
 
 
             if (headerProfile) {
 
                 headerProfile.addEventListener(
-                    'click',
+                    "click",
                     async function () {
 
                         try {
 
+                            const client =
+                                window.supabaseClient;
+
+
+                            if (!client) {
+
+                                alert(
+                                    "Supabase ещё не инициализирован. Обновите страницу."
+                                );
+
+                                return;
+                            }
+
+
                             const result =
-                                await window.supabaseClient
-                                    .auth
-                                    .getUser();
+                                await client.auth.getUser();
 
 
-                            if (
-                                result.error
-                            ) {
+                            if (result.error) {
+
                                 throw result.error;
+
                             }
 
 
@@ -1460,26 +1502,44 @@
                             if (!user) {
 
                                 alert(
-                                    'Сначала войдите в аккаунт.'
+                                    "Сначала войдите в аккаунт."
                                 );
 
                                 return;
                             }
 
 
-                            window.openVipProfile(
-                                user.id
-                            );
+                            if (
+                                typeof window.openVipProfile ===
+                                "function"
+                            ) {
+
+                                window.openVipProfile(
+                                    user.id
+                                );
+
+                            } else {
+
+                                console.error(
+                                    "Функция openVipProfile не найдена."
+                                );
+
+                                alert(
+                                    "Модуль профиля ещё не загрузился."
+                                );
+
+                            }
 
                         } catch (error) {
 
                             console.error(
+                                "Ошибка открытия профиля:",
                                 error
                             );
 
                             alert(
                                 error.message ||
-                                'Не удалось открыть профиль.'
+                                "Не удалось открыть профиль."
                             );
 
                         }
@@ -1498,3 +1558,43 @@
 </body>
 </html>
 ```
+
+### Что теперь важно сделать
+
+В `index.html` **больше нет**:
+
+```js
+YOUR_SUPABASE_URL
+YOUR_SUPABASE_ANON_KEY
+window.supabase.createClient(...)
+```
+
+Это принципиально. Supabase создаётся только в твоём `app.js`.
+
+Порядок загрузки теперь такой:
+
+```text
+Supabase JS
+      ↓
+app.js
+      ↓
+Supabase client из app.js
+      ↓
+мост window.supabaseClient
+      ↓
+profile-vip.js
+      ↓
+кнопки профиля
+```
+
+И самое главное: твой `app.js` уже содержит правильный:
+
+```text
+https://tpdpciooxfulythevhgw.supabase.co
+```
+
+и правильный publishable key.
+
+**После замены `index.html` обязательно сделай жёсткое обновление страницы:** `Ctrl + F5`.
+
+Если после этого в консоли всё ещё появится `Unexpected token 'class'`, следующим шагом нужно исправлять уже **сам `app.js`**, потому что `index.html` больше не содержит дублирующего Supabase-кода.
