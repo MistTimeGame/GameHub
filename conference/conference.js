@@ -1,2120 +1,1376 @@
-# /*
+/* =========================================================
+   GAMEHUB CONFERENCE
+   conference.js
+   Работа с существующей структурой Supabase
+   ========================================================= */
 
-# GAMEHUB CONFERENCE MODULE
-
-Отдельный модуль конференции.
-
-Не зависит от app.js основного GameHub.
-
-Использует:
-
-* Supabase Auth
-* profiles
-* conference_rooms
-* conference_room_members
-* chat_messages
-
-Если названия колонок в существующих таблицах отличаются,
-их можно будет скорректировать одним местом ниже.
-=================================================
-
-*/
-
-/* =====================================================
-SUPABASE
-===================================================== */
-
-/*
-ВАЖНО:
-
-Здесь нужно вставить те же значения,
-которые используются в основном GameHub.
-
-Если в основном проекте у тебя уже есть:
-
-const SUPABASE_URL = "...";
-const SUPABASE_ANON_KEY = "...";
-
-просто скопируй значения сюда.
-*/
-
-const SUPABASE_URL = "https://tpdpciooxfulythevhgw.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_yNWxh02tapOVUQN9iJ_2_Q_IPVc60J3";
+const SUPABASE_URL = "ВСТАВЬ_СЮДА_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "ВСТАВЬ_СЮДА_SUPABASE_ANON_KEY";
 
 const supabaseClient = window.supabase.createClient(
-SUPABASE_URL,
-SUPABASE_ANON_KEY
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
 );
 
-/* =====================================================
-STATE
-===================================================== */
+/* =========================================================
+   STATE
+   ========================================================= */
 
-const state = {
+let currentUser = null;
+let currentProfile = null;
 
-```
-user: null,
+let rooms = [];
+let games = [];
+let members = [];
 
-profile: null,
+let currentRoom = null;
+let messageSubscription = null;
+let memberSubscription = null;
 
-rooms: [],
+let isSending = false;
 
-currentRoom: null,
+/* =========================================================
+   DOM
+   ========================================================= */
 
-messages: [],
+const roomsList = document.getElementById("roomsList");
+const messagesList = document.getElementById("messagesList");
 
-members: [],
+const roomTitle = document.getElementById("roomTitle");
+const roomDescription = document.getElementById("roomDescription");
+const membersCount = document.getElementById("membersCount");
 
-realtimeChannel: null,
+const emptyState = document.getElementById("emptyState");
+const chatArea = document.getElementById("chatArea");
 
-messagesChannel: null,
+const messageForm = document.getElementById("messageForm");
+const messageInput = document.getElementById("messageInput");
 
-games: [],
+const typingIndicator = document.getElementById("typingIndicator");
 
-loading: false
-```
+const membersList = document.getElementById("membersList");
 
-};
+const currentUserName = document.getElementById("currentUserName");
+const currentUserAvatar = document.getElementById("currentUserAvatar");
 
-/* =====================================================
-DOM
-===================================================== */
+const createRoomBtn = document.getElementById("createRoomBtn");
+const refreshBtn = document.getElementById("refreshBtn");
+const logoutBtn = document.getElementById("logoutBtn");
 
-const $ = (id) => document.getElementById(id);
+const createRoomModal = document.getElementById("createRoomModal");
+const closeCreateRoomBtn = document.getElementById("closeCreateRoomBtn");
+const cancelCreateRoomBtn = document.getElementById("cancelCreateRoomBtn");
+const createRoomForm = document.getElementById("createRoomForm");
 
-/* =====================================================
-INIT
-===================================================== */
+const roomNameInput = document.getElementById("roomName");
+const roomDescriptionInput = document.getElementById("roomDescriptionInput");
+const roomGameSelect = document.getElementById("roomGame");
+
+const notification = document.getElementById("notification");
+
+/* =========================================================
+   INIT
+   ========================================================= */
 
 document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
+    try {
+        const {
+            data: { session },
+            error
+        } = await supabaseClient.auth.getSession();
 
-```
-bindEvents();
+        if (error) {
+            console.error("Ошибка получения сессии:", error);
+            showNotification("Не удалось получить сессию", "error");
+            return;
+        }
 
-try {
+        if (!session || !session.user) {
+            redirectToLogin();
+            return;
+        }
 
-    const {
-        data,
-        error
-    } = await supabaseClient.auth.getSession();
+        currentUser = session.user;
+
+        await loadCurrentProfile();
+        renderCurrentUser();
+
+        await loadGames();
+        await loadRooms();
+
+        setupEvents();
+
+        console.log("GAMEHUB CONFERENCE READY");
+    } catch (error) {
+        console.error("Ошибка запуска конференции:", error);
+        showNotification("Ошибка запуска конференции", "error");
+    }
+}
+
+/* =========================================================
+   PROFILE
+   ========================================================= */
+
+async function loadCurrentProfile() {
+    const { data, error } = await supabaseClient
+        .from("profiles")
+        .select("*")
+        .eq("id", currentUser.id)
+        .maybeSingle();
 
     if (error) {
-        throw error;
+        console.error("Ошибка загрузки профиля:", error);
+        return;
     }
 
-    if (!data.session) {
+    currentProfile = data || {};
+}
 
-        redirectToMain();
+function renderCurrentUser() {
+    const name =
+        currentProfile?.nickname ||
+        currentProfile?.username ||
+        currentProfile?.display_name ||
+        currentProfile?.full_name ||
+        currentUser.email?.split("@")[0] ||
+        "Пользователь";
+
+    if (currentUserName) {
+        currentUserName.textContent = name;
+    }
+
+    if (currentUserAvatar) {
+        currentUserAvatar.src = getAvatar(
+            currentProfile?.avatar_url,
+            name
+        );
+    }
+}
+
+/* =========================================================
+   GAMES
+   ========================================================= */
+
+async function loadGames() {
+    const { data, error } = await supabaseClient
+        .from("games")
+        .select("*")
+        .order("name", { ascending: true });
+
+    if (error) {
+        console.error("Ошибка загрузки игр:", error);
+        games = [];
+        return;
+    }
+
+    games = data || [];
+
+    fillGameSelect();
+}
+
+function fillGameSelect() {
+    if (!roomGameSelect) {
+        return;
+    }
+
+    roomGameSelect.innerHTML = "";
+
+    const noGameOption = document.createElement("option");
+    noGameOption.value = "";
+    noGameOption.textContent = "Без привязки к игре";
+
+    roomGameSelect.appendChild(noGameOption);
+
+    games.forEach(game => {
+        const option = document.createElement("option");
+
+        option.value = game.id;
+
+        option.textContent =
+            game.name ||
+            game.title ||
+            game.game_name ||
+            "Игра";
+
+        roomGameSelect.appendChild(option);
+    });
+}
+
+/* =========================================================
+   ROOMS
+   ========================================================= */
+
+async function loadRooms() {
+    const { data, error } = await supabaseClient
+        .from("conference_rooms")
+        .select(`
+            id,
+            name,
+            description,
+            created_by,
+            created_at,
+            is_active,
+            game_id
+        `)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Ошибка загрузки конференций:", error);
+        showNotification(
+            "Не удалось загрузить конференции",
+            "error"
+        );
+        return;
+    }
+
+    rooms = data || [];
+
+    renderRooms();
+
+    if (!currentRoom && rooms.length > 0) {
+        await openRoom(rooms[0].id);
+    }
+
+    if (currentRoom) {
+        const exists = rooms.find(
+            room => room.id === currentRoom.id
+        );
+
+        if (!exists) {
+            closeRoom();
+        }
+    }
+}
+
+function renderRooms() {
+    if (!roomsList) {
+        return;
+    }
+
+    roomsList.innerHTML = "";
+
+    if (!rooms.length) {
+        const empty = document.createElement("div");
+
+        empty.className = "rooms-empty";
+        empty.textContent = "Конференций пока нет";
+
+        roomsList.appendChild(empty);
 
         return;
     }
 
-    state.user = data.session.user;
+    rooms.forEach(room => {
+        const item = document.createElement("button");
 
-    await loadProfile();
+        item.type = "button";
+        item.className = "room-item";
 
-    await loadRooms();
-
-    await loadGames();
-
-    renderUser();
-
-} catch (error) {
-
-    console.error(
-        "Ошибка инициализации конференции:",
-        error
-    );
-
-    showNotification(
-        "Не удалось загрузить конференцию"
-    );
-}
-```
-
-}
-
-/* =====================================================
-EVENTS
-===================================================== */
-
-function bindEvents() {
-
-```
-$("backButton")
-    .addEventListener(
-        "click",
-        redirectToMain
-    );
-
-
-$("logoutButton")
-    .addEventListener(
-        "click",
-        logout
-    );
-
-
-$("refreshButton")
-    .addEventListener(
-        "click",
-        refreshCurrentRoom
-    );
-
-
-$("membersButton")
-    .addEventListener(
-        "click",
-        openMembers
-    );
-
-
-$("closeMembersButton")
-    .addEventListener(
-        "click",
-        closeMembers
-    );
-
-
-$("createRoomButton")
-    .addEventListener(
-        "click",
-        openCreateRoom
-    );
-
-
-$("closeCreateRoom")
-    .addEventListener(
-        "click",
-        closeCreateRoom
-    );
-
-
-$("cancelCreateRoom")
-    .addEventListener(
-        "click",
-        closeCreateRoom
-    );
-
-
-$("createRoomForm")
-    .addEventListener(
-        "submit",
-        createRoom
-    );
-
-
-$("messageForm")
-    .addEventListener(
-        "submit",
-        sendMessage
-    );
-
-
-$("messageInput")
-    .addEventListener(
-        "keydown",
-        handleMessageKeydown
-    );
-
-
-$("attachButton")
-    .addEventListener(
-        "click",
-        () => {
-
-            showNotification(
-                "Вложения добавим следующим этапом"
-            );
-
+        if (currentRoom && currentRoom.id === room.id) {
+            item.classList.add("active");
         }
-    );
-```
 
-}
-
-/* =====================================================
-PROFILE
-===================================================== */
-
-async function loadProfile() {
-
-```
-if (!state.user) {
-    return;
-}
-
-
-const {
-    data,
-    error
-} = await supabaseClient
-    .from("profiles")
-    .select("*")
-    .eq("id", state.user.id)
-    .maybeSingle();
-
-
-if (error) {
-
-    console.error(
-        "Ошибка загрузки профиля:",
-        error
-    );
-
-    return;
-}
-
-
-state.profile = data;
-```
-
-}
-
-function renderUser() {
-
-```
-const profile = state.profile;
-
-const metadata =
-    state.user?.user_metadata || {};
-
-
-const username =
-    profile?.username ||
-    profile?.display_name ||
-    profile?.nickname ||
-    metadata.username ||
-    metadata.name ||
-    state.user?.email?.split("@")[0] ||
-    "Пользователь";
-
-
-const avatar =
-    profile?.avatar_url ||
-    profile?.photo_url ||
-    metadata.avatar_url ||
-    createDefaultAvatar(username);
-
-
-$("sidebarUsername").textContent =
-    username;
-
-
-$("sidebarAvatar").src =
-    avatar;
-
-
-let vipText = "Пользователь";
-
-
-if (profile?.vip_level) {
-
-    vipText =
-        "VIP " +
-        romanNumber(
-            Number(profile.vip_level)
+        const game = games.find(
+            gameItem => gameItem.id === room.game_id
         );
+
+        const gameName = game
+            ? game.name || game.title || game.game_name
+            : "";
+
+        item.innerHTML = `
+            <div class="room-icon">
+                💬
+            </div>
+
+            <div class="room-item-content">
+                <div class="room-item-name">
+                    ${escapeHtml(room.name)}
+                </div>
+
+                <div class="room-item-description">
+                    ${escapeHtml(
+                        room.description ||
+                        gameName ||
+                        "Конференция GameHub"
+                    )}
+                </div>
+            </div>
+        `;
+
+        item.addEventListener("click", () => {
+            openRoom(room.id);
+        });
+
+        roomsList.appendChild(item);
+    });
 }
 
+/* =========================================================
+   OPEN ROOM
+   ========================================================= */
 
-$("sidebarVip").textContent =
-    vipText;
-```
+async function openRoom(roomId) {
+    const room = rooms.find(item => item.id === roomId);
 
+    if (!room) {
+        return;
+    }
+
+    currentRoom = room;
+
+    renderRooms();
+    renderRoomHeader();
+
+    if (emptyState) {
+        emptyState.style.display = "none";
+    }
+
+    if (chatArea) {
+        chatArea.style.display = "flex";
+    }
+
+    await loadMembers();
+    await ensureMembership();
+    await loadMessages();
+
+    subscribeToMessages();
+    subscribeToMembers();
 }
 
-/* =====================================================
-ROOMS
-===================================================== */
+function closeRoom() {
+    currentRoom = null;
 
-async function loadRooms() {
+    unsubscribeMessages();
+    unsubscribeMembers();
 
-```
-$("roomsList").innerHTML = `
-    <div class="rooms-loading">
-        Загрузка...
-    </div>
-`;
+    if (roomTitle) {
+        roomTitle.textContent = "Конференция";
+    }
 
+    if (roomDescription) {
+        roomDescription.textContent = "";
+    }
 
-/*
-   Основная попытка:
+    if (messagesList) {
+        messagesList.innerHTML = "";
+    }
 
-   conference_rooms
-   id
-   name
-   description
-   game_id
-   created_by
-   created_at
-*/
+    if (membersList) {
+        membersList.innerHTML = "";
+    }
 
-const {
-    data,
-    error
-} = await supabaseClient
-    .from("conference_rooms")
-    .select("*")
-    .order(
-        "created_at",
-        {
-            ascending: true
-        }
-    );
+    if (chatArea) {
+        chatArea.style.display = "none";
+    }
 
+    if (emptyState) {
+        emptyState.style.display = "flex";
+    }
 
-if (error) {
-
-    console.error(
-        "Ошибка загрузки конференций:",
-        error
-    );
-
-
-    $("roomsList").innerHTML = `
-        <div class="rooms-loading">
-            Не удалось загрузить конференции
-        </div>
-    `;
-
-    return;
+    renderRooms();
 }
 
-
-state.rooms =
-    data || [];
-
-
-renderRooms();
-```
-
-}
-
-function renderRooms() {
-
-```
-const container =
-    $("roomsList");
-
-
-if (!state.rooms.length) {
-
-    container.innerHTML = `
-        <div class="rooms-loading">
-            Конференций пока нет
-        </div>
-    `;
-
-    return;
-}
-
-
-container.innerHTML =
-    state.rooms
-        .map(
-            room => {
-
-                const active =
-                    state.currentRoom &&
-                    state.currentRoom.id === room.id
-                        ? "active"
-                        : "";
-
-
-                return `
-                    <button
-                        class="room-item ${active}"
-                        data-room-id="${escapeHtml(
-                            String(room.id)
-                        )}"
-                    >
-
-                        <div class="room-item-icon">
-                            #
-                        </div>
-
-                        <div class="room-item-info">
-
-                            <span class="room-item-name">
-                                ${escapeHtml(
-                                    room.name ||
-                                    "Без названия"
-                                )}
-                            </span>
-
-                            <span class="room-item-description">
-                                ${escapeHtml(
-                                    room.description ||
-                                    "Конференция"
-                                )}
-                            </span>
-
-                        </div>
-
-                    </button>
-                `;
-            }
-        )
-        .join("");
-
-
-container
-    .querySelectorAll(".room-item")
-    .forEach(
-        button => {
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    const roomId =
-                        button.dataset.roomId;
-
-                    selectRoom(roomId);
-                }
-            );
-
-        }
-    );
-```
-
-}
-
-/* =====================================================
-SELECT ROOM
-===================================================== */
-
-async function selectRoom(roomId) {
-
-```
-const room =
-    state.rooms.find(
-        item =>
-            String(item.id) ===
-            String(roomId)
-    );
-
-
-if (!room) {
-    return;
-}
-
-
-state.currentRoom =
-    room;
-
-
-renderRooms();
-
-renderRoomHeader();
-
-
-$("emptyState")
-    .classList.add("hidden");
-
-
-$("chatContainer")
-    .classList.remove("hidden");
-
-
-await loadMessages();
-
-await loadMembers();
-
-subscribeToRoom();
-
-scrollMessagesToBottom();
-```
-
-}
-
-/* =====================================================
-ROOM HEADER
-===================================================== */
+/* =========================================================
+   ROOM HEADER
+   ========================================================= */
 
 function renderRoomHeader() {
+    if (!currentRoom) {
+        return;
+    }
 
-```
-const room =
-    state.currentRoom;
+    if (roomTitle) {
+        roomTitle.textContent = currentRoom.name;
+    }
 
+    if (roomDescription) {
+        roomDescription.textContent =
+            currentRoom.description || "";
+    }
 
-if (!room) {
-    return;
+    updateMembersCount();
 }
 
+function updateMembersCount() {
+    if (!membersCount) {
+        return;
+    }
 
-$("headerRoomName")
-    .textContent =
-        room.name ||
-        "Конференция";
+    membersCount.textContent =
+        `${members.length} ${pluralize(
+            members.length,
+            "участник",
+            "участника",
+            "участников"
+        )}`;
+}
 
+/* =========================================================
+   MEMBERSHIP
+   ========================================================= */
 
-$("headerRoomDescription")
-    .textContent =
-        room.description ||
-        "Общая конференция";
+async function ensureMembership() {
+    if (!currentRoom || !currentUser) {
+        return;
+    }
 
+    const { data, error } = await supabaseClient
+        .from("conference_room_members")
+        .select("room_id,user_id")
+        .eq("room_id", currentRoom.id)
+        .eq("user_id", currentUser.id)
+        .maybeSingle();
 
-$("headerRoomIcon")
-    .textContent =
-        "#";
-
-
-$("membersCount")
-    .textContent =
-        String(
-            state.members.length
+    if (error) {
+        console.error(
+            "Ошибка проверки участия:",
+            error
         );
-```
+        return;
+    }
 
+    if (data) {
+        return;
+    }
+
+    const { error: insertError } = await supabaseClient
+        .from("conference_room_members")
+        .insert({
+            room_id: currentRoom.id,
+            user_id: currentUser.id
+        });
+
+    if (insertError) {
+        console.error(
+            "Ошибка добавления участника:",
+            insertError
+        );
+    }
 }
 
-/* =====================================================
-MESSAGES
-===================================================== */
+/* =========================================================
+   LOAD MEMBERS
+   ========================================================= */
+
+async function loadMembers() {
+    if (!currentRoom) {
+        return;
+    }
+
+    const { data, error } = await supabaseClient
+        .from("conference_room_members")
+        .select(`
+            room_id,
+            user_id,
+            joined_at
+        `)
+        .eq("room_id", currentRoom.id)
+        .order("joined_at", { ascending: true });
+
+    if (error) {
+        console.error(
+            "Ошибка загрузки участников:",
+            error
+        );
+
+        members = [];
+        renderMembers();
+
+        return;
+    }
+
+    const rawMembers = data || [];
+
+    if (!rawMembers.length) {
+        members = [];
+        renderMembers();
+        return;
+    }
+
+    const userIds = rawMembers.map(item => item.user_id);
+
+    const { data: profiles, error: profilesError } =
+        await supabaseClient
+            .from("profiles")
+            .select("*")
+            .in("id", userIds);
+
+    if (profilesError) {
+        console.error(
+            "Ошибка загрузки профилей участников:",
+            profilesError
+        );
+    }
+
+    const profileMap = {};
+
+    (profiles || []).forEach(profile => {
+        profileMap[profile.id] = profile;
+    });
+
+    members = rawMembers.map(member => ({
+        ...member,
+        profile: profileMap[member.user_id] || null
+    }));
+
+    renderMembers();
+}
+
+function renderMembers() {
+    if (!membersList) {
+        return;
+    }
+
+    membersList.innerHTML = "";
+
+    if (!members.length) {
+        membersList.innerHTML = `
+            <div class="members-empty">
+                Пока нет участников
+            </div>
+        `;
+
+        updateMembersCount();
+
+        return;
+    }
+
+    members.forEach(member => {
+        const profile = member.profile || {};
+
+        const name = getProfileName(
+            profile,
+            member.user_id
+        );
+
+        const item = document.createElement("div");
+
+        item.className = "member-item";
+
+        item.innerHTML = `
+            <img
+                class="member-avatar"
+                src="${getAvatar(
+                    profile.avatar_url,
+                    name
+                )}"
+                alt=""
+            >
+
+            <div class="member-info">
+                <div class="member-name">
+                    ${escapeHtml(name)}
+                </div>
+
+                <div class="member-status">
+                    участник
+                </div>
+            </div>
+        `;
+
+        membersList.appendChild(item);
+    });
+
+    updateMembersCount();
+}
+
+/* =========================================================
+   MESSAGES
+   ========================================================= */
 
 async function loadMessages() {
+    if (!currentRoom) {
+        return;
+    }
 
-```
-if (!state.currentRoom) {
-    return;
+    if (messagesList) {
+        messagesList.innerHTML = "";
+    }
+
+    const { data, error } = await supabaseClient
+        .from("chat_messages")
+        .select(`
+            id,
+            room_id,
+            user_id,
+            body,
+            created_at,
+            nickname,
+            room_type,
+            message
+        `)
+        .eq("room_id", currentRoom.id)
+        .order("created_at", { ascending: true });
+
+    if (error) {
+        console.error(
+            "Ошибка загрузки сообщений:",
+            error
+        );
+
+        showNotification(
+            "Не удалось загрузить сообщения",
+            "error"
+        );
+
+        return;
+    }
+
+    const messages = data || [];
+
+    if (!messages.length) {
+        renderEmptyMessages();
+        return;
+    }
+
+    messages.forEach(message => {
+        renderMessage(message);
+    });
+
+    scrollMessagesToBottom();
 }
 
+function renderEmptyMessages() {
+    if (!messagesList) {
+        return;
+    }
 
-$("messages").innerHTML = `
-    <div class="system-message">
-        Загрузка сообщений...
-    </div>
-`;
+    messagesList.innerHTML = `
+        <div class="messages-empty">
+            <div class="messages-empty-icon">
+                💬
+            </div>
 
+            <div class="messages-empty-title">
+                Пока сообщений нет
+            </div>
 
-/*
-   В существующем проекте таблица
-   сообщений может иметь дополнительные поля.
-
-   Здесь используются:
-
-   id
-   room_id
-   user_id
-   message
-   created_at
-*/
-
-
-const {
-    data,
-    error
-} = await supabaseClient
-    .from("chat_messages")
-    .select("*")
-    .eq(
-        "room_id",
-        state.currentRoom.id
-    )
-    .order(
-        "created_at",
-        {
-            ascending: true
-        }
-    )
-    .limit(300);
-
-
-if (error) {
-
-    console.error(
-        "Ошибка загрузки сообщений:",
-        error
-    );
-
-
-    $("messages").innerHTML = `
-        <div class="system-message">
-            Не удалось загрузить сообщения
+            <div class="messages-empty-text">
+                Будьте первым, кто напишет сообщение.
+            </div>
         </div>
     `;
-
-    return;
-}
-
-
-state.messages =
-    data || [];
-
-
-renderMessages();
-```
-
-}
-
-function renderMessages() {
-
-```
-const container =
-    $("messages");
-
-
-if (!state.messages.length) {
-
-    container.innerHTML = `
-        <div class="system-message">
-            Сообщений пока нет. Начните общение.
-        </div>
-    `;
-
-    return;
-}
-
-
-container.innerHTML =
-    state.messages
-        .map(
-            message =>
-                renderMessage(
-                    message
-                )
-        )
-        .join("");
-
-
-scrollMessagesToBottom();
-```
-
 }
 
 function renderMessage(message) {
+    if (!messagesList) {
+        return;
+    }
 
-```
-const isOwn =
-    String(message.user_id) ===
-    String(state.user?.id);
-
-
-const username =
-    getMessageUsername(message);
-
-
-const avatar =
-    getMessageAvatar(message);
-
-
-const text =
-    getMessageText(message);
-
-
-const time =
-    formatTime(
-        message.created_at
+    const existing = document.querySelector(
+        `[data-message-id="${message.id}"]`
     );
 
+    if (existing) {
+        existing.remove();
+    }
 
-return `
-    <div
-        class="message ${isOwn ? "own" : ""}"
-        data-message-id="${escapeHtml(
-            String(message.id)
-        )}"
-    >
+    const isOwn =
+        message.user_id === currentUser?.id;
 
+    const nickname =
+        message.nickname ||
+        getMemberName(message.user_id) ||
+        "Пользователь";
+
+    const body =
+        message.body ||
+        message.message ||
+        "";
+
+    const profile =
+        getMemberProfile(message.user_id);
+
+    const avatar =
+        getAvatar(
+            profile?.avatar_url,
+            nickname
+        );
+
+    const element = document.createElement("div");
+
+    element.className = "message";
+
+    if (isOwn) {
+        element.classList.add("own");
+    }
+
+    element.dataset.messageId = message.id;
+
+    element.innerHTML = `
         <img
             class="message-avatar"
-            src="${escapeHtml(avatar)}"
+            src="${avatar}"
             alt=""
         >
 
-        <div class="message-body">
+        <div class="message-content">
 
-            <div class="message-author">
-                ${escapeHtml(username)}
+            <div class="message-meta">
+                <span class="message-author">
+                    ${escapeHtml(nickname)}
+                </span>
+
+                <span class="message-time">
+                    ${formatMessageTime(
+                        message.created_at
+                    )}
+                </span>
             </div>
 
             <div class="message-bubble">
-                ${formatMessageText(text)}
-            </div>
-
-            <div class="message-time">
-                ${escapeHtml(time)}
+                ${formatMessageBody(body)}
             </div>
 
         </div>
+    `;
 
-    </div>
-`;
-```
-
+    messagesList.appendChild(element);
 }
 
-/* =====================================================
-SEND MESSAGE
-===================================================== */
-
-async function sendMessage(event) {
-
-```
-event.preventDefault();
-
-
-if (!state.currentRoom) {
-
-    showNotification(
-        "Сначала выберите конференцию"
-    );
-
-    return;
+function formatMessageBody(text) {
+    return escapeHtml(text)
+        .replace(/\n/g, "<br>");
 }
 
+/* =========================================================
+   SEND MESSAGE
+   ========================================================= */
 
-const input =
-    $("messageInput");
+async function sendMessage() {
+    if (!currentRoom || !currentUser) {
+        return;
+    }
 
+    if (isSending) {
+        return;
+    }
 
-const text =
-    input.value.trim();
+    const body = messageInput?.value?.trim();
 
+    if (!body) {
+        return;
+    }
 
-if (!text) {
-    return;
-}
+    isSending = true;
 
+    const nickname =
+        getProfileName(
+            currentProfile,
+            currentUser.id
+        );
 
-if (!state.user) {
-    return;
-}
+    const payload = {
+        room_id: currentRoom.id,
+        user_id: currentUser.id,
+        body: body,
+        nickname: nickname,
+        room_type: "conference"
+    };
 
-
-input.disabled = true;
-
-
-try {
-
-    /*
-       Здесь специально используется
-       поле message.
-
-       Если в твоей chat_messages
-       оно называется content/text,
-       поменяем это после проверки SQL.
-    */
-
-    const {
-        data,
-        error
-    } = await supabaseClient
+    const { error } = await supabaseClient
         .from("chat_messages")
-        .insert({
-
-            room_id:
-                state.currentRoom.id,
-
-            user_id:
-                state.user.id,
-
-            message:
-                text
-
-        })
-        .select()
-        .single();
-
+        .insert(payload);
 
     if (error) {
-        throw error;
+        console.error(
+            "Ошибка отправки сообщения:",
+            error
+        );
+
+        showNotification(
+            "Не удалось отправить сообщение",
+            "error"
+        );
+
+        isSending = false;
+        return;
     }
 
-
-    input.value = "";
-
-
-    /*
-       Если Realtime включён,
-       сообщение придёт автоматически.
-
-       Но для надёжности добавляем его
-       сразу, если подписка ещё не успела.
-    */
-
-    if (
-        data &&
-        !state.messages.some(
-            item =>
-                String(item.id) ===
-                String(data.id)
-        )
-    ) {
-
-        state.messages.push(data);
-
-        renderMessages();
+    if (messageInput) {
+        messageInput.value = "";
+        messageInput.focus();
     }
 
-
-} catch (error) {
-
-    console.error(
-        "Ошибка отправки сообщения:",
-        error
-    );
-
-
-    showNotification(
-        "Не удалось отправить сообщение"
-    );
-
-} finally {
-
-    input.disabled = false;
-
-    input.focus();
-}
-```
-
+    isSending = false;
 }
 
-/* =====================================================
-REALTIME
-===================================================== */
+/* =========================================================
+   REALTIME MESSAGES
+   ========================================================= */
 
-function subscribeToRoom() {
+function subscribeToMessages() {
+    unsubscribeMessages();
 
-```
-unsubscribeFromRoom();
+    if (!currentRoom) {
+        return;
+    }
 
-
-if (!state.currentRoom) {
-    return;
-}
-
-
-const roomId =
-    state.currentRoom.id;
-
-
-state.messagesChannel =
-    supabaseClient
+    messageSubscription = supabaseClient
         .channel(
-            "conference-messages-" +
-            String(roomId)
+            `conference-messages-${currentRoom.id}`
         )
         .on(
             "postgres_changes",
             {
                 event: "INSERT",
-
                 schema: "public",
-
                 table: "chat_messages",
-
-                filter:
-                    "room_id=eq." +
-                    roomId
+                filter: `room_id=eq.${currentRoom.id}`
             },
-
             payload => {
+                const message = payload.new;
 
-                const message =
-                    payload.new;
+                if (!message) {
+                    return;
+                }
 
-
-                if (
-                    !state.messages.some(
-                        item =>
-                            String(item.id) ===
-                            String(message.id)
-                    )
-                ) {
-
-                    state.messages.push(
-                        message
+                const empty =
+                    messagesList?.querySelector(
+                        ".messages-empty"
                     );
 
-                    renderMessages();
+                if (empty) {
+                    empty.remove();
                 }
+
+                renderMessage(message);
+                scrollMessagesToBottom();
             }
         )
-        .subscribe();
+        .subscribe(status => {
+            console.log(
+                "Message realtime:",
+                status
+            );
+        });
+}
 
+function unsubscribeMessages() {
+    if (messageSubscription) {
+        supabaseClient.removeChannel(
+            messageSubscription
+        );
 
-state.realtimeChannel =
-    supabaseClient
+        messageSubscription = null;
+    }
+}
+
+/* =========================================================
+   REALTIME MEMBERS
+   ========================================================= */
+
+function subscribeToMembers() {
+    unsubscribeMembers();
+
+    if (!currentRoom) {
+        return;
+    }
+
+    memberSubscription = supabaseClient
         .channel(
-            "conference-rooms"
+            `conference-members-${currentRoom.id}`
         )
         .on(
             "postgres_changes",
             {
                 event: "*",
-
                 schema: "public",
-
-                table: "conference_rooms"
+                table: "conference_room_members",
+                filter: `room_id=eq.${currentRoom.id}`
             },
-
-            () => {
-
-                loadRooms();
+            async () => {
+                await loadMembers();
             }
         )
-        .subscribe();
-```
-
-}
-
-function unsubscribeFromRoom() {
-
-```
-if (state.messagesChannel) {
-
-    supabaseClient.removeChannel(
-        state.messagesChannel
-    );
-
-    state.messagesChannel =
-        null;
-}
-
-
-if (state.realtimeChannel) {
-
-    supabaseClient.removeChannel(
-        state.realtimeChannel
-    );
-
-    state.realtimeChannel =
-        null;
-}
-```
-
-}
-
-/* =====================================================
-MEMBERS
-===================================================== */
-
-async function loadMembers() {
-
-```
-if (!state.currentRoom) {
-    return;
-}
-
-
-const {
-    data,
-    error
-} = await supabaseClient
-    .from("conference_room_members")
-    .select("*")
-    .eq(
-        "room_id",
-        state.currentRoom.id
-    );
-
-
-if (error) {
-
-    console.error(
-        "Ошибка участников:",
-        error
-    );
-
-    state.members = [];
-
-    renderMembers();
-
-    return;
-}
-
-
-state.members =
-    data || [];
-
-
-/*
-   Если таблица участников
-   хранит только user_id,
-   отдельно получаем profiles.
-*/
-
-await enrichMembers();
-
-
-renderMembers();
-
-renderRoomHeader();
-```
-
-}
-
-async function enrichMembers() {
-
-```
-if (!state.members.length) {
-    return;
-}
-
-
-const userIds =
-    state.members
-        .map(
-            member =>
-                member.user_id
-        )
-        .filter(Boolean);
-
-
-if (!userIds.length) {
-    return;
-}
-
-
-const {
-    data,
-    error
-} = await supabaseClient
-    .from("profiles")
-    .select("*")
-    .in(
-        "id",
-        userIds
-    );
-
-
-if (error) {
-
-    console.error(
-        "Ошибка профилей участников:",
-        error
-    );
-
-    return;
-}
-
-
-const profiles =
-    data || [];
-
-
-state.members =
-    state.members.map(
-        member => {
-
-            const profile =
-                profiles.find(
-                    item =>
-                        String(item.id) ===
-                        String(member.user_id)
-                );
-
-
-            return {
-                ...member,
-                profile
-            };
-        }
-    );
-```
-
-}
-
-function renderMembers() {
-
-```
-const container =
-    $("membersList");
-
-
-const count =
-    state.members.length;
-
-
-$("membersCount")
-    .textContent =
-        String(count);
-
-
-$("membersPanelCount")
-    .textContent =
-        String(count);
-
-
-if (!count) {
-
-    container.innerHTML = `
-        <div class="system-message">
-            Участников пока нет
-        </div>
-    `;
-
-    return;
-}
-
-
-container.innerHTML =
-    state.members
-        .map(
-            member => {
-
-                const profile =
-                    member.profile || {};
-
-
-                const name =
-                    profile.username ||
-                    profile.display_name ||
-                    profile.nickname ||
-                    "Пользователь";
-
-
-                const avatar =
-                    profile.avatar_url ||
-                    profile.photo_url ||
-                    createDefaultAvatar(
-                        name
-                    );
-
-
-                return `
-                    <div class="member-item">
-
-                        <img
-                            class="member-avatar"
-                            src="${escapeHtml(
-                                avatar
-                            )}"
-                            alt=""
-                        >
-
-                        <div class="member-info">
-
-                            <span class="member-name">
-                                ${escapeHtml(
-                                    name
-                                )}
-                            </span>
-
-                            <span class="member-role">
-                                ${getMemberRole(
-                                    member
-                                )}
-                            </span>
-
-                        </div>
-
-                    </div>
-                `;
-            }
-        )
-        .join("");
-```
-
-}
-
-function getMemberRole(member) {
-
-```
-if (
-    String(member.user_id) ===
-    String(state.currentRoom?.created_by)
-) {
-
-    return "Создатель";
-}
-
-
-if (member.role) {
-
-    return String(
-        member.role
-    );
-}
-
-
-return "Участник";
-```
-
-}
-
-/* =====================================================
-CREATE ROOM
-===================================================== */
-
-function openCreateRoom() {
-
-```
-$("createRoomModal")
-    .classList.remove("hidden");
-
-$("createRoomError")
-    .classList.add("hidden");
-
-$("roomNameInput")
-    .focus();
-```
-
-}
-
-function closeCreateRoom() {
-
-```
-$("createRoomModal")
-    .classList.add("hidden");
-
-$("createRoomForm")
-    .reset();
-```
-
-}
-
-async function createRoom(event) {
-
-```
-event.preventDefault();
-
-
-const name =
-    $("roomNameInput")
-        .value
-        .trim();
-
-
-const description =
-    $("roomDescriptionInput")
-        .value
-        .trim();
-
-
-const gameId =
-    $("roomGameInput")
-        .value ||
-    null;
-
-
-const errorBox =
-    $("createRoomError");
-
-
-errorBox
-    .classList
-    .add("hidden");
-
-
-if (!name) {
-
-    showCreateRoomError(
-        "Введите название конференции"
-    );
-
-    return;
-}
-
-
-if (!state.user) {
-
-    showCreateRoomError(
-        "Пользователь не авторизован"
-    );
-
-    return;
-}
-
-
-try {
-
-    const {
-        data: room,
-        error
-    } = await supabaseClient
-        .from("conference_rooms")
-        .insert({
-
-            name,
-
-            description:
-                description || null,
-
-            game_id:
-                gameId,
-
-            created_by:
-                state.user.id
-
-        })
-        .select()
-        .single();
-
-
-    if (error) {
-        throw error;
-    }
-
-
-    /*
-       Автоматически добавляем создателя
-       в участников.
-    */
-
-    const {
-        error: memberError
-    } = await supabaseClient
-        .from("conference_room_members")
-        .insert({
-
-            room_id:
-                room.id,
-
-            user_id:
-                state.user.id,
-
-            role:
-                "owner"
-
-        });
-
-
-    if (memberError) {
-
-        console.warn(
-            "Комната создана, но участник не добавлен:",
-            memberError
-        );
-    }
-
-
-    closeCreateRoom();
-
-
-    await loadRooms();
-
-
-    if (room) {
-
-        await selectRoom(
-            room.id
-        );
-    }
-
-
-    showNotification(
-        "Конференция создана"
-    );
-
-
-} catch (error) {
-
-    console.error(
-        "Ошибка создания конференции:",
-        error
-    );
-
-
-    showCreateRoomError(
-        getSupabaseErrorMessage(
-            error
-        )
-    );
-}
-```
-
-}
-
-function showCreateRoomError(message) {
-
-```
-const errorBox =
-    $("createRoomError");
-
-
-errorBox.textContent =
-    message;
-
-
-errorBox
-    .classList
-    .remove("hidden");
-```
-
-}
-
-/* =====================================================
-GAMES
-===================================================== */
-
-async function loadGames() {
-
-```
-const select =
-    $("roomGameInput");
-
-
-if (!select) {
-    return;
-}
-
-
-try {
-
-    const {
-        data,
-        error
-    } = await supabaseClient
-        .from("games")
-        .select("*")
-        .order(
-            "name",
-            {
-                ascending: true
-            }
-        );
-
-
-    if (error) {
-        throw error;
-    }
-
-
-    state.games =
-        data || [];
-
-
-    state.games.forEach(
-        game => {
-
-            const option =
-                document.createElement(
-                    "option"
-                );
-
-
-            option.value =
-                game.id;
-
-
-            option.textContent =
-                game.name ||
-                game.title ||
-                "Игра";
-
-
-            select.appendChild(
-                option
+        .subscribe(status => {
+            console.log(
+                "Member realtime:",
+                status
             );
-        }
-    );
-
-} catch (error) {
-
-    console.warn(
-        "Игры не загружены:",
-        error
-    );
-}
-```
-
+        });
 }
 
-/* =====================================================
-MEMBERS PANEL
-===================================================== */
-
-function openMembers() {
-
-```
-$("membersPanel")
-    .classList
-    .remove("hidden");
-
-renderMembers();
-```
-
-}
-
-function closeMembers() {
-
-```
-$("membersPanel")
-    .classList
-    .add("hidden");
-```
-
-}
-
-/* =====================================================
-REFRESH
-===================================================== */
-
-async function refreshCurrentRoom() {
-
-```
-if (!state.currentRoom) {
-
-    await loadRooms();
-
-    return;
-}
-
-
-await Promise.all([
-    loadMessages(),
-    loadMembers()
-]);
-
-
-showNotification(
-    "Конференция обновлена"
-);
-```
-
-}
-
-/* =====================================================
-KEYBOARD
-===================================================== */
-
-function handleMessageKeydown(event) {
-
-```
-if (
-    event.key === "Enter" &&
-    !event.shiftKey
-) {
-
-    event.preventDefault();
-
-    $("messageForm")
-        .requestSubmit();
-}
-```
-
-}
-
-/* =====================================================
-AUTH
-===================================================== */
-
-async function logout() {
-
-```
-try {
-
-    await supabaseClient.auth.signOut();
-
-    redirectToMain();
-
-} catch (error) {
-
-    console.error(
-        "Ошибка выхода:",
-        error
-    );
-}
-```
-
-}
-
-/* =====================================================
-REDIRECT
-===================================================== */
-
-function redirectToMain() {
-
-```
-/*
-   conference.html находится
-   внутри /conference/
-
-   Поэтому ../ возвращает
-   в корень GameHub.
-*/
-
-window.location.href =
-    "../index.html";
-```
-
-}
-
-/* =====================================================
-SCROLL
-===================================================== */
-
-function scrollMessagesToBottom() {
-
-```
-const container =
-    $("messages");
-
-
-if (!container) {
-    return;
-}
-
-
-requestAnimationFrame(
-    () => {
-
-        container.scrollTop =
-            container.scrollHeight;
-    }
-);
-```
-
-}
-
-/* =====================================================
-MESSAGE HELPERS
-===================================================== */
-
-function getMessageUsername(message) {
-
-```
-if (
-    message.profile &&
-    (
-        message.profile.username ||
-        message.profile.display_name
-    )
-) {
-
-    return (
-        message.profile.username ||
-        message.profile.display_name
-    );
-}
-
-
-if (
-    String(message.user_id) ===
-    String(state.user?.id)
-) {
-
-    return (
-        state.profile?.username ||
-        state.profile?.display_name ||
-        state.user?.email?.split("@")[0] ||
-        "Вы"
-    );
-}
-
-
-return "Пользователь";
-```
-
-}
-
-function getMessageAvatar(message) {
-
-```
-if (message.profile) {
-
-    return (
-        message.profile.avatar_url ||
-        message.profile.photo_url ||
-        createDefaultAvatar(
-            getMessageUsername(
-                message
-            )
-        )
-    );
-}
-
-
-if (
-    String(message.user_id) ===
-    String(state.user?.id)
-) {
-
-    return (
-        state.profile?.avatar_url ||
-        state.profile?.photo_url ||
-        createDefaultAvatar(
-            getMessageUsername(
-                message
-            )
-        )
-    );
-}
-
-
-return createDefaultAvatar(
-    getMessageUsername(
-        message
-    )
-);
-```
-
-}
-
-function getMessageText(message) {
-
-```
-return (
-    message.message ??
-    message.content ??
-    message.text ??
-    ""
-);
-```
-
-}
-
-/* =====================================================
-DEFAULT AVATAR
-===================================================== */
-
-function createDefaultAvatar(name) {
-
-```
-const first =
-    String(name || "G")
-        .trim()
-        .charAt(0)
-        .toUpperCase();
-
-
-const svg = `
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="100"
-        height="100"
-        viewBox="0 0 100 100"
-    >
-
-        <rect
-            width="100"
-            height="100"
-            rx="50"
-            fill="#ffd400"
-        />
-
-        <circle
-            cx="50"
-            cy="42"
-            r="18"
-            fill="#222"
-        />
-
-        <path
-            d="M24 82
-               C27 63 38 55 50 55
-               C62 55 73 63 76 82"
-            fill="#222"
-        />
-
-        <text
-            x="50"
-            y="95"
-            text-anchor="middle"
-            font-family="Arial"
-            font-size="9"
-            font-weight="bold"
-            fill="#111"
-        >
-            ${escapeHtml(first)}
-        </text>
-
-    </svg>
-`;
-
-
-return (
-    "data:image/svg+xml;charset=UTF-8," +
-    encodeURIComponent(svg)
-);
-```
-
-}
-
-/* =====================================================
-ROMAN NUMBERS
-===================================================== */
-
-function romanNumber(number) {
-
-```
-const values = [
-    [10, "X"],
-    [9, "IX"],
-    [8, "VIII"],
-    [7, "VII"],
-    [6, "VI"],
-    [5, "V"],
-    [4, "IV"],
-    [3, "III"],
-    [2, "II"],
-    [1, "I"]
-];
-
-
-let result = "";
-let value = Number(number) || 0;
-
-
-for (
-    const [
-        numeric,
-        roman
-    ] of values
-) {
-
-    while (
-        value >= numeric
-    ) {
-
-        result += roman;
-
-        value -= numeric;
+function unsubscribeMembers() {
+    if (memberSubscription) {
+        supabaseClient.removeChannel(
+            memberSubscription
+        );
+
+        memberSubscription = null;
     }
 }
 
+/* =========================================================
+   CREATE ROOM
+   ========================================================= */
 
-return result || "0";
-```
-
-}
-
-/* =====================================================
-DATE
-===================================================== */
-
-function formatTime(date) {
-
-```
-if (!date) {
-    return "";
-}
-
-
-const parsed =
-    new Date(date);
-
-
-if (
-    Number.isNaN(
-        parsed.getTime()
-    )
-) {
-
-    return "";
-}
-
-
-return parsed.toLocaleTimeString(
-    "ru-RU",
-    {
-        hour: "2-digit",
-        minute: "2-digit"
+async function createRoom() {
+    if (!currentUser) {
+        return;
     }
-);
-```
 
-}
+    const name =
+        roomNameInput?.value?.trim();
 
-/* =====================================================
-FORMAT MESSAGE
-===================================================== */
+    const description =
+        roomDescriptionInput?.value?.trim();
 
-function formatMessageText(text) {
+    const gameId =
+        roomGameSelect?.value || null;
 
-```
-let safe =
-    escapeHtml(
-        String(text || "")
-    );
+    if (!name) {
+        showNotification(
+            "Введите название конференции",
+            "error"
+        );
 
-
-safe =
-    safe.replace(
-        /\n/g,
-        "<br>"
-    );
-
-
-return safe;
-```
-
-}
-
-/* =====================================================
-ESCAPE
-===================================================== */
-
-function escapeHtml(value) {
-
-```
-return String(value ?? "")
-    .replace(
-        /&/g,
-        "&amp;"
-    )
-    .replace(
-        /</g,
-        "&lt;"
-    )
-    .replace(
-        />/g,
-        "&gt;"
-    )
-    .replace(
-        /"/g,
-        "&quot;"
-    )
-    .replace(
-        /'/g,
-        "&#039;"
-    );
-```
-
-}
-
-/* =====================================================
-NOTIFICATION
-===================================================== */
-
-let notificationTimer = null;
-
-function showNotification(message) {
-
-```
-const notification =
-    $("notification");
-
-
-$("notificationText")
-    .textContent =
-        message;
-
-
-notification
-    .classList
-    .remove("hidden");
-
-
-clearTimeout(
-    notificationTimer
-);
-
-
-notificationTimer =
-    setTimeout(
-        () => {
-
-            notification
-                .classList
-                .add("hidden");
-
-        },
-        3000
-    );
-```
-
-}
-
-/* =====================================================
-SUPABASE ERROR
-===================================================== */
-
-function getSupabaseErrorMessage(error) {
-
-```
-if (!error) {
-    return "Неизвестная ошибка";
-}
-
-
-if (
-    error.code ===
-    "42501"
-) {
-
-    return (
-        "Недостаточно прав. " +
-        "Проверьте RLS-политики Supabase."
-    );
-}
-
-
-if (
-    error.code ===
-    "23505"
-) {
-
-    return (
-        "Такая запись уже существует."
-    );
-}
-
-
-if (
-    error.code ===
-    "23503"
-) {
-
-    return (
-        "Связанная запись не найдена."
-    );
-}
-
-
-return (
-    error.message ||
-    "Произошла ошибка"
-);
-```
-
-}
-
-/* =====================================================
-AUTH LISTENER
-===================================================== */
-
-supabaseClient.auth.onAuthStateChange(
-(
-event,
-session
-) => {
-
-```
-    if (
-        event ===
-        "SIGNED_OUT"
-    ) {
-
-        redirectToMain();
+        roomNameInput?.focus();
 
         return;
     }
 
+    const payload = {
+        name,
+        description: description || null,
+        created_by: currentUser.id,
+        game_id: gameId,
+        is_active: true
+    };
 
-    if (
-        session &&
-        !state.user
-    ) {
+    const { data, error } = await supabaseClient
+        .from("conference_rooms")
+        .insert(payload)
+        .select()
+        .single();
 
-        state.user =
-            session.user;
+    if (error) {
+        console.error(
+            "Ошибка создания конференции:",
+            error
+        );
 
+        showNotification(
+            "Не удалось создать конференцию",
+            "error"
+        );
+
+        return;
     }
+
+    if (data) {
+        await supabaseClient
+            .from("conference_room_members")
+            .insert({
+                room_id: data.id,
+                user_id: currentUser.id
+            });
+    }
+
+    closeCreateRoomModal();
+
+    if (createRoomForm) {
+        createRoomForm.reset();
+    }
+
+    await loadRooms();
+
+    if (data) {
+        await openRoom(data.id);
+    }
+
+    showNotification(
+        "Конференция создана",
+        "success"
+    );
 }
-```
 
-);
+/* =========================================================
+   EVENTS
+   ========================================================= */
 
-/* =====================================================
-PAGE UNLOAD
-===================================================== */
+function setupEvents() {
+    if (messageForm) {
+        messageForm.addEventListener(
+            "submit",
+            event => {
+                event.preventDefault();
+                sendMessage();
+            }
+        );
+    }
 
-window.addEventListener(
-"beforeunload",
-() => {
+    if (createRoomBtn) {
+        createRoomBtn.addEventListener(
+            "click",
+            openCreateRoomModal
+        );
+    }
 
-```
-    unsubscribeFromRoom();
+    if (closeCreateRoomBtn) {
+        closeCreateRoomBtn.addEventListener(
+            "click",
+            closeCreateRoomModal
+        );
+    }
 
+    if (cancelCreateRoomBtn) {
+        cancelCreateRoomBtn.addEventListener(
+            "click",
+            closeCreateRoomModal
+        );
+    }
+
+    if (createRoomForm) {
+        createRoomForm.addEventListener(
+            "submit",
+            event => {
+                event.preventDefault();
+                createRoom();
+            }
+        );
+    }
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener(
+            "click",
+            async () => {
+                await loadGames();
+                await loadRooms();
+
+                if (currentRoom) {
+                    await loadMembers();
+                    await loadMessages();
+                }
+
+                showNotification(
+                    "Обновлено",
+                    "success"
+                );
+            }
+        );
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener(
+            "click",
+            logout
+        );
+    }
+
+    if (messageInput) {
+        messageInput.addEventListener(
+            "keydown",
+            event => {
+                if (
+                    event.key === "Enter" &&
+                    !event.shiftKey
+                ) {
+                    event.preventDefault();
+
+                    if (
+                        !event.ctrlKey &&
+                        !event.altKey
+                    ) {
+                        sendMessage();
+                    }
+                }
+            }
+        );
+    }
+
+    if (createRoomModal) {
+        createRoomModal.addEventListener(
+            "click",
+            event => {
+                if (
+                    event.target ===
+                    createRoomModal
+                ) {
+                    closeCreateRoomModal();
+                }
+            }
+        );
+    }
+
+    window.addEventListener(
+        "beforeunload",
+        () => {
+            unsubscribeMessages();
+            unsubscribeMembers();
+        }
+    );
 }
-```
 
-);
+/* =========================================================
+   MODAL
+   ========================================================= */
+
+function openCreateRoomModal() {
+    if (!createRoomModal) {
+        return;
+    }
+
+    createRoomModal.classList.add("open");
+
+    setTimeout(() => {
+        roomNameInput?.focus();
+    }, 50);
+}
+
+function closeCreateRoomModal() {
+    if (!createRoomModal) {
+        return;
+    }
+
+    createRoomModal.classList.remove("open");
+}
+
+/* =========================================================
+   LOGOUT
+   ========================================================= */
+
+async function logout() {
+    const { error } =
+        await supabaseClient.auth.signOut();
+
+    if (error) {
+        console.error(
+            "Ошибка выхода:",
+            error
+        );
+
+        return;
+    }
+
+    redirectToLogin();
+}
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+
+function getProfileName(profile, fallbackId) {
+    if (!profile) {
+        return `Пользователь ${String(
+            fallbackId || ""
+        ).slice(0, 6)}`;
+    }
+
+    return (
+        profile.nickname ||
+        profile.username ||
+        profile.display_name ||
+        profile.full_name ||
+        profile.name ||
+        `Пользователь ${String(
+            fallbackId || ""
+        ).slice(0, 6)}`
+    );
+}
+
+function getMemberName(userId) {
+    const member = members.find(
+        item => item.user_id === userId
+    );
+
+    if (!member) {
+        return null;
+    }
+
+    return getProfileName(
+        member.profile,
+        userId
+    );
+}
+
+function getMemberProfile(userId) {
+    const member = members.find(
+        item => item.user_id === userId
+    );
+
+    return member?.profile || null;
+}
+
+function getAvatar(url, name) {
+    if (url) {
+        return url;
+    }
+
+    const safeName =
+        String(name || "G")
+            .trim()
+            .charAt(0)
+            .toUpperCase() || "G";
+
+    const svg = `
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+        >
+            <defs>
+                <linearGradient
+                    id="bg"
+                    x1="0"
+                    y1="0"
+                    x2="1"
+                    y2="1"
+                >
+                    <stop
+                        offset="0%"
+                        stop-color="#171717"
+                    />
+                    <stop
+                        offset="100%"
+                        stop-color="#303030"
+                    />
+                </linearGradient>
+            </defs>
+
+            <rect
+                width="128"
+                height="128"
+                rx="64"
+                fill="url(#bg)"
+            />
+
+            <circle
+                cx="64"
+                cy="48"
+                r="23"
+                fill="#f4c400"
+            />
+
+            <path
+                d="
+                    M31 106
+                    C34 82 47 72 64 72
+                    C81 72 94 82 97 106
+                    Z
+                "
+                fill="#f4c400"
+            />
+
+            <text
+                x="64"
+                y="121"
+                text-anchor="middle"
+                font-family="Arial"
+                font-size="10"
+                font-weight="700"
+                fill="#ffffff"
+            >
+                ${escapeXml(safeName)}
+            </text>
+        </svg>
+    `;
+
+    return (
+        "data:image/svg+xml;charset=UTF-8," +
+        encodeURIComponent(svg)
+    );
+}
+
+function formatMessageTime(dateString) {
+    if (!dateString) {
+        return "";
+    }
+
+    const date = new Date(dateString);
+
+    return date.toLocaleTimeString(
+        "ru-RU",
+        {
+            hour: "2-digit",
+            minute: "2-digit"
+        }
+    );
+}
+
+function scrollMessagesToBottom() {
+    if (!messagesList) {
+        return;
+    }
+
+    requestAnimationFrame(() => {
+        messagesList.scrollTop =
+            messagesList.scrollHeight;
+    });
+}
+
+function pluralize(
+    number,
+    one,
+    few,
+    many
+) {
+    const n = Math.abs(number) % 100;
+    const n1 = n % 10;
+
+    if (n > 10 && n < 20) {
+        return many;
+    }
+
+    if (n1 > 1 && n1 < 5) {
+        return few;
+    }
+
+    if (n1 === 1) {
+        return one;
+    }
+
+    return many;
+}
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function escapeXml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+}
+
+function redirectToLogin() {
+    window.location.href = "../index.html";
+}
+
+function showNotification(
+    message,
+    type = "info"
+) {
+    if (!notification) {
+        return;
+    }
+
+    notification.textContent = message;
+
+    notification.className =
+        `notification ${type} show`;
+
+    clearTimeout(
+        showNotification.timeout
+    );
+
+    showNotification.timeout =
+        setTimeout(() => {
+            notification.classList.remove(
+                "show"
+            );
+        }, 3000);
+}
