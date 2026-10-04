@@ -65,6 +65,7 @@
       <button class="menu-button" data-page="news" type="button">📰 Новости</button>
 
       <div class="menu-title">COMMUNITY</div>
+      <button class="menu-button" data-page="online" type="button">🟢 Онлайн</button>
       <button class="menu-button" data-page="chat" type="button">💬 Чат</button>
       <button class="menu-button" data-page="conference" type="button">🎙 Конференции</button>
       <button class="menu-button" data-page="profile" type="button">👤 Профиль</button>
@@ -74,29 +75,136 @@
 
     <main class="content">
 
+      <!-- ГЛАВНАЯ -->
       <section id="home" class="page active">
         <h1>Главная</h1>
-        <div class="news-panel">
-          <h2>Новости платформы</h2>
-          <div id="news-list">Загрузка новостей…</div>
+
+        <div class="dash-stats">
+          <div class="dash-stat" id="ds-online">
+            <div class="dash-stat-icon">🟢</div>
+            <div class="dash-stat-value" id="dash-online">—</div>
+            <div class="dash-stat-label">Сейчас онлайн</div>
+          </div>
+          <div class="dash-stat" id="ds-rooms">
+            <div class="dash-stat-icon">🎙</div>
+            <div class="dash-stat-value" id="dash-rooms">—</div>
+            <div class="dash-stat-label">Активных комнат</div>
+          </div>
+          <div class="dash-stat" id="ds-messages">
+            <div class="dash-stat-icon">💬</div>
+            <div class="dash-stat-value" id="dash-messages">—</div>
+            <div class="dash-stat-label">Сообщений в чате</div>
+          </div>
+          <div class="dash-stat" id="ds-guilds">
+            <div class="dash-stat-icon">⚔</div>
+            <div class="dash-stat-value" id="dash-guilds">—</div>
+            <div class="dash-stat-label">Гильдий</div>
+          </div>
+        </div>
+
+        <div class="dash-grid">
+          <div class="news-panel">
+            <h2>Последние новости</h2>
+            <div id="news-list">Загрузка новостей…</div>
+          </div>
+
+          <div class="dash-recent">
+            <h2>Последние сообщения</h2>
+            <div id="home-recent-messages" class="dash-recent-list">Загрузка…</div>
+          </div>
         </div>
       </section>
 
+      <!-- ИГРЫ -->
       <section id="games" class="page">
-        <h1>Игры</h1>
-        <div class="empty-card">Список игр</div>
+        <h1>🎮 Игры</h1>
+
+        <div class="games-layout">
+          <div class="games-catalog">
+            <div class="game-card active" data-game="ttt">
+              <div class="game-card-icon">❌⭕</div>
+              <div class="game-card-title">Крестики-нолики</div>
+              <div class="game-card-text">Классика против ИИ</div>
+            </div>
+            <div class="game-card disabled">
+              <div class="game-card-icon">♟</div>
+              <div class="game-card-title">Шахматы</div>
+              <div class="game-card-text">Скоро</div>
+            </div>
+            <div class="game-card disabled">
+              <div class="game-card-icon">🃏</div>
+              <div class="game-card-title">Карты</div>
+              <div class="game-card-text">Скоро</div>
+            </div>
+            <div class="game-card disabled">
+              <div class="game-card-icon">🚀</div>
+              <div class="game-card-title">Космос</div>
+              <div class="game-card-text">Скоро</div>
+            </div>
+          </div>
+
+          <div class="game-stage" id="game-stage">
+            <h2>Крестики-нолики</h2>
+            <div class="ttt-status" id="ttt-status">Ваш ход (❌)</div>
+            <div class="ttt-board" id="ttt-board"></div>
+            <div class="ttt-controls">
+              <button id="ttt-reset" class="main-button" type="button">Новая партия</button>
+            </div>
+            <div class="ttt-score" id="ttt-score">
+              <span>Победы: <b id="ttt-wins">0</b></span>
+              <span>Ничьи: <b id="ttt-draws">0</b></span>
+              <span>Поражения: <b id="ttt-losses">0</b></span>
+            </div>
+          </div>
+        </div>
       </section>
 
+      <!-- ГИЛЬДИИ -->
       <section id="guilds" class="page">
-        <h1>Гильдии</h1>
-        <div class="empty-card">Игровые сообщества</div>
+        <h1>⚔ Гильдии</h1>
+
+        <div class="guilds-layout">
+          <div class="guilds-panel">
+            <h2>Создать гильдию</h2>
+            <form id="guild-create-form" class="create-room-form" onsubmit="return false">
+              <input id="guild-name-input" placeholder="Название" maxlength="40" required>
+              <input id="guild-desc-input" placeholder="Описание" maxlength="120">
+              <button id="guild-create-btn" class="main-button" type="button">Создать</button>
+            </form>
+
+            <h2>Список гильдий</h2>
+            <div id="guilds-list">Загрузка…</div>
+          </div>
+
+          <div class="guild-detail" id="guild-detail">
+            <div class="guild-detail-empty">
+              <div class="guild-detail-icon">⚔</div>
+              <p>Выберите гильдию из списка</p>
+            </div>
+          </div>
+        </div>
       </section>
 
+      <!-- НОВОСТИ -->
       <section id="news" class="page">
-        <h1>Новости</h1>
-        <div id="news-page"></div>
+        <h1>📰 Новости</h1>
+        <div class="news-panel">
+          <div id="news-page-list">Загрузка…</div>
+        </div>
       </section>
 
+      <!-- ОНЛАЙН -->
+      <section id="online" class="page">
+        <div class="view-head">
+          <h1>🟢 Онлайн</h1>
+          <span class="online-count-badge" id="online-page-count">0</span>
+        </div>
+        <div id="online-list-page" class="online-list-page">
+          <div class="dash-recent-empty">Никого нет онлайн</div>
+        </div>
+      </section>
+
+      <!-- ЧАТ -->
       <section id="chat" class="page">
         <h1>💬 Общий чат</h1>
         <div class="chat-box">
@@ -108,6 +216,7 @@
         </div>
       </section>
 
+      <!-- КОНФЕРЕНЦИИ -->
       <section id="conference" class="page">
         <h1>🎙 Видеоконференции</h1>
 
@@ -126,7 +235,6 @@
           </div>
 
           <div class="video-panel">
-
             <h2 id="current-room-title">Комната не выбрана</h2>
             <div id="room-status" class="room-status"></div>
 
@@ -140,12 +248,12 @@
             <div class="room-controls">
               <button id="leave-room" class="main-button" type="button">Покинуть комнату</button>
             </div>
-
           </div>
 
         </div>
       </section>
 
+      <!-- ПРОФИЛЬ -->
       <section id="profile" class="page">
         <h1>👤 Профиль</h1>
         <div class="profile-card">
