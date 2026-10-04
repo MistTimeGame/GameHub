@@ -8,18 +8,10 @@
 </head>
 <body>
 
-<!-- =========================
-     AUTH
-========================= -->
-
 <section id="auth-screen" class="auth-screen">
-
   <div class="auth-card">
-
     <div class="logo">GP</div>
-
     <h1>GAME PLATFORM</h1>
-
     <p>Игровое сообщество нового поколения</p>
 
     <div class="auth-tabs">
@@ -41,19 +33,12 @@
       <input id="register-password" type="password" placeholder="Пароль" required minlength="6" autocomplete="new-password">
       <button class="main-button" type="submit">Создать аккаунт</button>
     </form>
-
   </div>
-
 </section>
-
-<!-- =========================
-     MAIN APP
-========================= -->
 
 <div id="app" class="hidden">
 
   <header class="topbar">
-
     <div class="brand">
       <div class="brand-logo">GP</div>
       <div>
@@ -61,7 +46,6 @@
         <span>COMMUNITY</span>
       </div>
     </div>
-
     <div class="top-profile">
       <img id="top-avatar" src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png" alt="">
       <div>
@@ -69,41 +53,27 @@
         <span>Online</span>
       </div>
     </div>
-
   </header>
 
   <div class="layout">
 
-    <!-- =========================
-         LEFT MENU
-    ========================= -->
-
     <aside class="sidebar">
-
       <div class="menu-title">PLATFORM</div>
-
       <button class="menu-button active" data-page="home" type="button">🏠 Главная</button>
       <button class="menu-button" data-page="games" type="button">🎮 Игры</button>
       <button class="menu-button" data-page="guilds" type="button">⚔ Гильдии</button>
       <button class="menu-button" data-page="news" type="button">📰 Новости</button>
 
       <div class="menu-title">COMMUNITY</div>
-
       <button class="menu-button" data-page="chat" type="button">💬 Чат</button>
       <button class="menu-button" data-page="conference" type="button">🎙 Конференции</button>
       <button class="menu-button" data-page="profile" type="button">👤 Профиль</button>
 
       <button id="logout" class="menu-button logout" type="button">Выход</button>
-
     </aside>
-
-    <!-- =========================
-         CENTER
-    ========================= -->
 
     <main class="content">
 
-      <!-- HOME -->
       <section id="home" class="page active">
         <h1>Главная</h1>
         <div class="news-panel">
@@ -112,25 +82,21 @@
         </div>
       </section>
 
-      <!-- GAMES -->
       <section id="games" class="page">
         <h1>Игры</h1>
         <div class="empty-card">Список игр</div>
       </section>
 
-      <!-- GUILDS -->
       <section id="guilds" class="page">
         <h1>Гильдии</h1>
         <div class="empty-card">Игровые сообщества</div>
       </section>
 
-      <!-- NEWS -->
       <section id="news" class="page">
         <h1>Новости</h1>
         <div id="news-page"></div>
       </section>
 
-      <!-- CHAT -->
       <section id="chat" class="page">
         <h1>💬 Общий чат</h1>
         <div class="chat-box">
@@ -142,7 +108,6 @@
         </div>
       </section>
 
-      <!-- CONFERENCE -->
       <section id="conference" class="page">
         <h1>🎙 Видеоконференции</h1>
 
@@ -184,7 +149,6 @@
         </div>
       </section>
 
-      <!-- PROFILE -->
       <section id="profile" class="page">
         <h1>👤 Профиль</h1>
         <div class="profile-card">
@@ -203,30 +167,23 @@
 
     </main>
 
-    <!-- =========================
-         RIGHT PANEL
-    ========================= -->
-
     <aside class="rightbar">
-
       <h3>PROFILE</h3>
-
       <div class="side-profile">
         <img id="side-avatar" src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png" alt="">
         <h2 id="side-name">Player</h2>
         <div id="side-vip">VIP 0</div>
       </div>
-
       <div class="online-box">
         <span class="online-dot"></span>
         Онлайн: <strong id="online-count">0</strong>
       </div>
-
     </aside>
 
   </div>
 
-  <div id="remote-audio" style="display:none"></div>
+  <!-- Аудио-контейнер: НЕ display:none (иначе браузер блокирует автоплей) -->
+  <div id="remote-audio" style="position:absolute;width:0;height:0;overflow:hidden;pointer-events:none;"></div>
 
 </div>
 
