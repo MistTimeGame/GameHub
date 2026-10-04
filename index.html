@@ -80,22 +80,22 @@
         <h1>Главная</h1>
 
         <div class="dash-stats">
-          <div class="dash-stat" id="ds-online">
+          <div class="dash-stat">
             <div class="dash-stat-icon">🟢</div>
             <div class="dash-stat-value" id="dash-online">—</div>
             <div class="dash-stat-label">Сейчас онлайн</div>
           </div>
-          <div class="dash-stat" id="ds-rooms">
+          <div class="dash-stat">
             <div class="dash-stat-icon">🎙</div>
             <div class="dash-stat-value" id="dash-rooms">—</div>
             <div class="dash-stat-label">Активных комнат</div>
           </div>
-          <div class="dash-stat" id="ds-messages">
+          <div class="dash-stat">
             <div class="dash-stat-icon">💬</div>
             <div class="dash-stat-value" id="dash-messages">—</div>
             <div class="dash-stat-label">Сообщений в чате</div>
           </div>
-          <div class="dash-stat" id="ds-guilds">
+          <div class="dash-stat">
             <div class="dash-stat-icon">⚔</div>
             <div class="dash-stat-value" id="dash-guilds">—</div>
             <div class="dash-stat-label">Гильдий</div>
@@ -117,58 +117,76 @@
 
       <!-- ИГРЫ -->
       <section id="games" class="page">
-        <h1>🎮 Игры</h1>
+        <div class="view-head">
+          <h1>🎮 Игры</h1>
+          <button id="toggle-add-game" class="main-button" type="button">+ Добавить игру</button>
+        </div>
 
-        <div class="games-layout">
-          <div class="games-catalog">
-            <div class="game-card active" data-game="ttt">
-              <div class="game-card-icon">❌⭕</div>
-              <div class="game-card-title">Крестики-нолики</div>
-              <div class="game-card-text">Классика против ИИ</div>
-            </div>
-            <div class="game-card disabled">
-              <div class="game-card-icon">♟</div>
-              <div class="game-card-title">Шахматы</div>
-              <div class="game-card-text">Скоро</div>
-            </div>
-            <div class="game-card disabled">
-              <div class="game-card-icon">🃏</div>
-              <div class="game-card-title">Карты</div>
-              <div class="game-card-text">Скоро</div>
-            </div>
-            <div class="game-card disabled">
-              <div class="game-card-icon">🚀</div>
-              <div class="game-card-title">Космос</div>
-              <div class="game-card-text">Скоро</div>
-            </div>
-          </div>
+        <div id="add-game-panel" class="add-game-panel hidden">
+          <h2>Новая игра</h2>
+          <form id="add-game-form" onsubmit="return false">
+            <label class="profile-field">
+              <span>Название игры</span>
+              <input id="game-name-input" placeholder="Counter-Strike 2" maxlength="60" required>
+            </label>
 
-          <div class="game-stage" id="game-stage">
-            <h2>Крестики-нолики</h2>
-            <div class="ttt-status" id="ttt-status">Ваш ход (❌)</div>
-            <div class="ttt-board" id="ttt-board"></div>
-            <div class="ttt-controls">
-              <button id="ttt-reset" class="main-button" type="button">Новая партия</button>
+            <label class="profile-field">
+              <span>Ссылка на официальный сайт</span>
+              <input id="game-url-input" type="url" placeholder="https://www.counter-strike.net" required>
+              <small class="field-hint" id="game-url-hint">
+                Иконка автоматически подтянется с сайта
+              </small>
+            </label>
+
+            <label class="profile-field">
+              <span>Описание</span>
+              <textarea id="game-desc-input" rows="2" maxlength="200" placeholder="Краткое описание"></textarea>
+            </label>
+
+            <label class="profile-field">
+              <span>Своя иконка (необязательно)</span>
+              <input id="game-icon-input" type="url" placeholder="Оставьте пустым — подтянем с сайта">
+            </label>
+
+            <div class="game-icon-preview">
+              <div class="game-icon-preview-img-wrap" id="game-icon-preview-wrap">
+                <span id="game-icon-preview-fallback">🎮</span>
+              </div>
+              <span class="game-icon-preview-text" id="game-icon-preview-text">
+                Превью иконки появится здесь
+              </span>
             </div>
-            <div class="ttt-score" id="ttt-score">
-              <span>Победы: <b id="ttt-wins">0</b></span>
-              <span>Ничьи: <b id="ttt-draws">0</b></span>
-              <span>Поражения: <b id="ttt-losses">0</b></span>
+
+            <div class="profile-actions">
+              <button id="save-game-btn" class="main-button" type="button">Добавить игру</button>
+              <button id="cancel-game-btn" class="main-button secondary" type="button">Отмена</button>
             </div>
-          </div>
+            <div id="game-status" class="profile-status"></div>
+          </form>
+        </div>
+
+        <div id="games-list" class="games-grid">
+          <div class="dash-recent-empty">Загрузка игр…</div>
         </div>
       </section>
 
       <!-- ГИЛЬДИИ -->
       <section id="guilds" class="page">
-        <h1>⚔ Гильдии</h1>
+        <div class="view-head">
+          <h1>⚔ Гильдии</h1>
+        </div>
+
+        <div class="guilds-game-filter" id="guilds-game-filter"></div>
 
         <div class="guilds-layout">
           <div class="guilds-panel">
             <h2>Создать гильдию</h2>
             <form id="guild-create-form" class="create-room-form" onsubmit="return false">
-              <input id="guild-name-input" placeholder="Название" maxlength="40" required>
-              <input id="guild-desc-input" placeholder="Описание" maxlength="120">
+              <select id="guild-game-select" class="guild-select" required>
+                <option value="">— Выберите игру —</option>
+              </select>
+              <input id="guild-name-input" placeholder="Название гильдии" maxlength="40" required>
+              <input id="guild-desc-input" placeholder="Описание (необязательно)" maxlength="120">
               <button id="guild-create-btn" class="main-button" type="button">Создать</button>
             </form>
 
@@ -221,16 +239,13 @@
         <h1>🎙 Видеоконференции</h1>
 
         <div class="conference-layout">
-
           <div class="rooms-panel">
             <h2>Комнаты</h2>
-
             <form id="create-room-form" class="create-room-form" onsubmit="return false">
               <input id="room-name-input" placeholder="Название комнаты" maxlength="60" required>
               <input id="room-desc-input" placeholder="Описание (необязательно)" maxlength="120">
               <button id="create-room-btn" class="main-button" type="button">Создать</button>
             </form>
-
             <div id="rooms-list">Загрузка комнат…</div>
           </div>
 
@@ -249,7 +264,6 @@
               <button id="leave-room" class="main-button" type="button">Покинуть комнату</button>
             </div>
           </div>
-
         </div>
       </section>
 
@@ -273,7 +287,6 @@
           <div id="schema-warning" class="schema-warning hidden"></div>
 
           <form class="profile-form" id="profile-form" onsubmit="return false">
-
             <label class="profile-field" id="field-nickname">
               <span>Никнейм</span>
               <input id="pf-nickname" placeholder="Player" maxlength="30" required>
@@ -284,7 +297,7 @@
               <span>Ссылка на аватар</span>
               <input id="pf-avatar" placeholder="https://i.imgur.com/xxxxx.jpg" type="url">
               <small class="field-hint" id="pf-avatar-hint">
-                Прямая ссылка на картинку (jpg, png, webp, gif). Не ссылка на страницу!
+                Прямая ссылка на картинку (jpg, png, webp, gif).
               </small>
             </label>
 
@@ -293,7 +306,6 @@
                 <span>Город</span>
                 <input id="pf-city" placeholder="Москва" maxlength="40">
               </label>
-
               <label class="profile-field" id="field-age">
                 <span>Возраст</span>
                 <input id="pf-age" type="number" min="1" max="120" placeholder="18">
@@ -312,7 +324,6 @@
             </div>
 
             <div id="profile-status" class="profile-status"></div>
-
           </form>
         </div>
       </section>
@@ -333,7 +344,6 @@
     </aside>
 
   </div>
-
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
