@@ -7,13 +7,12 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>GamePlatform</title>
+<title>Game Platform</title>
 
 
 <link rel="stylesheet" href="style.css">
 
 
-<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 
@@ -23,14 +22,12 @@
 <body>
 
 
-
-<div class="layout">
-
+<div class="app">
 
 
-<!-- =====================
-     LEFT PANEL
-===================== -->
+<!-- =========================
+     ЛЕВАЯ ПАНЕЛЬ
+========================= -->
 
 <aside class="sidebar">
 
@@ -43,8 +40,19 @@ GAME PLATFORM
 
 
 
+<div class="menu">
+
+
 <button class="menu-btn"
-onclick="showBlock('auth')">
+onclick="openPage('home')">
+
+🏠 Главная
+
+</button>
+
+
+<button class="menu-btn"
+onclick="openPage('auth')">
 
 🔐 Вход
 
@@ -53,7 +61,7 @@ onclick="showBlock('auth')">
 
 
 <button class="menu-btn"
-onclick="showBlock('profile')">
+onclick="openPage('profile')">
 
 👤 Профиль
 
@@ -62,7 +70,7 @@ onclick="showBlock('profile')">
 
 
 <button class="menu-btn"
-onclick="showBlock('games')">
+onclick="openPage('games')">
 
 🎮 Игры
 
@@ -71,7 +79,7 @@ onclick="showBlock('games')">
 
 
 <button class="menu-btn"
-onclick="showBlock('guilds')">
+onclick="openPage('guilds')">
 
 ⚔ Гильдии
 
@@ -80,7 +88,7 @@ onclick="showBlock('guilds')">
 
 
 <button class="menu-btn"
-onclick="showBlock('chat')">
+onclick="openPage('chat')">
 
 💬 Чат
 
@@ -89,11 +97,23 @@ onclick="showBlock('chat')">
 
 
 <button class="menu-btn"
-onclick="showBlock('conference')">
+onclick="openPage('conference')">
 
 📢 Конференция
 
 </button>
+
+
+
+<button class="menu-btn"
+onclick="openPage('admin')">
+
+⚙ Админ
+
+</button>
+
+
+</div>
 
 
 
@@ -104,10 +124,9 @@ onclick="showBlock('conference')">
 
 
 
-
-<!-- =====================
-     MAIN
-===================== -->
+<!-- =========================
+     ОСНОВНОЙ ЭКРАН
+========================= -->
 
 
 <main class="content">
@@ -116,10 +135,63 @@ onclick="showBlock('conference')">
 
 
 
-<!-- AUTH -->
+<!-- =========================
+     ГЛАВНАЯ
+========================= -->
+
+
+<section id="home"
+class="page">
+
+
+<h1>
+Game Platform
+</h1>
+
+
+
+<div class="news-panel">
+
+
+<h2>
+Новости и важная информация
+</h2>
+
+
+
+<div id="newsContent">
+
+
+Добро пожаловать!
+
+
+<br><br>
+
+
+Здесь будут отображаться новости,
+объявления и важная информация.
+
+
+</div>
+
+
+
+</div>
+
+
+</section>
+
+
+
+
+
+<!-- =========================
+     АВТОРИЗАЦИЯ
+========================= -->
+
 
 <section id="auth"
-class="page">
+class="page hidden">
 
 
 <h1>
@@ -128,14 +200,19 @@ class="page">
 
 
 
-<input 
+<div class="card">
+
+
+<input
 id="nickname"
 placeholder="Никнейм">
+
 
 
 <input
 id="email"
 placeholder="Email">
+
 
 
 <input
@@ -145,15 +222,13 @@ placeholder="Пароль">
 
 
 
-<div class="buttons">
-
-
 <button
 id="registerBtn">
 
 Регистрация
 
 </button>
+
 
 
 <button
@@ -167,301 +242,5 @@ id="loginBtn">
 </div>
 
 
-</section>
-
-
-
-
-
-
-
-
-<!-- PROFILE -->
-
-
-<section id="profile"
-class="page hidden">
-
-
-<h1>
-Профиль
-</h1>
-
-
-
-<div id="profileBox">
-
-
-Войдите в аккаунт
-
-
-</div>
-
-
-
-<hr>
-
-
-
-<input
-id="avatar"
-placeholder="Ссылка на аватар">
-
-
-
-<input
-id="city"
-placeholder="Город">
-
-
-
-<input
-id="age"
-type="number"
-placeholder="Возраст">
-
-
-
-<button
-id="saveProfileBtn">
-
-Сохранить профиль
-
-</button>
-
-
 
 </section>
-
-
-
-
-
-
-
-
-
-<!-- GAMES -->
-
-
-<section id="games"
-class="page hidden">
-
-
-<h1>
-Игры
-</h1>
-
-
-<div class="card">
-
-Поиск игр
-
-<br><br>
-
-<button>
-
-Добавить игру
-
-</button>
-
-
-</div>
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<!-- GUILDS -->
-
-
-<section id="guilds"
-class="page hidden">
-
-
-<h1>
-Гильдии
-</h1>
-
-
-
-<div class="card">
-
-
-Создание и управление гильдиями
-
-
-</div>
-
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<!-- CHAT -->
-
-
-<section id="chat"
-class="page hidden">
-
-
-<h1>
-Общий чат
-</h1>
-
-
-
-<div id="chatMessages"
-class="messages">
-
-</div>
-
-
-
-
-<div class="chat-input">
-
-
-<input
-id="messageInput"
-placeholder="Сообщение">
-
-
-<button
-id="sendMessageBtn">
-
-Отправить
-
-</button>
-
-
-</div>
-
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<!-- CONFERENCE -->
-
-
-<section id="conference"
-class="page hidden">
-
-
-<h1>
-Конференция
-</h1>
-
-
-
-
-<div id="conferenceMessages"
-class="messages">
-
-</div>
-
-
-
-
-<div class="chat-input">
-
-
-<input
-id="conferenceInput"
-placeholder="Сообщение">
-
-
-<button
-id="sendConferenceBtn">
-
-Отправить
-
-</button>
-
-
-
-</div>
-
-
-
-</section>
-
-
-
-
-
-
-
-</main>
-
-
-</div>
-
-
-
-
-
-
-
-<script src="app.js"></script>
-
-
-
-<script>
-
-
-function showBlock(id){
-
-
-document
-.querySelectorAll(".page")
-.forEach(
-p=>p.classList.add("hidden")
-);
-
-
-
-let block =
-document.getElementById(id);
-
-
-
-if(block)
-block.classList.remove("hidden");
-
-
-
-}
-
-
-
-</script>
-
-
-
-
-</body>
-
-</html>
