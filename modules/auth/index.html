@@ -1,184 +1,89 @@
-<!DOCTYPE html>
-<html lang="ru">
-
-<head>
-
-<meta charset="UTF-8">
-
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0">
+<div class="auth-box">
 
 
-<title>
-GameHub Авторизация
-</title>
-
-
-<link
-rel="stylesheet"
-href="../core/core.css"
->
-
-
-<link
-rel="stylesheet"
-href="./auth.css"
->
-
-
-</head>
-
-
-<body>
-
-
-<div class="auth-page">
-
-
-<div class="auth-box gh-card">
-
-
-<div class="auth-title">
-
-<h1>
-GameHub
-</h1>
-
-<p>
-Игровая платформа
-</p>
-
-</div>
+<h2>
+🎮 Авторизация
+</h2>
 
 
 
-<div class="auth-tabs">
+<div class="tabs">
 
-
-<button
-id="show-login"
-class="gh-button"
->
+<button id="showLogin">
 Вход
 </button>
 
 
-
-<button
-id="show-register"
-class="gh-button secondary"
->
+<button id="showRegister">
 Регистрация
 </button>
-
 
 </div>
 
 
 
-
-
-<form
-id="login-form"
-class="auth-form"
->
+<div id="loginForm">
 
 
 <input
-id="login-email"
-class="gh-input"
+id="loginEmail"
 type="email"
 placeholder="Email"
-required
 >
 
 
 <input
-id="login-password"
-class="gh-input"
+id="loginPassword"
 type="password"
 placeholder="Пароль"
-required
 >
 
 
-<button
-class="gh-button"
->
+<button id="loginSubmit">
 Войти
 </button>
 
 
-</form>
+</div>
 
 
 
 
 
+<div id="registerForm"
+style="display:none">
 
-<form
-id="register-form"
-class="auth-form gh-hidden"
+
+<input
+id="regNickname"
+placeholder="Никнейм"
 >
 
 
 <input
-id="register-email"
-class="gh-input"
+id="regEmail"
 type="email"
 placeholder="Email"
-required
 >
 
 
 <input
-id="register-password"
-class="gh-input"
+id="regPassword"
 type="password"
 placeholder="Пароль"
-minlength="6"
-placeholder="Минимум 6 символов"
-required
 >
 
 
-<input
-id="register-nickname"
-class="gh-input"
-type="text"
-placeholder="Игровой ник"
-required
->
-
-
-
-<button
-class="gh-button"
->
+<button id="registerSubmit">
 Создать аккаунт
 </button>
 
 
-</form>
-
-
-
-
-<div
-id="auth-message"
-class="auth-message"
-></div>
-
-
-
-
-<div class="auth-footer">
-
-После регистрации будет создан профиль игрока.
-
 </div>
 
 
+
+<div id="authMessage">
 
 </div>
 
@@ -186,23 +91,6 @@ class="auth-message"
 </div>
 
 
+<link rel="stylesheet" href="modules/auth/auth.css">
 
-
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-
-<script src="../core/supabase.js"></script>
-
-<script src="../core/session.js"></script>
-
-<script src="../core/router.js"></script>
-
-
-<script src="./auth.js"></script>
-
-
-
-</body>
-
-</html>
+<script src="modules/auth/auth.js"></script>
