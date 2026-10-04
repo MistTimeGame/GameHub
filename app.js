@@ -1,7 +1,7 @@
 /* =====================================================
    GAME PLATFORM — app.js
    Auth + Profile + Chat + Conference (WebRTC)
-   VERSION: conference polling + broadcast signaling
+   VERSION: stable WebRTC (dummy video track + sendrecv)
 ===================================================== */
 
 const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -18,7 +18,6 @@ const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/4712/4712109.png"
 let currentUser = null;
 let chatChannel = null;
 
-// конференция
 let currentRoom = null;
 let localStream = null;
 let screenStream = null;
@@ -30,6 +29,7 @@ let nicknames = {};
 let signalChannel = null;
 let usersPollTimer = null;
 let roomsPollTimer = null;
+let dummyVideoTrack = null;
 
 /* =====================================================
    ХЕЛПЕРЫ
@@ -60,22 +60,51 @@ function setText(id, text){
     if(el) el.textContent = text;
 }
 
-/**
- * Устанавливает картинку с fallback при ошибке загрузки.
- * Если url пустой или не грузится — ставим DEFAULT_AVATAR.
- */
 function setImage(id, url){
     const el = $(id);
     if(!el) return;
-
     const clean = (url || "").trim();
+    el.onerror = () => { el.onerror = null; el.src = DEFAULT_AVATAR; };
+    el.src = clean || DEFAULT_AVATAR;
+}
 
-    el.onerror = () => {
-        el.onerror = null;
-        el.src = DEFAULT_AVATAR;
+/* =====================================================
+   DUMMY VIDEO TRACK
+   Всегда активный видео-трек-заглушка.
+   Гарантирует, что видео-трансивер прошит в SDP с самого начала,
+   поэтому replaceTrack(экран) работает без ре-негоциации.
+===================================================== */
+
+function getDummyVideoTrack(){
+    if(dummyVideoTrack && dummyVideoTrack.readyState === "live"){
+        return dummyVideoTrack;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 480;
+    canvas.height = 270;
+    const ctx = canvas.getContext("2d");
+
+    const draw = () => {
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#334155";
+        ctx.fillRect(0, 0, canvas.width, 3);
+        ctx.fillStyle = "#8ba1c2";
+        ctx.font = "bold 20px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("Нет трансляции", canvas.width / 2, canvas.height / 2);
     };
 
-    el.src = clean || DEFAULT_AVATAR;
+    draw();
+    const stream = canvas.captureStream(2);
+    dummyVideoTrack = stream.getVideoTracks()[0];
+
+    // Обновляем изредка, чтобы трек не «засыпал»
+    setInterval(draw, 2000);
+
+    return dummyVideoTrack;
 }
 
 /* =====================================================
@@ -89,19 +118,6 @@ document.addEventListener("DOMContentLoaded", () => {
     initChat();
     initConference();
     checkSession();
-
-    window.addEventListener("beforeunload", () => {
-        // Попытка удалить себя из комнаты при закрытии страницы
-        if(currentRoom && currentUser){
-            const url = SUPABASE_URL + "/rest/v1/conference_users" +
-                "?user_id=eq." + currentUser.id +
-                "&room_id=eq." + currentRoom.id;
-            try{
-                navigator.sendBeacon &&
-                navigator.sendBeacon(url);
-            }catch(e){}
-        }
-    });
 });
 
 /* =====================================================
@@ -109,7 +125,6 @@ document.addEventListener("DOMContentLoaded", () => {
 ===================================================== */
 
 function initAuth(){
-
     const loginTab = $("login-tab");
     const registerTab = $("register-tab");
 
@@ -193,8 +208,8 @@ function initAuth(){
                     vip_level: 0
                 });
                 if(ins.error) errLog("PROFILE CREATE ERROR", ins.error.message);
-            }catch(e){
-                errLog("PROFILE CREATE EXCEPTION", e);
+            }catch(err){
+                errLog("PROFILE CREATE EXCEPTION", err);
             }
 
             if(!result.data.session){
@@ -255,7 +270,6 @@ async function openApp(){
     startChatRealtime();
     await safeRun(loadRooms);
 
-    // периодическое обновление списка комнат
     if(roomsPollTimer) clearInterval(roomsPollTimer);
     roomsPollTimer = setInterval(() => {
         loadRooms().catch(e => errLog("ROOMS POLL", e));
@@ -300,10 +314,7 @@ function initNavigation(){
 ===================================================== */
 
 async function loadProfile(){
-    if(!currentUser){
-        log("NO USER — PROFILE SKIPPED");
-        return;
-    }
+    if(!currentUser){ log("NO USER — PROFILE SKIPPED"); return; }
 
     let result = await supabaseClient
         .from("profiles")
@@ -325,7 +336,6 @@ async function loadProfile(){
             avatar_url: DEFAULT_AVATAR,
             vip_level: 0
         });
-
         if(create.error){
             errLog("PROFILE INSERT ERROR", create.error.message);
             return;
@@ -334,11 +344,9 @@ async function loadProfile(){
     }
 
     const profile = result.data;
-
     setText("top-name", profile.nickname || "Player");
     setText("profile-name", profile.nickname || "Player");
     setText("side-name", profile.nickname || "Player");
-
     setText("vip-level", "VIP " + (profile.vip_level || 0));
     setText("side-vip", "VIP " + (profile.vip_level || 0));
 
@@ -384,7 +392,6 @@ if(saveProfile){
             return;
         }
 
-        // Обновляем UI сразу из ответа
         const p = update.data;
         setText("top-name", p.nickname || "Player");
         setText("profile-name", p.nickname || "Player");
@@ -453,10 +460,7 @@ function initChat(){
 }
 
 async function sendMessage(){
-    if(!currentUser){
-        alert("Нет авторизации");
-        return;
-    }
+    if(!currentUser){ alert("Нет авторизации"); return; }
 
     const input = $("message-text");
     if(!input) return;
@@ -474,11 +478,7 @@ async function sendMessage(){
 
     const result = await supabaseClient
         .from("messages")
-        .insert({
-            user_id: currentUser.id,
-            nickname,
-            text
-        });
+        .insert({ user_id: currentUser.id, nickname, text });
 
     if(result.error){
         errLog("MESSAGE INSERT ERROR", result.error.message);
@@ -515,7 +515,6 @@ function appendMessage(m){
     if(!box) return;
 
     const isOwn = currentUser && m.user_id === currentUser.id;
-
     const div = document.createElement("div");
     div.className = "chat-message" + (isOwn ? " own" : "");
 
@@ -534,14 +533,11 @@ function appendMessage(m){
 
 function startChatRealtime(){
     if(chatChannel) return;
-
     chatChannel = supabaseClient
         .channel("public-messages")
-        .on(
-            "postgres_changes",
+        .on("postgres_changes",
             { event: "INSERT", schema: "public", table: "messages" },
-            (payload) => appendMessage(payload.new)
-        )
+            (payload) => appendMessage(payload.new))
         .subscribe((status) => log("CHAT REALTIME:", status));
 }
 
@@ -563,20 +559,12 @@ function initConference(){
     if(createForm) createForm.onsubmit = createRoom;
 }
 
-/* =====================================================
-   СОЗДАНИЕ КОМНАТЫ
-===================================================== */
-
 async function createRoom(e){
     e.preventDefault();
-    if(!currentUser){
-        alert("Нет авторизации");
-        return;
-    }
+    if(!currentUser){ alert("Нет авторизации"); return; }
 
     const name = $("room-name-input").value.trim();
     const description = $("room-desc-input").value.trim();
-
     if(!name) return;
 
     const result = await supabaseClient
@@ -599,7 +587,7 @@ async function createRoom(e){
 }
 
 /* =====================================================
-   СПИСОК КОМНАТ — только где есть люди
+   СПИСОК КОМНАТ (только где есть люди)
 ===================================================== */
 
 async function loadRooms(){
@@ -619,7 +607,6 @@ async function loadRooms(){
 
     const rooms = roomsRes.data || [];
 
-    // Все пользователи во всех комнатах одним запросом
     const usersRes = await supabaseClient
         .from("conference_users")
         .select("room_id");
@@ -645,7 +632,6 @@ async function loadRooms(){
             "<p>" + escapeHtml(room.description || "") + "</p>" +
             "<p>👥 " + (counts[room.id] || 0) + " участников</p>" +
             "<button class='main-button' type='button'>Войти</button>";
-
         card.querySelector("button").onclick = () => joinRoom(room);
         box.appendChild(card);
     });
@@ -656,16 +642,9 @@ async function loadRooms(){
 ===================================================== */
 
 async function joinRoom(room){
-    if(!currentUser){
-        alert("Нет авторизации");
-        return;
-    }
+    if(!currentUser){ alert("Нет авторизации"); return; }
+    if(currentRoom){ await leaveRoom(); }
 
-    if(currentRoom){
-        await leaveRoom();
-    }
-
-    // Ник
     const profile = await supabaseClient
         .from("profiles")
         .select("nickname")
@@ -675,20 +654,14 @@ async function joinRoom(room){
     const nickname = (profile.data && profile.data.nickname) || "Player";
     nicknames[currentUser.id] = nickname;
 
-    // Удаляем прежние записи (если где-то висели)
     await supabaseClient
         .from("conference_users")
         .delete()
         .eq("user_id", currentUser.id);
 
-    // Вставляем новую запись
     const insert = await supabaseClient
         .from("conference_users")
-        .insert({
-            room_id: room.id,
-            user_id: currentUser.id,
-            nickname
-        });
+        .insert({ room_id: room.id, user_id: currentUser.id, nickname });
 
     if(insert.error){
         errLog("JOIN ROOM ERROR", insert.error.message);
@@ -699,16 +672,10 @@ async function joinRoom(room){
     currentRoom = room;
     setText("current-room-title", "🎙 " + (room.name || "Комната"));
 
-    // Микрофон
     await startLocalAudio();
 
-    // Канал сигналинга (broadcast)
     subscribeSignaling(room.id);
-
-    // Опроса пользователей комнаты
     startUsersPolling(room.id);
-
-    // Первичная синхронизация
     await pollRoomUsers(room.id);
 
     updateMicButton();
@@ -725,22 +692,19 @@ async function joinRoom(room){
 async function startLocalAudio(){
     try{
         localStream = await navigator.mediaDevices.getUserMedia({
-            audio: true,
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
             video: false
         });
         microphoneEnabled = true;
         log("MIC START");
     }catch(e){
         errLog("MIC ERROR", e);
-        alert("Нет доступа к микрофону: " + e.message);
+        // не блокируем — можно без микрофона
     }
 }
 
 function toggleMicrophone(){
-    if(!localStream){
-        alert("Микрофон не подключён");
-        return;
-    }
+    if(!localStream){ alert("Микрофон не подключён"); return; }
 
     const audio = localStream.getAudioTracks()[0];
     if(!audio) return;
@@ -753,9 +717,7 @@ function toggleMicrophone(){
 function updateMicButton(){
     const btn = $("mic-button");
     if(!btn) return;
-    btn.textContent = microphoneEnabled
-        ? "🎤 Микрофон: вкл"
-        : "🔇 Микрофон: выкл";
+    btn.textContent = microphoneEnabled ? "🎤 Микрофон: вкл" : "🔇 Микрофон: выкл";
 }
 
 /* =====================================================
@@ -763,10 +725,7 @@ function updateMicButton(){
 ===================================================== */
 
 async function toggleScreenShare(){
-    if(!currentRoom){
-        alert("Сначала войдите в комнату");
-        return;
-    }
+    if(!currentRoom){ alert("Сначала войдите в комнату"); return; }
 
     if(screenStream){
         stopScreenShare();
@@ -775,13 +734,14 @@ async function toggleScreenShare(){
 
     try{
         screenStream = await navigator.mediaDevices.getDisplayMedia({
-            video: true,
+            video: { frameRate: { ideal: 30, max: 30 } },
             audio: false
         });
 
         const track = screenStream.getVideoTracks()[0];
         showLocalScreenPreview(track);
 
+        // Заменяем dummy на экран у всех peer'ов
         Object.keys(videoSenders).forEach(peerId => {
             videoSenders[peerId].replaceTrack(track)
                 .catch(e => errLog("replaceTrack screen", e));
@@ -797,14 +757,17 @@ async function toggleScreenShare(){
 }
 
 function stopScreenShare(){
+    // Убираем видео-превью
     if(screenStream){
         screenStream.getTracks().forEach(t => t.stop());
         screenStream = null;
     }
 
+    // Возвращаем dummy-трек
+    const dummy = getDummyVideoTrack();
     Object.keys(videoSenders).forEach(peerId => {
-        videoSenders[peerId].replaceTrack(null)
-            .catch(e => errLog("replaceTrack null", e));
+        videoSenders[peerId].replaceTrack(dummy)
+            .catch(e => errLog("replaceTrack dummy", e));
     });
 
     const localPreview = $("vtile-local");
@@ -855,7 +818,7 @@ function showLocalScreenPreview(track){
 }
 
 /* =====================================================
-   СИГНАЛИНГ (Broadcast)
+   СИГНАЛИНГ
 ===================================================== */
 
 function subscribeSignaling(roomId){
@@ -864,7 +827,9 @@ function subscribeSignaling(roomId){
         signalChannel = null;
     }
 
-    signalChannel = supabaseClient.channel("room-signals-" + roomId);
+    signalChannel = supabaseClient.channel("room-signals-" + roomId, {
+        config: { broadcast: { self: false } }
+    });
 
     signalChannel.on("broadcast", { event: "signal" }, async ({ payload }) => {
         if(!payload || payload.to !== currentUser.id) return;
@@ -874,6 +839,10 @@ function subscribeSignaling(roomId){
 
     signalChannel.subscribe((status) => {
         log("SIGNAL CHANNEL:", status);
+        // Первый peer-poll после установки соединения
+        if(status === "SUBSCRIBED" && currentRoom){
+            pollRoomUsers(currentRoom.id).catch(e => errLog("INIT POLL", e));
+        }
     });
 }
 
@@ -882,12 +851,7 @@ function sendSignal(toUserId, type, data){
     signalChannel.send({
         type: "broadcast",
         event: "signal",
-        payload: {
-            from: currentUser.id,
-            to: toUserId,
-            type,
-            data
-        }
+        payload: { from: currentUser.id, to: toUserId, type, data }
     }).catch(e => errLog("SEND SIGNAL ERROR", e));
 }
 
@@ -900,14 +864,21 @@ async function handleSignal(payload){
 
     if(type === "offer"){
         if(!pc) pc = createPeer(fromId, false);
-        await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+
+        // Если уже в stable — принять оффер заново (ре-негоциация)
+        if(pc.signalingState === "stable" || pc.signalingState === "have-local-offer"){
+            await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+        } else {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+        }
         await drainCandidates(fromId, pc);
+
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         sendSignal(fromId, "answer", { sdp: pc.localDescription });
     }
     else if(type === "answer"){
-        if(pc && pc.signalingState !== "stable"){
+        if(pc && pc.signalingState === "have-local-offer"){
             await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
             await drainCandidates(fromId, pc);
         }
@@ -943,26 +914,48 @@ function createPeer(peerId, initiator){
     const pc = new RTCPeerConnection({
         iceServers: [
             { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:stun1.l.google.com:19302" }
-        ]
+            { urls: "stun:stun1.l.google.com:19302" },
+            { urls: "stun:stun2.l.google.com:19302" },
+            { urls: "stun:stun3.l.google.com:19302" }
+        ],
+        iceCandidatePoolSize: 10
     });
 
     peers[peerId] = pc;
 
-    // Аудио (микрофон)
+    // ---- AUDIO ----
+    let hasAudio = false;
     if(localStream){
-        localStream.getAudioTracks().forEach(track => {
-            pc.addTrack(track, localStream);
+        const tracks = localStream.getAudioTracks();
+        tracks.forEach(track => {
+            try{
+                pc.addTransceiver(track, {
+                    direction: "sendrecv",
+                    streams: [localStream]
+                });
+                hasAudio = true;
+            }catch(e){ errLog("addTransceiver audio", e); }
         });
     }
+    if(!hasAudio){
+        // Нет микрофона — всё равно хотим слышать собеседника
+        try{ pc.addTransceiver("audio", { direction: "recvonly" }); }
+        catch(e){ errLog("addTransceiver audio recvonly", e); }
+    }
 
-    // Видео-трансивер под демонстрацию экрана
-    const vt = pc.addTransceiver("video", { direction: "sendrecv" });
-    videoSenders[peerId] = vt.sender;
+    // ---- VIDEO (всегда есть) ----
+    const videoTrack = screenStream
+        ? screenStream.getVideoTracks()[0]
+        : getDummyVideoTrack();
 
-    if(screenStream){
-        const st = screenStream.getVideoTracks()[0];
-        if(st) vt.sender.replaceTrack(st).catch(e => errLog("replaceTrack initial", e));
+    try{
+        const vt = pc.addTransceiver(videoTrack, {
+            direction: "sendrecv",
+            streams: [new MediaStream([videoTrack])]
+        });
+        videoSenders[peerId] = vt.sender;
+    }catch(e){
+        errLog("addTransceiver video", e);
     }
 
     pc.onicecandidate = (e) => {
@@ -978,9 +971,16 @@ function createPeer(peerId, initiator){
 
     pc.onconnectionstatechange = () => {
         log("PEER", peerId, pc.connectionState);
-        if(pc.connectionState === "failed" || pc.connectionState === "closed"){
+        if(pc.connectionState === "failed"){
+            try{ pc.restartIce(); }catch(e){}
+        }
+        if(pc.connectionState === "closed"){
             closePeer(peerId);
         }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+        log("ICE", peerId, pc.iceConnectionState);
     };
 
     if(initiator){
@@ -1020,7 +1020,6 @@ function resetVideoPlaceholder(){
     const area = $("video-area");
     const ph = $("video-placeholder");
     if(!area || !ph) return;
-
     const hasTiles = area.querySelector(".video-tile");
     ph.style.display = hasTiles ? "none" : "block";
 }
@@ -1037,10 +1036,11 @@ function handleRemoteTrack(peerId, track){
             audio.id = "audio-" + peerId;
             audio.autoplay = true;
             audio.playsInline = true;
+            audio.style.cssText = "position:absolute;width:0;height:0;opacity:0;";
             $("remote-audio").appendChild(audio);
         }
         audio.srcObject = new MediaStream([track]);
-        audio.play().catch(() => {});
+        tryPlayAudio(audio);
     }
     else if(track.kind === "video"){
         const area = $("video-area");
@@ -1051,15 +1051,16 @@ function handleRemoteTrack(peerId, track){
             tile = document.createElement("div");
             tile.id = "vtile-" + peerId;
             tile.className = "video-tile";
-            tile.style.display = "none";
 
             const v = document.createElement("video");
             v.id = "v-" + peerId;
             v.autoplay = true;
             v.playsInline = true;
+            v.muted = true;
 
             const lbl = document.createElement("div");
             lbl.className = "video-label";
+            lbl.id = "vl-" + peerId;
             lbl.textContent = "🖥 " + (nicknames[peerId] || "Участник");
 
             tile.appendChild(v);
@@ -1071,25 +1072,34 @@ function handleRemoteTrack(peerId, track){
         video.srcObject = new MediaStream([track]);
         video.play().catch(() => {});
 
-        const refresh = () => {
-            const active = !track.muted && track.readyState === "live";
-            tile.style.display = active ? "block" : "none";
-            resetVideoPlaceholder();
-        };
+        // Обновляем подпись
+        const lbl = $("vl-" + peerId);
+        if(lbl) lbl.textContent = "🖥 " + (nicknames[peerId] || "Участник");
 
-        track.onunmute = refresh;
-        track.onmute = refresh;
-        track.onended = () => {
-            tile.remove();
-            resetVideoPlaceholder();
-        };
+        resetVideoPlaceholder();
+    }
+}
 
-        refresh();
+function tryPlayAudio(audio){
+    const p = audio.play();
+    if(p && p.catch){
+        p.catch(err => {
+            errLog("AUDIO PLAY FAIL:", err.message);
+            const retry = () => {
+                audio.play().catch(e => errLog("AUDIO RETRY FAIL", e.message));
+                document.removeEventListener("click", retry);
+                document.removeEventListener("keydown", retry);
+                document.removeEventListener("touchstart", retry);
+            };
+            document.addEventListener("click", retry, { once: true });
+            document.addEventListener("keydown", retry, { once: true });
+            document.addEventListener("touchstart", retry, { once: true });
+        });
     }
 }
 
 /* =====================================================
-   ОПРОС УЧАСТНИКОВ КОМНАТЫ (polling)
+   ОПРОС УЧАСТНИКОВ (polling)
 ===================================================== */
 
 function startUsersPolling(roomId){
@@ -1115,15 +1125,31 @@ async function pollRoomUsers(roomId){
 
     users.forEach(u => { nicknames[u.user_id] = u.nickname; });
 
-    // Новые пользователи → создаём peer
+    // Обновляем подписи на существующих тайлах
+    Object.keys(peers).forEach(peerId => {
+        const lbl = $("vl-" + peerId);
+        if(lbl && nicknames[peerId]){
+            lbl.textContent = "🖥 " + nicknames[peerId];
+        }
+    });
+
+    // Создаём peer'ы для новых участников
     for(const u of users){
         if(u.user_id === currentUser.id) continue;
-        if(peers[u.user_id]) continue;
+
+        const existing = peers[u.user_id];
+        if(existing && existing.connectionState !== "closed" && existing.connectionState !== "failed"){
+            continue;
+        }
+        if(existing && (existing.connectionState === "failed" || existing.connectionState === "closed")){
+            closePeer(u.user_id);
+        }
+
+        // Инициатор — тот, у кого ID меньше
         if(currentUser.id < u.user_id){
-            log("INITIATING PEER", u.user_id);
+            log("INITIATE PEER →", u.user_id);
             createPeer(u.user_id, true);
         }
-        // иначе — ждём их offer
     }
 
     // Ушедшие — закрываем
@@ -1164,7 +1190,6 @@ function updateParticipants(users){
 
 async function leaveRoom(){
     if(!currentRoom) return;
-
     const roomId = currentRoom.id;
 
     try{
@@ -1173,14 +1198,10 @@ async function leaveRoom(){
             .delete()
             .eq("user_id", currentUser.id)
             .eq("room_id", roomId);
-    }catch(e){
-        errLog("LEAVE ROOM DB ERROR", e);
-    }
+    }catch(e){ errLog("LEAVE ROOM DB ERROR", e); }
 
-    // Закрыть peer connections
     Object.keys(peers).forEach(id => closePeer(id));
 
-    // Остановить медиа
     if(localStream){
         localStream.getTracks().forEach(t => t.stop());
         localStream = null;
@@ -1189,20 +1210,17 @@ async function leaveRoom(){
         screenStream.getTracks().forEach(t => t.stop());
         screenStream = null;
     }
-
     microphoneEnabled = false;
 
     if(signalChannel){
         try{ supabaseClient.removeChannel(signalChannel); }catch(e){}
         signalChannel = null;
     }
-
     if(usersPollTimer){
         clearInterval(usersPollTimer);
         usersPollTimer = null;
     }
 
-    // Очистить UI
     const area = $("video-area");
     if(area){
         area.querySelectorAll(".video-tile").forEach(t => t.remove());
@@ -1217,7 +1235,6 @@ async function leaveRoom(){
     updateMicButton();
 
     currentRoom = null;
-
     await loadRooms();
     log("LEFT ROOM");
 }
