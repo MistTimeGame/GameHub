@@ -75,7 +75,6 @@
 
     <main class="content">
 
-      <!-- ГЛАВНАЯ -->
       <section id="home" class="page active">
         <h1>Главная</h1>
         <div class="dash-stats">
@@ -112,7 +111,6 @@
         </div>
       </section>
 
-      <!-- ИГРЫ -->
       <section id="games" class="page">
         <div class="view-head">
           <h1>🎮 Игры</h1>
@@ -160,39 +158,43 @@
         </div>
       </section>
 
-      <!-- ГИЛЬДИИ -->
       <section id="guilds" class="page">
         <div class="view-head">
           <h1>⚔ Гильдии</h1>
+          <button id="guild-create-toggle" class="main-button" type="button">+ Создать гильдию</button>
+        </div>
+
+        <div id="guild-create-panel" class="add-game-panel hidden">
+          <h2>Новая гильдия</h2>
+          <form id="guild-create-form" onsubmit="return false">
+            <label class="profile-field">
+              <span>Игра</span>
+              <select id="guild-game-select" required>
+                <option value="">— Выберите игру —</option>
+              </select>
+            </label>
+            <label class="profile-field">
+              <span>Название гильдии</span>
+              <input id="guild-name-input" placeholder="Название" maxlength="40" required>
+            </label>
+            <label class="profile-field">
+              <span>Описание</span>
+              <textarea id="guild-desc-input" rows="2" maxlength="200" placeholder="Кратко о гильдии"></textarea>
+            </label>
+            <div class="profile-actions">
+              <button id="guild-create-btn" class="main-button" type="button">Создать</button>
+              <button id="guild-create-cancel" class="main-button secondary" type="button">Отмена</button>
+            </div>
+          </form>
         </div>
 
         <div class="guilds-game-filter" id="guilds-game-filter"></div>
 
-        <div class="guilds-layout">
-          <div class="guilds-panel">
-            <h2>Создать гильдию</h2>
-            <form id="guild-create-form" class="create-room-form" onsubmit="return false">
-              <select id="guild-game-select" class="guild-select" required>
-                <option value="">— Выберите игру —</option>
-              </select>
-              <input id="guild-name-input" placeholder="Название гильдии" maxlength="40" required>
-              <input id="guild-desc-input" placeholder="Описание (необязательно)" maxlength="120">
-              <button id="guild-create-btn" class="main-button" type="button">Создать</button>
-            </form>
-            <h2>Список гильдий</h2>
-            <div id="guilds-list">Загрузка…</div>
-          </div>
-
-          <div class="guild-detail" id="guild-detail">
-            <div class="guild-detail-empty">
-              <div class="guild-detail-icon">⚔</div>
-              <p>Выберите гильдию из списка</p>
-            </div>
-          </div>
+        <div id="guilds-list" class="guilds-grid">
+          <div class="dash-recent-empty">Загрузка…</div>
         </div>
       </section>
 
-      <!-- НОВОСТИ -->
       <section id="news" class="page">
         <h1>📰 Новости</h1>
         <div class="news-panel">
@@ -200,7 +202,6 @@
         </div>
       </section>
 
-      <!-- ОНЛАЙН -->
       <section id="online" class="page">
         <div class="view-head">
           <h1>🟢 Онлайн</h1>
@@ -211,7 +212,6 @@
         </div>
       </section>
 
-      <!-- ЧАТ -->
       <section id="chat" class="page">
         <h1>💬 Общий чат</h1>
         <div class="chat-box">
@@ -223,7 +223,6 @@
         </div>
       </section>
 
-      <!-- КОНФЕРЕНЦИИ -->
       <section id="conference" class="page">
         <h1>🎙 Видеоконференции</h1>
         <div class="conference-layout">
@@ -252,7 +251,6 @@
         </div>
       </section>
 
-      <!-- ПРОФИЛЬ -->
       <section id="profile" class="page">
         <h1>👤 Профиль</h1>
         <div class="profile-card">
@@ -261,6 +259,7 @@
           </div>
           <h2 id="profile-name">Player</h2>
           <div id="vip-level">VIP 0</div>
+          <div id="admin-badge" class="admin-badge hidden">👑 Администратор</div>
           <div class="profile-id">
             <span>ID профиля</span>
             <code id="profile-id">—</code>
@@ -270,12 +269,12 @@
             <label class="profile-field" id="field-nickname">
               <span>Никнейм</span>
               <input id="pf-nickname" placeholder="Player" maxlength="30" required>
-              <small class="field-hint">От 2 до 30 символов. Должен быть уникальным.</small>
+              <small class="field-hint">От 2 до 30 символов.</small>
             </label>
             <label class="profile-field" id="field-avatar">
               <span>Ссылка на аватар</span>
               <input id="pf-avatar" placeholder="https://i.imgur.com/xxxxx.jpg" type="url">
-              <small class="field-hint" id="pf-avatar-hint">Прямая ссылка на картинку (jpg, png, webp, gif).</small>
+              <small class="field-hint" id="pf-avatar-hint">Прямая ссылка на картинку.</small>
             </label>
             <div class="profile-field-row" id="field-row-city-age">
               <label class="profile-field" id="field-city">
@@ -317,6 +316,32 @@
     </aside>
 
   </div>
+</div>
+
+<!-- ============================================================
+     ГИЛЬДИЯ — ПОЛНОЭКРАННЫЙ OVERLAY
+============================================================ -->
+<div id="guild-overlay" class="guild-overlay hidden">
+  <div class="guild-overlay-header">
+    <button id="guild-overlay-back" class="guild-overlay-back" type="button">← Назад</button>
+    <div class="guild-overlay-header-title" id="guild-overlay-header-title">Гильдия</div>
+    <div class="guild-overlay-header-actions" id="guild-overlay-header-actions"></div>
+  </div>
+  <div class="guild-overlay-body" id="guild-overlay-body"></div>
+</div>
+
+<!-- ============================================================
+     ПРОСМОТР ФАЙЛА (вложенный overlay)
+============================================================ -->
+<div id="file-viewer" class="file-viewer hidden">
+  <div class="file-viewer-header">
+    <div class="file-viewer-title" id="file-viewer-title">Файл</div>
+    <div class="file-viewer-actions">
+      <button id="file-viewer-download" class="main-button" type="button">⬇ Скачать</button>
+      <button id="file-viewer-close" class="main-button danger" type="button">Закрыть</button>
+    </div>
+  </div>
+  <div class="file-viewer-body" id="file-viewer-body"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
