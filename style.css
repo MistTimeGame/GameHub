@@ -569,6 +569,9 @@ input:focus, textarea:focus{
     color:#98a2b5;
     line-height:1.4;
 }
+.field-hint.ok{ color:#1e8f4a; font-weight:600; }
+.field-hint.err{ color:#c33; font-weight:600; }
+.field-hint.loading{ color:#7a849a; }
 
 .profile-field-row{
     display:grid;
