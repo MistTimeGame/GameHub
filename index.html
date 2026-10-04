@@ -78,7 +78,6 @@
       <!-- ГЛАВНАЯ -->
       <section id="home" class="page active">
         <h1>Главная</h1>
-
         <div class="dash-stats">
           <div class="dash-stat">
             <div class="dash-stat-icon">🟢</div>
@@ -101,13 +100,11 @@
             <div class="dash-stat-label">Гильдий</div>
           </div>
         </div>
-
         <div class="dash-grid">
           <div class="news-panel">
             <h2>Последние новости</h2>
             <div id="news-list">Загрузка новостей…</div>
           </div>
-
           <div class="dash-recent">
             <h2>Последние сообщения</h2>
             <div id="home-recent-messages" class="dash-recent-list">Загрузка…</div>
@@ -129,25 +126,19 @@
               <span>Название игры</span>
               <input id="game-name-input" placeholder="Counter-Strike 2" maxlength="60" required>
             </label>
-
             <label class="profile-field">
               <span>Ссылка на официальный сайт</span>
               <input id="game-url-input" type="url" placeholder="https://www.counter-strike.net" required>
-              <small class="field-hint" id="game-url-hint">
-                Иконка автоматически подтянется с сайта
-              </small>
+              <small class="field-hint" id="game-url-hint">Иконка автоматически подтянется с сайта</small>
             </label>
-
             <label class="profile-field">
               <span>Описание</span>
               <textarea id="game-desc-input" rows="2" maxlength="200" placeholder="Краткое описание"></textarea>
             </label>
-
             <label class="profile-field">
               <span>Своя иконка (необязательно)</span>
               <input id="game-icon-input" type="url" placeholder="Оставьте пустым — подтянем с сайта">
             </label>
-
             <div class="game-icon-preview">
               <div class="game-icon-preview-img-wrap" id="game-icon-preview-wrap">
                 <span id="game-icon-preview-fallback">🎮</span>
@@ -156,7 +147,6 @@
                 Превью иконки появится здесь
               </span>
             </div>
-
             <div class="profile-actions">
               <button id="save-game-btn" class="main-button" type="button">Добавить игру</button>
               <button id="cancel-game-btn" class="main-button secondary" type="button">Отмена</button>
@@ -189,7 +179,6 @@
               <input id="guild-desc-input" placeholder="Описание (необязательно)" maxlength="120">
               <button id="guild-create-btn" class="main-button" type="button">Создать</button>
             </form>
-
             <h2>Список гильдий</h2>
             <div id="guilds-list">Загрузка…</div>
           </div>
@@ -237,7 +226,6 @@
       <!-- КОНФЕРЕНЦИИ -->
       <section id="conference" class="page">
         <h1>🎙 Видеоконференции</h1>
-
         <div class="conference-layout">
           <div class="rooms-panel">
             <h2>Комнаты</h2>
@@ -248,18 +236,15 @@
             </form>
             <div id="rooms-list">Загрузка комнат…</div>
           </div>
-
           <div class="video-panel">
             <h2 id="current-room-title">Комната не выбрана</h2>
             <div id="room-status" class="room-status"></div>
-
             <div id="mirotalk-container" class="mirotalk-container">
               <div class="mirotalk-placeholder" id="mirotalk-placeholder">
                 <div class="mirotalk-placeholder-icon">🎥</div>
                 <p>Выберите комнату из списка слева, чтобы начать конференцию</p>
               </div>
             </div>
-
             <div class="room-controls">
               <button id="leave-room" class="main-button" type="button">Покинуть комнату</button>
             </div>
@@ -271,36 +256,27 @@
       <section id="profile" class="page">
         <h1>👤 Профиль</h1>
         <div class="profile-card">
-
           <div class="profile-avatar-wrap">
             <img id="profile-avatar" referrerpolicy="no-referrer" src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png" alt="">
           </div>
-
           <h2 id="profile-name">Player</h2>
           <div id="vip-level">VIP 0</div>
-
           <div class="profile-id">
             <span>ID профиля</span>
             <code id="profile-id">—</code>
           </div>
-
           <div id="schema-warning" class="schema-warning hidden"></div>
-
           <form class="profile-form" id="profile-form" onsubmit="return false">
             <label class="profile-field" id="field-nickname">
               <span>Никнейм</span>
               <input id="pf-nickname" placeholder="Player" maxlength="30" required>
               <small class="field-hint">От 2 до 30 символов. Должен быть уникальным.</small>
             </label>
-
             <label class="profile-field" id="field-avatar">
               <span>Ссылка на аватар</span>
               <input id="pf-avatar" placeholder="https://i.imgur.com/xxxxx.jpg" type="url">
-              <small class="field-hint" id="pf-avatar-hint">
-                Прямая ссылка на картинку (jpg, png, webp, gif).
-              </small>
+              <small class="field-hint" id="pf-avatar-hint">Прямая ссылка на картинку (jpg, png, webp, gif).</small>
             </label>
-
             <div class="profile-field-row" id="field-row-city-age">
               <label class="profile-field" id="field-city">
                 <span>Город</span>
@@ -311,18 +287,15 @@
                 <input id="pf-age" type="number" min="1" max="120" placeholder="18">
               </label>
             </div>
-
             <label class="profile-field" id="field-about">
               <span>О себе</span>
               <textarea id="pf-about" rows="4" maxlength="300" placeholder="Расскажите о себе…"></textarea>
               <small class="field-hint"><span id="pf-about-count">0</span> / 300</small>
             </label>
-
             <div class="profile-actions">
               <button id="save-profile" class="main-button" type="button">Сохранить</button>
               <button id="reset-profile" class="main-button secondary" type="button">Сбросить</button>
             </div>
-
             <div id="profile-status" class="profile-status"></div>
           </form>
         </div>
