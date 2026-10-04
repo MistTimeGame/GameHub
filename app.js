@@ -1,9 +1,9 @@
-// =====================================
+// ==========================================
 // GAME PLATFORM APP
-// =====================================
+// AUTH + CHAT + CONFERENCE ROOMS
+// ==========================================
 
 
-// SUPABASE
 
 const SUPABASE_URL =
 "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -14,7 +14,7 @@ const SUPABASE_KEY =
 
 
 
-const client =
+const db =
 supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY
@@ -23,40 +23,169 @@ supabase.createClient(
 
 
 
+let currentUser = null;
 
-let user = null;
-
-
-
-
-
-
-
-// =====================================
-// DOM
-// =====================================
-
-
-const authScreen =
-document.getElementById("auth-screen");
-
-
-const app =
-document.getElementById("app");
+let currentRoom = null;
 
 
 
 
 
 
-// =====================================
-// AUTH TABS
-// =====================================
+
+// ==========================================
+// START
+// ==========================================
+
+
+document.addEventListener(
+"DOMContentLoaded",
+()=>{
+
+
+checkSession();
+
+
+setupAuth();
+
+
+setupNavigation();
+
+
+setupChat();
+
+
+setupConference();
+
+
+}
+);
+
+
+
+
+
+
+
+
+
+// ==========================================
+// SESSION
+// ==========================================
+
+
+async function checkSession(){
+
+
+const {
+
+data
+
+}=
+
+await db.auth.getSession();
+
+
+
+if(data.session){
+
+
+currentUser =
+data.session.user;
+
+
+openApp();
+
+
+}
+
+
+
+}
+
+
+
+
+
+
+
+
+
+// ==========================================
+// OPEN APP
+// ==========================================
+
+
+function openApp(){
 
 
 document
-.getElementById("show-login")
-.onclick=function(){
+.getElementById("auth-screen")
+.classList.add("hidden");
+
+
+
+document
+.getElementById("app")
+.classList.remove("hidden");
+
+
+
+loadProfile();
+
+loadNews();
+
+loadMessages();
+
+loadRooms();
+
+
+startChatRealtime();
+
+startConferenceRealtime();
+
+
+
+}
+
+
+
+
+
+
+
+
+
+// ==========================================
+// AUTH
+// ==========================================
+
+
+function setupAuth(){
+
+
+
+const loginTab =
+document.getElementById(
+"login-tab"
+);
+
+
+const registerTab =
+document.getElementById(
+"register-tab"
+);
+
+
+
+
+loginTab.onclick=()=>{
+
+
+loginTab.classList.add("active");
+
+registerTab.classList.remove("active");
+
 
 
 document
@@ -64,17 +193,102 @@ document
 .classList.remove("hidden");
 
 
+
 document
 .getElementById("register-form")
 .classList.add("hidden");
 
+};
 
-this.classList.add("active");
+
+
+
+
+
+
+registerTab.onclick=()=>{
+
+
+registerTab.classList.add("active");
+
+
+loginTab.classList.remove("active");
+
 
 
 document
-.getElementById("show-register")
-.classList.remove("active");
+.getElementById("register-form")
+.classList.remove("hidden");
+
+
+
+document
+.getElementById("login-form")
+.classList.add("hidden");
+
+};
+
+
+
+
+
+
+// LOGIN
+
+
+document
+.getElementById("login-form")
+.onsubmit=async e=>{
+
+
+e.preventDefault();
+
+
+
+let email =
+document
+.getElementById("login-email")
+.value;
+
+
+
+let password =
+document
+.getElementById("login-password")
+.value;
+
+
+
+
+let result =
+await db.auth
+.signInWithPassword({
+
+email,
+password
+
+});
+
+
+
+
+if(result.error){
+
+
+alert(result.error.message);
+
+return;
+
+}
+
+
+
+currentUser =
+result.data.user;
+
+
+openApp();
+
 
 
 };
@@ -85,47 +299,13 @@ document
 
 
 
-document
-.getElementById("show-register")
-.onclick=function(){
 
-
-document
-.getElementById("register-form")
-.classList.remove("hidden");
-
-
-document
-.getElementById("login-form")
-.classList.add("hidden");
-
-
-this.classList.add("active");
-
-
-document
-.getElementById("show-login")
-.classList.remove("active");
-
-
-};
-
-
-
-
-
-
-
-
-
-// =====================================
 // REGISTER
-// =====================================
 
 
 document
 .getElementById("register-form")
-.onsubmit=async(e)=>{
+.onsubmit=async e=>{
 
 
 e.preventDefault();
@@ -155,14 +335,8 @@ document
 
 
 
-const {
-
-data,
-error
-
-}=
-
-await client.auth.signUp({
+let result =
+await db.auth.signUp({
 
 email,
 password
@@ -173,9 +347,10 @@ password
 
 
 
-if(error){
+if(result.error){
 
-alert(error.message);
+
+alert(result.error.message);
 
 return;
 
@@ -183,22 +358,17 @@ return;
 
 
 
-
-const uid =
-data.user.id;
-
+let uid =
+result.data.user.id;
 
 
 
 
-const {
-
-error:profileError
-
-}=
 
 
-await client
+
+let profile =
+await db
 .from("profiles")
 .insert({
 
@@ -209,11 +379,7 @@ nickname:nickname,
 avatar_url:
 "https://cdn-icons-png.flaticon.com/512/4712/4712109.png",
 
-vip_level:0,
-
-city:"",
-
-age:null
+vip_level:0
 
 
 });
@@ -223,14 +389,14 @@ age:null
 
 
 
-if(profileError){
+if(profile.error){
 
-alert(profileError.message);
+
+alert(profile.error.message);
 
 return;
 
 }
-
 
 
 
@@ -246,183 +412,7 @@ alert(
 
 
 
-
-
-
-
-
-// =====================================
-// LOGIN
-// =====================================
-
-
-
-document
-.getElementById("login-form")
-.onsubmit=async(e)=>{
-
-
-e.preventDefault();
-
-
-
-let email =
-document
-.getElementById("login-email")
-.value;
-
-
-
-let password =
-document
-.getElementById("login-password")
-.value;
-
-
-
-
-
-const {
-
-data,
-error
-
-}=
-
-await client.auth
-.signInWithPassword({
-
-email,
-password
-
-});
-
-
-
-
-
-if(error){
-
-alert(error.message);
-
-return;
-
-}
-
-
-
-user =
-data.user;
-
-
-
-openApp();
-
-
-};
-
-
-
-
-
-
-
-
-
-
-// =====================================
-// SESSION
-// =====================================
-
-
-
-async function checkSession(){
-
-
-const {
-
-data
-
-}=
-
-await client.auth.getSession();
-
-
-
-if(data.session){
-
-
-user =
-data.session.user;
-
-
-openApp();
-
-
-
-}
-
-
-
-}
-
-
-
-
-
-
-
-
-
-
-// =====================================
-// OPEN APP
-// =====================================
-
-
-function openApp(){
-
-
-
-authScreen
-.classList.add("hidden");
-
-
-
-app
-.classList.remove("hidden");
-
-
-
-loadProfile();
-
-
-loadNews();
-
-
-loadMessages();
-
-
-startRealtime();
-
-
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-// =====================================
 // LOGOUT
-// =====================================
 
 
 document
@@ -430,7 +420,15 @@ document
 .onclick=async()=>{
 
 
-await client.auth.signOut();
+if(currentRoom){
+
+await leaveRoom();
+
+}
+
+
+
+await db.auth.signOut();
 
 
 location.reload();
@@ -448,9 +446,12 @@ location.reload();
 
 
 
-// =====================================
-// PAGE SWITCH
-// =====================================
+// ==========================================
+// NAVIGATION
+// ==========================================
+
+
+function setupNavigation(){
 
 
 document
@@ -473,14 +474,11 @@ btn.classList.add("active");
 
 
 
-
 document
 .querySelectorAll(".page")
-.forEach(page=>{
-
-page.classList.remove("active");
-
-});
+.forEach(p=>
+p.classList.remove("active")
+);
 
 
 
@@ -495,56 +493,8 @@ btn.dataset.page
 };
 
 
-
 });
 
-
-
-
-
-
-
-
-
-// =====================================
-// PROFILE
-// =====================================
-
-
-async function loadProfile(){
-
-
-
-if(!user)
-return;
-
-
-
-const {
-
-data,
-error
-
-}=
-
-await client
-.from("profiles")
-.select("*")
-.eq(
-"id",
-user.id
-)
-.single();
-
-
-
-
-
-if(error){
-
-console.log(error);
-
-return;
 
 }
 
@@ -552,18 +502,63 @@ return;
 
 
 
+
+
+
+
+// ==========================================
+// PROFILE
+// ==========================================
+
+
+async function loadProfile(){
+
+
+
+let result =
+await db
+.from("profiles")
+.select("*")
+.eq(
+"id",
+currentUser.id
+)
+.single();
+
+
+
+
+if(result.error){
+
+console.log(result.error);
+
+return;
+
+}
+
+
+
+let p =
+result.data;
+
+
+
+
 let avatar =
-data.avatar_url ||
+p.avatar_url ||
 "https://cdn-icons-png.flaticon.com/512/4712/4712109.png";
 
 
 
 
+document
+.getElementById("top-avatar")
+.src=avatar;
+
 
 document
 .getElementById("profile-avatar")
 .src=avatar;
-
 
 
 document
@@ -573,68 +568,41 @@ document
 
 
 document
-.getElementById("top-avatar")
-.src=avatar;
-
-
+.getElementById("top-name")
+.textContent=
+p.nickname;
 
 
 
 document
 .getElementById("profile-name")
-.innerHTML=data.nickname;
+.textContent=
+p.nickname;
 
 
 
 document
 .getElementById("side-name")
-.innerHTML=data.nickname;
+.textContent=
+p.nickname;
 
 
 
 document
-.getElementById("top-name")
-.innerHTML=data.nickname;
-
-
-
-document
-.getElementById("vip")
-.innerHTML=
-"VIP "+data.vip_level;
+.getElementById("vip-level")
+.textContent=
+"VIP "+p.vip_level;
 
 
 
 document
 .getElementById("side-vip")
-.innerHTML=
-"VIP "+data.vip_level;
-
-
-
-document
-.getElementById("avatar-url")
-.value =
-avatar;
-
-
-
-document
-.getElementById("profile-city")
-.value =
-data.city || "";
-
-
-
-document
-.getElementById("profile-age")
-.value =
-data.age || "";
+.textContent=
+"VIP "+p.vip_level;
 
 
 
 }
-
 
 
 
@@ -648,52 +616,37 @@ document
 .onclick=async()=>{
 
 
-
-let avatar =
-document
-.getElementById("avatar-url")
-.value;
-
-
-
-let city =
-document
-.getElementById("profile-city")
-.value;
-
-
-
-let age =
-document
-.getElementById("profile-age")
-.value;
-
-
-
-
-
-await client
+await db
 .from("profiles")
 .update({
 
-avatar_url:avatar,
+avatar_url:
+document
+.getElementById("avatar-url")
+.value,
 
-city:city,
 
-age:age
+city:
+document
+.getElementById("profile-city")
+.value,
+
+
+age:
+document
+.getElementById("profile-age")
+.value
 
 
 })
-
 .eq(
 "id",
-user.id
+currentUser.id
 );
 
 
 
 loadProfile();
-
 
 
 };
@@ -706,23 +659,16 @@ loadProfile();
 
 
 
-// =====================================
+// ==========================================
 // NEWS
-// =====================================
-
+// ==========================================
 
 
 async function loadNews(){
 
 
-
-const {
-
-data
-
-}=
-
-await client
+let result =
+await db
 .from("news")
 .select("*")
 .order(
@@ -731,7 +677,6 @@ await client
 ascending:false
 }
 );
-
 
 
 
@@ -745,12 +690,12 @@ box.innerHTML="";
 
 
 
-
-if(!data.length){
+if(!result.data ||
+result.data.length===0){
 
 
 box.innerHTML=
-"Новостей пока нет";
+"Новостей нет";
 
 
 return;
@@ -761,14 +706,10 @@ return;
 
 
 
-
-data.forEach(n=>{
-
-
-box.innerHTML+=
+result.data.forEach(n=>{
 
 
-`
+box.innerHTML+=`
 
 <div class="empty-card">
 
@@ -776,17 +717,20 @@ box.innerHTML+=
 ${n.title}
 </h3>
 
+
 <p>
 ${n.text}
 </p>
 
+
 </div>
+
 
 `;
 
 
-});
 
+});
 
 
 }
@@ -799,23 +743,16 @@ ${n.text}
 
 
 
-// =====================================
+// ==========================================
 // CHAT
-// =====================================
-
+// ==========================================
 
 
 async function loadMessages(){
 
 
-const {
-
-data
-
-}=
-
-
-await client
+let result =
+await db
 .from("messages")
 .select("*")
 .order(
@@ -824,7 +761,6 @@ await client
 ascending:true
 }
 );
-
 
 
 
@@ -838,27 +774,20 @@ box.innerHTML="";
 
 
 
-data.forEach(m=>{
+result.data.forEach(m=>{
 
 
-box.innerHTML+=
+box.innerHTML+=`
 
+<div class="room-card">
 
-`
+<b>${m.nickname}</b>
 
-<div>
-
-<b>
-${m.nickname}
-</b>
-
-:
+<br>
 
 ${m.text}
 
-
 </div>
-
 
 `;
 
@@ -868,7 +797,6 @@ ${m.text}
 
 
 }
-
 
 
 
@@ -897,13 +825,14 @@ return;
 
 
 
+
 let profile =
-await client
+await db
 .from("profiles")
 .select("nickname")
 .eq(
 "id",
-user.id
+currentUser.id
 )
 .single();
 
@@ -911,14 +840,18 @@ user.id
 
 
 
-await client
+
+await db
 .from("messages")
 .insert({
 
-user_id:user.id,
+user_id:
+currentUser.id,
+
 
 nickname:
 profile.data.nickname,
+
 
 text:text
 
@@ -927,9 +860,7 @@ text:text
 
 
 
-
 input.value="";
-
 
 
 };
@@ -941,12 +872,11 @@ input.value="";
 
 
 
-function startRealtime(){
+
+function startChatRealtime(){
 
 
-client
-
-.channel("messages")
+db.channel("chat")
 
 .on(
 
@@ -961,6 +891,7 @@ schema:"public",
 table:"messages"
 
 },
+
 
 ()=>{
 
@@ -983,7 +914,264 @@ loadMessages();
 
 
 
-// START
 
 
-checkSession();
+
+
+// ==========================================
+// CONFERENCE ROOMS
+// ==========================================
+
+
+async function loadRooms(){
+
+
+let rooms =
+await db
+.from("conference_rooms")
+.select("*");
+
+
+
+
+
+let box =
+document
+.getElementById("rooms-list");
+
+
+
+box.innerHTML="";
+
+
+
+
+for(let room of rooms.data){
+
+
+
+let users =
+await db
+.from("conference_users")
+.select("*")
+.eq(
+"room_id",
+room.id
+);
+
+
+
+
+
+box.innerHTML+=`
+
+<div class="room-card">
+
+
+<h3>
+${room.name}
+</h3>
+
+
+<p>
+${room.description}
+</p>
+
+
+
+<p>
+👥 ${users.data.length}
+</p>
+
+
+
+<button
+class="main-button"
+onclick="joinRoom(${room.id},'${room.name}')"
+>
+
+Войти
+
+</button>
+
+
+</div>
+
+
+`;
+
+
+
+}
+
+
+}
+
+
+
+
+
+
+
+
+
+async function joinRoom(id,name){
+
+
+
+await leaveRoom();
+
+
+
+currentRoom=id;
+
+
+
+document
+.getElementById(
+"current-room-title"
+)
+.textContent=name;
+
+
+
+
+
+let profile =
+await db
+.from("profiles")
+.select("nickname")
+.eq(
+"id",
+currentUser.id
+)
+.single();
+
+
+
+
+
+await db
+.from("conference_users")
+.insert({
+
+room_id:id,
+
+user_id:
+currentUser.id,
+
+
+nickname:
+profile.data.nickname
+
+
+});
+
+
+
+
+
+loadRooms();
+
+
+}
+
+
+
+
+
+
+
+async function leaveRoom(){
+
+
+if(!currentRoom)
+return;
+
+
+
+await db
+.from("conference_users")
+.delete()
+.eq(
+"user_id",
+currentUser.id
+)
+.eq(
+"room_id",
+currentRoom
+);
+
+
+
+currentRoom=null;
+
+
+document
+.getElementById(
+"current-room-title"
+)
+.textContent=
+"Комната не выбрана";
+
+
+loadRooms();
+
+
+}
+
+
+
+
+
+
+document
+.getElementById("leave-room")
+.onclick=
+leaveRoom;
+
+
+
+
+
+
+
+
+
+function startConferenceRealtime(){
+
+
+db.channel(
+"conference"
+)
+
+
+.on(
+
+"postgres_changes",
+
+{
+
+event:"*",
+
+schema:"public",
+
+table:"conference_users"
+
+},
+
+
+()=>{
+
+
+loadRooms();
+
+
+}
+
+)
+
+.subscribe();
+
+
+}
