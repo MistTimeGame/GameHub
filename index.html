@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>GameHub</title>
+
+    <link
+        rel="stylesheet"
+        href="./core/core.css"
+    >
+
+</head>
+
+<body>
+
+    <main
+        id="gamehub-app"
+        style="
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        "
+    >
+
+        <section
+            class="gh-card"
+            style="
+                padding: 40px;
+                text-align: center;
+            "
+        >
+
+            <h1
+                style="
+                    margin: 0 0 10px;
+                    font-size: 36px;
+                "
+            >
+                GameHub
+            </h1>
+
+            <p
+                style="
+                    margin: 0 0 30px;
+                    color: var(--gh-text-secondary);
+                "
+            >
+                Игровая платформа
+            </p>
+
+            <div
+                id="connection-status"
+                class="gh-loading"
+            >
+                Подключение к GameHub...
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- Supabase -->
+    <script
+        src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+    ></script>
+
+
+    <!-- GameHub Core -->
+    <script src="./core/supabase.js"></script>
+    <script src="./core/session.js"></script>
+    <script src="./core/router.js"></script>
+
+
+    <script>
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            async () => {
+
+                const status =
+                    document.getElementById(
+                        "connection-status"
+                    );
+
+                try {
+
+                    const user =
+                        await window.GameHub.session.init();
+
+                    if (user) {
+
+                        status.className =
+                            "gh-success";
+
+                        status.textContent =
+                            "GameHub подключён. Пользователь авторизован.";
+
+                    } else {
+
+                        status.className =
+                            "gh-success";
+
+                        status.textContent =
+                            "GameHub подключён. Пользователь не авторизован.";
+
+                    }
+
+                } catch (error) {
+
+                    console.error(error);
+
+                    status.className =
+                        "gh-error";
+
+                    status.textContent =
+                        "Ошибка подключения к GameHub.";
+                }
+
+            }
+        );
+
+    </script>
+
+</body>
+
+</html>
