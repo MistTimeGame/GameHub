@@ -1,6 +1,5 @@
 /* =====================================
-   GAME PLATFORM
-   WHITE 3D UI STYLE
+   GAME PLATFORM — WHITE 3D UI
 ===================================== */
 
 *{
@@ -18,9 +17,7 @@ body{
 
 .hidden{ display:none!important; }
 
-/* =====================================
- AUTH SCREEN
-===================================== */
+/* ============ AUTH ============ */
 
 .auth-screen{
     width:100%;
@@ -58,21 +55,10 @@ body{
         0 10px 25px rgba(0,0,0,.3);
 }
 
-.auth-card h1{
-    margin-top:20px;
-    font-size:30px;
-}
+.auth-card h1{ margin-top:20px; font-size:30px; }
+.auth-card p{ color:#777; margin:10px 0 25px; }
 
-.auth-card p{
-    color:#777;
-    margin:10px 0 25px;
-}
-
-.auth-tabs{
-    display:flex;
-    gap:10px;
-    margin-bottom:20px;
-}
+.auth-tabs{ display:flex; gap:10px; margin-bottom:20px; }
 
 .auth-tabs button{
     flex:1;
@@ -118,9 +104,7 @@ input:focus{
     box-shadow:0 0 12px rgba(0,140,255,.45);
 }
 
-/* =====================================
- BUTTONS
-===================================== */
+/* ============ BUTTONS ============ */
 
 .main-button{
     height:50px;
@@ -154,9 +138,7 @@ input:focus{
         0 3px 8px rgba(0,0,0,.2);
 }
 
-/* =====================================
- TOP BAR
-===================================== */
+/* ============ TOP BAR ============ */
 
 .topbar{
     height:85px;
@@ -169,11 +151,7 @@ input:focus{
     box-shadow:0 5px 20px rgba(0,0,0,.12);
 }
 
-.brand{
-    display:flex;
-    align-items:center;
-    gap:15px;
-}
+.brand{ display:flex; align-items:center; gap:15px; }
 
 .brand-logo{
     width:55px;
@@ -190,11 +168,7 @@ input:focus{
 
 .brand span{ color:#777; font-size:12px; }
 
-.top-profile{
-    display:flex;
-    align-items:center;
-    gap:15px;
-}
+.top-profile{ display:flex; align-items:center; gap:15px; }
 
 .top-profile img{
     width:55px;
@@ -203,20 +177,17 @@ input:focus{
     object-fit:cover;
     border:3px solid white;
     box-shadow:0 5px 15px rgba(0,0,0,.3);
+    background:#eef2f8;
 }
 
-/* =====================================
- MAIN LAYOUT
-===================================== */
+/* ============ LAYOUT ============ */
 
 .layout{
     display:flex;
     min-height:calc(100vh - 85px);
 }
 
-/* =====================================
- LEFT MENU
-===================================== */
+/* ============ LEFT MENU ============ */
 
 .sidebar{
     width:270px;
@@ -247,6 +218,8 @@ input:focus{
         inset 0 3px 5px white,
         0 6px 12px rgba(0,0,0,.25);
     transition:.25s;
+    text-align:left;
+    padding:0 16px;
 }
 
 .menu-button:hover,
@@ -261,22 +234,14 @@ input:focus{
 
 .logout{ margin-top:40px; }
 
-/* =====================================
- CENTER CONTENT
-===================================== */
+/* ============ CENTER ============ */
 
-.content{
-    flex:1;
-    padding:35px;
-}
+.content{ flex:1; padding:35px; min-width:0; }
 
 .page{ display:none; }
 .page.active{ display:block; }
 
-.content h1{
-    font-size:34px;
-    margin-bottom:25px;
-}
+.content h1{ font-size:34px; margin-bottom:25px; }
 
 .news-panel,
 .empty-card,
@@ -291,9 +256,7 @@ input:focus{
     box-shadow:0 10px 35px rgba(0,0,0,.15);
 }
 
-/* =====================================
- NEWS
-===================================== */
+/* ============ NEWS ============ */
 
 .news-item{
     padding:18px;
@@ -315,9 +278,7 @@ input:focus{
     line-height:1.5;
 }
 
-/* =====================================
- CHAT
-===================================== */
+/* ============ CHAT ============ */
 
 .messages{
     height:400px;
@@ -340,10 +301,7 @@ input:focus{
     overflow-wrap:anywhere;
 }
 
-.chat-message b{
-    color:#1b4aa8;
-    font-size:14px;
-}
+.chat-message b{ color:#1b4aa8; font-size:14px; }
 
 .chat-message .msg-time{
     display:block;
@@ -364,17 +322,10 @@ input:focus{
     border-color:#cfdff9;
 }
 
-.chat-controls{
-    display:flex;
-    gap:10px;
-    margin-top:15px;
-}
-
+.chat-controls{ display:flex; gap:10px; margin-top:15px; }
 .chat-controls input{ flex:1; margin:0; }
 
-/* =====================================
- CONFERENCE
-===================================== */
+/* ============ CONFERENCE ============ */
 
 .conference-layout{
     display:flex;
@@ -382,14 +333,29 @@ input:focus{
     align-items:flex-start;
 }
 
-.rooms-panel{
-    width:340px;
-    flex-shrink:0;
+.rooms-panel{ width:340px; flex-shrink:0; }
+.video-panel{ flex:1; min-width:0; }
+
+.create-room-form{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-bottom:18px;
+    padding:14px;
+    background:#f8faff;
+    border:1px solid #eaf0f9;
+    border-radius:14px;
 }
 
-.video-panel{
-    flex:1;
-    min-width:0;
+.create-room-form input{
+    margin:0;
+    height:42px;
+    font-size:14px;
+}
+
+.create-room-form button{
+    height:42px;
+    font-size:14px;
 }
 
 .room-card{
@@ -532,9 +498,7 @@ input:focus{
     box-shadow:0 0 0 3px rgba(52,199,89,.18);
 }
 
-/* =====================================
- PROFILE
-===================================== */
+/* ============ PROFILE ============ */
 
 .profile-card{
     max-width:450px;
@@ -547,6 +511,7 @@ input:focus{
     border-radius:50%;
     object-fit:cover;
     box-shadow:0 10px 25px rgba(0,0,0,.3);
+    background:#eef2f8;
 }
 
 #vip-level,
@@ -560,9 +525,16 @@ input:focus{
     background:linear-gradient(145deg,#ffe97a,#d79b00);
 }
 
-/* =====================================
- RIGHT BAR
-===================================== */
+.profile-status{
+    min-height:18px;
+    margin-top:10px;
+    font-size:13px;
+    color:#1e8f4a;
+    font-weight:600;
+}
+.profile-status.err{ color:#c33; }
+
+/* ============ RIGHT BAR ============ */
 
 .rightbar{
     width:300px;
@@ -584,6 +556,7 @@ input:focus{
     height:120px;
     border-radius:50%;
     object-fit:cover;
+    background:#eef2f8;
 }
 
 .online-box{
@@ -605,9 +578,7 @@ input:focus{
     vertical-align:middle;
 }
 
-/* =====================================
- MOBILE
-===================================== */
+/* ============ MOBILE ============ */
 
 @media(max-width:1000px){
     .layout{ flex-direction:column; }
