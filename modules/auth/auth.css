@@ -1,115 +1,87 @@
-/* ============================================================
-   GAMEHUB AUTH
-   ============================================================ */
+.auth-box{
 
 
-.auth-page {
+max-width:420px;
 
-    min-height: 100vh;
+margin:30px auto;
 
-    display: flex;
+padding:30px;
 
-    align-items: center;
+background:white;
 
-    justify-content: center;
+border-radius:25px;
 
-    padding: 20px;
+box-shadow:
+0 10px 30px rgba(0,0,0,.1);
+
+text-align:center;
+
 
 }
 
 
 
-.auth-box {
+.auth-box input{
 
-    width: 100%;
 
-    max-width: 420px;
+width:100%;
 
-    padding: 30px;
+padding:14px;
+
+margin:8px 0;
+
+border-radius:12px;
+
+border:1px solid #ddd;
+
+font-size:15px;
+
 
 }
 
 
 
-.auth-title {
-
-    text-align: center;
-
-    margin-bottom: 25px;
-
-}
+.auth-box button{
 
 
-.auth-title h1 {
+padding:12px 25px;
 
-    margin: 0;
+margin-top:15px;
 
-    font-size: 32px;
+border:none;
 
-}
+border-radius:15px;
 
+background:#3478f6;
 
+color:white;
 
-.auth-title p {
+cursor:pointer;
 
-    color:
-        var(--gh-text-secondary);
+font-weight:bold;
 
-    margin-top: 8px;
 
 }
 
 
 
-.auth-tabs {
+.tabs button{
 
-    display: flex;
 
-    gap: 10px;
+margin:5px;
 
-    margin-bottom: 20px;
+background:#222;
+
 
 }
 
 
 
-.auth-tabs button {
-
-    flex: 1;
-
-}
+#authMessage{
 
 
+margin-top:20px;
 
-.auth-form {
-
-    display: flex;
-
-    flex-direction: column;
-
-    gap: 14px;
-
-}
-
-
-
-.auth-message {
-
-    margin-top: 15px;
-
-}
-
-
-
-.auth-footer {
-
-    margin-top: 20px;
-
-    text-align: center;
-
-    color:
-        var(--gh-text-secondary);
-
-    font-size: 13px;
+color:#555;
 
 }
