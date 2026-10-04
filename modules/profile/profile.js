@@ -1,200 +1,71 @@
-/*
-================================================
-GAME PLATFORM
-PROFILE MODULE
-================================================
-*/
+import { supabase } from "../../supabase/config.js";
 
 
-(function(){
-
-
-"use strict";
-
-
-
-let profileUser=null;
-
-
-
-const roman = [
-
-"",
-
-"I",
-
-"II",
-
-"III",
-
-"IV",
-
-"V",
-
-"VI",
-
-"VII",
-
-"VIII",
-
-"IX",
-
-"X",
-
-"XI",
-
-"XII"
-
-];
-
-
-
-async function loadProfileHTML(){
-
-
-const container =
-document.getElementById(
-"profile-container"
-);
-
-
-
-if(!container)
-return;
-
-
-
-const response =
-await fetch(
-"modules/profile/profile.html"
-);
-
-
-
-container.innerHTML =
-await response.text();
-
-
-
-bindProfile();
-
-
-}
-
-
-
-
-function bindProfile(){
-
-
-const save =
-document.getElementById(
-"save-profile"
-);
-
-
-
-if(save){
-
-save.onclick =
-saveProfile;
-
-}
-
-
-}
-
-
+const avatarDefault =
+"https://cdn-icons-png.flaticon.com/512/4712/4712109.png";
 
 
 
 async function loadProfile(){
 
 
-
-profileUser =
-window.GameAuth
-.getUser();
-
-
-
-if(!profileUser)
-return;
+    const {
+        data:{
+            user
+        }
+    } = await supabase.auth.getUser();
 
 
 
-const {
+    if(!user){
 
-data,
+        console.log("Пользователь не вошел");
 
-error
+        return;
 
-}=
-
-await window.supabaseClient
-.from("profiles")
-.select("*")
-.eq(
-"id",
-profileUser.id
-)
-.single();
+    }
 
 
 
-if(error){
-
-console.error(error);
-
-return;
-
-}
-
-
-
-document.getElementById(
-"profile-nickname"
-).value =
-data.nickname || "";
+    const {
+        data,
+        error
+    } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id",user.id)
+        .single();
 
 
 
-document.getElementById(
-"profile-city"
-).value =
-data.city || "";
+    if(error){
+
+        console.log(error);
+
+        return;
+
+    }
 
 
 
-document.getElementById(
-"profile-age"
-).value =
-data.age || "";
+    document.getElementById("nickname").value =
+        data.nickname || "";
+
+
+    document.getElementById("age").value =
+        data.age || "";
+
+
+    document.getElementById("city").value =
+        data.city || "";
+
+
+    document.getElementById("avatar").value =
+        data.avatar_url || "";
 
 
 
-document.getElementById(
-"profile-avatar-url"
-).value =
-data.avatar_url || "";
-
-
-
-updateVIP(
-data.vip_level || 0
-);
-
-
-
-if(data.avatar_url){
-
-document.getElementById(
-"profile-avatar"
-).src =
-data.avatar_url;
-
-}
-
+    updateView(data);
 
 
 }
@@ -203,108 +74,49 @@ data.avatar_url;
 
 
 
-async function saveProfile(){
+function updateView(data){
 
 
-if(!profileUser){
-
-alert(
-"Нет авторизации"
-);
-
-return;
-
-}
+    document.getElementById("profile-nickname")
+    .innerText =
+    data.nickname || "Игрок";
 
 
 
-
-const nickname =
-document.getElementById(
-"profile-nickname"
-).value;
+    document.getElementById("profile-avatar")
+    .src =
+    data.avatar_url || avatarDefault;
 
 
 
-const city =
-document.getElementById(
-"profile-city"
-).value;
+    let vip =
+    data.vip_level || 1;
 
 
 
-const age =
-Number(
-document.getElementById(
-"profile-age"
-).value
-);
+    const roman = [
+
+        "",
+        "I",
+        "II",
+        "III",
+        "IV",
+        "V",
+        "VI",
+        "VII",
+        "VIII",
+        "IX",
+        "X",
+        "XI",
+        "XII"
+
+    ];
 
 
 
-const avatar =
-document.getElementById(
-"profile-avatar-url"
-).value;
-
-
-
-
-const {
-
-error
-
-}=
-
-await window.supabaseClient
-.from("profiles")
-.update({
-
-nickname,
-
-city,
-
-age,
-
-avatar_url:avatar
-
-})
-.eq(
-"id",
-profileUser.id
-);
-
-
-
-
-if(error){
-
-alert(
-error.message
-);
-
-return;
-
-}
-
-
-
-if(avatar){
-
-document.getElementById(
-"profile-avatar"
-).src =
-avatar;
-
-}
-
-
-
-alert(
-"Профиль сохранён"
-);
-
-
+    document.getElementById("profile-vip")
+    .innerText =
+    "VIP " + roman[vip];
 
 }
 
@@ -312,71 +124,95 @@ alert(
 
 
 
-function updateVIP(level){
+document
+.getElementById("save-profile")
+.addEventListener(
+"click",
+async()=>{
 
 
-if(level<1)
-level=1;
-
-
-if(level>12)
-level=12;
-
-
-
-const el =
-document.getElementById(
-"vip-level"
-);
+    const {
+        data:{
+            user
+        }
+    } = await supabase.auth.getUser();
 
 
 
-if(el){
+    if(!user){
 
-el.textContent =
-roman[level];
+        alert(
+        "Сначала войдите"
+        );
 
-}
+        return;
 
-
-}
-
-
-
-
-async function init(){
-
-
-await loadProfileHTML();
-
-
-setTimeout(
-
-loadProfile,
-
-500
-
-);
-
-
-}
+    }
 
 
 
-document.addEventListener(
-"DOMContentLoaded",
-init
-);
+    const profile = {
+
+
+        id:user.id,
+
+
+        nickname:
+        document.getElementById("nickname").value,
+
+
+        age:
+        Number(
+        document.getElementById("age").value
+        ),
+
+
+        city:
+        document.getElementById("city").value,
+
+
+        avatar_url:
+        document.getElementById("avatar").value || avatarDefault
 
 
 
-window.GameProfile={
-
-load:
-loadProfile
-
-};
+    };
 
 
 
-})();
+
+    const {
+        error
+    } = await supabase
+    .from("profiles")
+    .upsert(profile);
+
+
+
+    if(error){
+
+        alert(error.message);
+
+        console.log(error);
+
+        return;
+
+    }
+
+
+
+    alert(
+    "Профиль сохранен"
+    );
+
+
+    loadProfile();
+
+
+});
+
+
+
+
+
+loadProfile();
