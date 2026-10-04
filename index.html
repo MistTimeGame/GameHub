@@ -2,16 +2,15 @@
 <html lang="ru">
 
 <head>
-
 <meta charset="UTF-8">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>GamePlatform</title>
 
-
 <link rel="stylesheet" href="style.css">
 
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 </head>
 
@@ -19,112 +18,447 @@
 <body>
 
 
-<div class="layout">
+<div class="app">
 
 
-<!-- ЛЕВАЯ ПАНЕЛЬ -->
+    <!-- Левая панель -->
 
-<aside class="sidebar">
+    <aside class="sidebar">
 
 
-<div class="logo">
+        <div class="logo">
+            GAME
+            <span>PLATFORM</span>
+        </div>
 
-🎮 GamePlatform
+
+        <div class="user-mini">
+
+            <img id="mini-avatar"
+            src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png">
+
+            <div>
+
+                <div id="mini-name">
+                    Гость
+                </div>
+
+                <small id="mini-status">
+                    Не авторизован
+                </small>
+
+            </div>
+
+        </div>
+
+
+
+        <nav>
+
+
+            <button class="menu-btn active"
+            data-page="home">
+
+                🏠 Главная
+
+            </button>
+
+
+            <button class="menu-btn"
+            data-page="profile">
+
+                👤 Профиль
+
+            </button>
+
+
+
+            <button class="menu-btn"
+            data-page="games">
+
+                🎮 Игры
+
+            </button>
+
+
+
+            <button class="menu-btn"
+            data-page="guilds">
+
+                ⚔ Гильдии
+
+            </button>
+
+
+
+            <button class="menu-btn"
+            data-page="conference">
+
+                💬 Конференция
+
+            </button>
+
+
+        </nav>
+
+
+
+        <div class="auth-buttons">
+
+
+            <button id="open-login"
+            class="glass-btn">
+
+                Войти
+
+            </button>
+
+
+
+            <button id="logout"
+            class="glass-btn hidden">
+
+                Выйти
+
+            </button>
+
+
+        </div>
+
+
+    </aside>
+
+
+
+
+
+    <!-- Основная область -->
+
+    <main class="content">
+
+
+
+        <!-- Главная -->
+
+
+        <section id="home"
+        class="page active">
+
+
+            <h1>
+                GamePlatform
+            </h1>
+
+
+            <p>
+                Игровая платформа для игроков,
+                гильдий и сообществ.
+            </p>
+
+
+            <div class="welcome-box">
+
+                <h2>
+                    Добро пожаловать
+                </h2>
+
+                <p>
+                    Создавайте профиль,
+                    добавляйте игры и объединяйтесь
+                    в гильдии.
+                </p>
+
+            </div>
+
+
+        </section>
+
+
+
+
+
+
+
+        <!-- Авторизация -->
+
+
+        <section id="auth"
+        class="page">
+
+
+            <div class="panel">
+
+
+                <h2>
+                    Авторизация
+                </h2>
+
+
+                <input 
+                id="email"
+                type="email"
+                placeholder="Email">
+
+
+
+                <input 
+                id="password"
+                type="password"
+                placeholder="Пароль">
+
+
+
+                <input 
+                id="nickname"
+                placeholder="Никнейм">
+
+
+
+                <button 
+                id="register"
+                class="glass-btn">
+
+                    Регистрация
+
+                </button>
+
+
+
+                <button 
+                id="login"
+                class="glass-btn">
+
+                    Войти
+
+                </button>
+
+
+                <div id="auth-message"></div>
+
+
+            </div>
+
+
+        </section>
+
+
+
+
+
+
+
+        <!-- Профиль -->
+
+
+        <section id="profile"
+        class="page">
+
+
+            <div class="panel">
+
+
+                <h2>
+                    Профиль
+                </h2>
+
+
+                <img id="profile-avatar"
+                class="big-avatar"
+                src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png">
+
+
+
+                <input
+                id="avatar-url"
+                placeholder="Ссылка на аватар">
+
+
+
+                <input
+                id="profile-nickname"
+                placeholder="Никнейм">
+
+
+
+                <input
+                id="profile-city"
+                placeholder="Город">
+
+
+
+                <input
+                id="profile-age"
+                type="number"
+                placeholder="Возраст">
+
+
+
+                <div class="vip">
+
+                    VIP уровень:
+
+                    <span id="vip-level">
+                        0
+                    </span>
+
+                </div>
+
+
+
+                <button
+                id="save-profile"
+                class="glass-btn">
+
+                    Сохранить
+
+                </button>
+
+
+            </div>
+
+
+        </section>
+
+
+
+
+
+
+
+
+        <!-- Игры -->
+
+
+        <section id="games"
+        class="page">
+
+
+            <div class="panel">
+
+
+                <h2>
+                    Игры
+                </h2>
+
+
+                <input
+                id="game-name"
+                placeholder="Название игры">
+
+
+                <button
+                class="glass-btn">
+
+                    Добавить игру
+
+                </button>
+
+
+                <div id="games-list">
+
+                </div>
+
+
+            </div>
+
+
+        </section>
+
+
+
+
+
+
+
+        <!-- Гильдии -->
+
+
+        <section id="guilds"
+        class="page">
+
+
+            <div class="panel">
+
+
+                <h2>
+                    Гильдии
+                </h2>
+
+
+                <input
+                placeholder="Название гильдии">
+
+
+
+                <button
+                class="glass-btn">
+
+                    Создать гильдию
+
+                </button>
+
+
+            </div>
+
+
+        </section>
+
+
+
+
+
+
+
+        <!-- Конференция -->
+
+
+        <section id="conference"
+        class="page">
+
+
+            <div class="panel">
+
+
+                <h2>
+                    Конференция
+                </h2>
+
+
+                <textarea
+                placeholder="Сообщение"></textarea>
+
+
+                <button
+                class="glass-btn">
+
+                    Отправить
+
+                </button>
+
+
+                <div id="chat">
+
+                </div>
+
+
+            </div>
+
+
+        </section>
+
+
+
+    </main>
+
+
 
 </div>
 
-
-
-<button class="menu-btn" onclick="showAuth()">
-
-🔐 Вход / Регистрация
-
-</button>
-
-
-
-<button class="menu-btn" onclick="showProfile()">
-
-👤 Профиль
-
-</button>
-
-
-
-<button class="menu-btn" onclick="showGames()">
-
-🎮 Игры
-
-</button>
-
-
-
-<button class="menu-btn" onclick="showGuilds()">
-
-⚔ Гильдии
-
-</button>
-
-
-
-<button class="menu-btn" onclick="showConference()">
-
-💬 Конференция
-
-</button>
-
-
-
-</aside>
-
-
-
-
-
-<!-- ОСНОВНАЯ ОБЛАСТЬ -->
-
-<section class="content">
-
-
-<div id="app">
-
-
-<div class="welcome">
-
-
-<h1>
-Добро пожаловать
-</h1>
-
-
-<p>
-Игровая платформа для игроков и гильдий
-</p>
-
-
-</div>
-
-
-</div>
-
-
-</section>
-
-
-
-</div>
-
-
-
-
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 
 <script src="app.js"></script>
 
 
 </body>
-
 
 </html>
