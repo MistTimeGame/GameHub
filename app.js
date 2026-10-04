@@ -1,7 +1,8 @@
-// ==========================================
-// GAME PLATFORM APP
-// AUTH + CHAT + CONFERENCE ROOMS
-// ==========================================
+// =============================================
+// GAME PLATFORM
+// APP.JS
+// AUTH + PROFILE + NEWS + CHAT + CONFERENCE
+// =============================================
 
 
 
@@ -14,12 +15,11 @@ const SUPABASE_KEY =
 
 
 
-const db =
+const supabaseClient =
 supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY
 );
-
 
 
 
@@ -29,52 +29,44 @@ let currentRoom = null;
 
 
 
-
-
-
-
-// ==========================================
+// =============================================
 // START
-// ==========================================
+// =============================================
 
 
 document.addEventListener(
 "DOMContentLoaded",
-()=>{
-
-
-checkSession();
+async()=>{
 
 
 setupAuth();
 
-
 setupNavigation();
-
 
 setupChat();
 
-
 setupConference();
 
-
-}
-);
+await checkSession();
 
 
-
+});
 
 
 
 
 
 
-// ==========================================
+
+// =============================================
 // SESSION
-// ==========================================
+// =============================================
 
 
 async function checkSession(){
+
+
+try{
 
 
 const {
@@ -83,7 +75,7 @@ data
 
 }=
 
-await db.auth.getSession();
+await supabaseClient.auth.getSession();
 
 
 
@@ -94,12 +86,23 @@ currentUser =
 data.session.user;
 
 
+
 openApp();
 
 
 }
 
 
+}
+catch(error){
+
+
+console.log(error);
+
+
+}
+
+
 
 }
 
@@ -109,14 +112,13 @@ openApp();
 
 
 
-
-
-// ==========================================
+// =============================================
 // OPEN APP
-// ==========================================
+// =============================================
 
 
-function openApp(){
+async function openApp(){
+
 
 
 document
@@ -131,18 +133,73 @@ document
 
 
 
-loadProfile();
 
-loadNews();
 
-loadMessages();
+try{
 
-loadRooms();
+await loadProfile();
 
+}
+catch(e){
+
+console.log(
+"PROFILE:",
+e
+);
+
+}
+
+
+
+try{
+
+await loadNews();
+
+}
+catch(e){
+
+console.log(
+"NEWS:",
+e
+);
+
+}
+
+
+
+try{
+
+await loadMessages();
 
 startChatRealtime();
 
+}
+catch(e){
+
+console.log(
+"CHAT:",
+e
+);
+
+}
+
+
+
+try{
+
+await loadRooms();
+
 startConferenceRealtime();
+
+}
+catch(e){
+
+console.log(
+"CONFERENCE:",
+e
+);
+
+}
 
 
 
@@ -156,9 +213,9 @@ startConferenceRealtime();
 
 
 
-// ==========================================
+// =============================================
 // AUTH
-// ==========================================
+// =============================================
 
 
 function setupAuth(){
@@ -179,10 +236,12 @@ document.getElementById(
 
 
 
+
 loginTab.onclick=()=>{
 
 
 loginTab.classList.add("active");
+
 
 registerTab.classList.remove("active");
 
@@ -198,8 +257,8 @@ document
 .getElementById("register-form")
 .classList.add("hidden");
 
-};
 
+};
 
 
 
@@ -226,7 +285,12 @@ document
 .getElementById("login-form")
 .classList.add("hidden");
 
+
 };
+
+
+
+
 
 
 
@@ -238,7 +302,7 @@ document
 
 document
 .getElementById("login-form")
-.onsubmit=async e=>{
+.onsubmit=async(e)=>{
 
 
 e.preventDefault();
@@ -260,11 +324,13 @@ document
 
 
 
+
 let result =
-await db.auth
+await supabaseClient.auth
 .signInWithPassword({
 
 email,
+
 password
 
 });
@@ -272,19 +338,42 @@ password
 
 
 
+
 if(result.error){
 
 
-alert(result.error.message);
+alert(
+result.error.message
+);
+
 
 return;
+
 
 }
 
 
 
+
+
 currentUser =
 result.data.user;
+
+
+
+if(!currentUser){
+
+
+alert(
+"Пользователь не найден"
+);
+
+
+return;
+
+
+}
+
 
 
 openApp();
@@ -300,15 +389,17 @@ openApp();
 
 
 
+
 // REGISTER
 
 
 document
 .getElementById("register-form")
-.onsubmit=async e=>{
+.onsubmit=async(e)=>{
 
 
 e.preventDefault();
+
 
 
 
@@ -336,9 +427,11 @@ document
 
 
 let result =
-await db.auth.signUp({
+await supabaseClient.auth
+.signUp({
 
 email,
+
 password
 
 });
@@ -350,7 +443,10 @@ password
 if(result.error){
 
 
-alert(result.error.message);
+alert(
+result.error.message
+);
+
 
 return;
 
@@ -358,21 +454,35 @@ return;
 
 
 
-let uid =
-result.data.user.id;
 
 
+let user =
+result.data.user;
+
+
+
+if(!user){
+
+alert(
+"Ошибка создания аккаунта"
+);
+
+
+return;
+
+
+}
 
 
 
 
 
 let profile =
-await db
+await supabaseClient
 .from("profiles")
 .insert({
 
-id:uid,
+id:user.id,
 
 nickname:nickname,
 
@@ -388,15 +498,25 @@ vip_level:0
 
 
 
-
 if(profile.error){
 
 
-alert(profile.error.message);
+console.log(
+profile.error
+);
+
+
+alert(
+"Аккаунт создан, но профиль не создан"
+);
+
 
 return;
 
+
 }
+
+
 
 
 
@@ -412,65 +532,39 @@ alert(
 
 
 
-// LOGOUT
-
-
-document
-.getElementById("logout")
-.onclick=async()=>{
-
-
-if(currentRoom){
-
-await leaveRoom();
-
-}
-
-
-
-await db.auth.signOut();
-
-
-location.reload();
-
-
-};
 
 
 
 
 
 
-
-
-
-
-
-// ==========================================
+// =============================================
 // NAVIGATION
-// ==========================================
+// =============================================
 
 
 function setupNavigation(){
 
 
-document
-.querySelectorAll(".menu-button")
-.forEach(btn=>{
-
-
-btn.onclick=()=>{
-
 
 document
 .querySelectorAll(".menu-button")
-.forEach(x=>
-x.classList.remove("active")
+.forEach(button=>{
+
+
+button.onclick=()=>{
+
+
+document
+.querySelectorAll(".menu-button")
+.forEach(b=>
+b.classList.remove("active")
 );
 
 
 
-btn.classList.add("active");
+button.classList.add("active");
+
 
 
 
@@ -482,11 +576,18 @@ p.classList.remove("active")
 
 
 
-document
-.getElementById(
-btn.dataset.page
-)
-.classList.add("active");
+let page =
+document.getElementById(
+button.dataset.page
+);
+
+
+
+if(page){
+
+page.classList.add("active");
+
+}
 
 
 
@@ -506,47 +607,77 @@ btn.dataset.page
 
 
 
-// ==========================================
+// =============================================
 // PROFILE
-// ==========================================
+// =============================================
 
 
 async function loadProfile(){
 
 
 
+if(!currentUser)
+return;
+
+
+
+
+
 let result =
-await db
+await supabaseClient
 .from("profiles")
 .select("*")
 .eq(
 "id",
 currentUser.id
 )
-.single();
+.maybeSingle();
 
 
 
 
-if(result.error){
 
-console.log(result.error);
 
-return;
+if(!result.data){
+
+
+
+await supabaseClient
+.from("profiles")
+.insert({
+
+id:currentUser.id,
+
+nickname:
+currentUser.email
+.split("@")[0],
+
+avatar_url:
+"https://cdn-icons-png.flaticon.com/512/4712/4712109.png",
+
+vip_level:0
+
+});
+
+
+
+return loadProfile();
+
 
 }
 
 
 
-let p =
-result.data;
 
+
+let p=result.data;
 
 
 
 let avatar =
-p.avatar_url ||
-"https://cdn-icons-png.flaticon.com/512/4712/4712109.png";
+p.avatar_url;
+
+
 
 
 
@@ -556,14 +687,18 @@ document
 .src=avatar;
 
 
+
 document
 .getElementById("profile-avatar")
 .src=avatar;
 
 
+
 document
 .getElementById("side-avatar")
 .src=avatar;
+
+
 
 
 
@@ -585,6 +720,7 @@ document
 .getElementById("side-name")
 .textContent=
 p.nickname;
+
 
 
 
@@ -611,12 +747,13 @@ document
 
 
 
+
 document
 .getElementById("save-profile")
 .onclick=async()=>{
 
 
-await db
+await supabaseClient
 .from("profiles")
 .update({
 
@@ -659,16 +796,17 @@ loadProfile();
 
 
 
-// ==========================================
+// =============================================
 // NEWS
-// ==========================================
+// =============================================
 
 
 async function loadNews(){
 
 
+
 let result =
-await db
+await supabaseClient
 .from("news")
 .select("*")
 .order(
@@ -680,9 +818,17 @@ ascending:false
 
 
 
+
+
 let box =
 document
 .getElementById("news-list");
+
+
+
+
+if(!box)
+return;
 
 
 
@@ -695,7 +841,7 @@ result.data.length===0){
 
 
 box.innerHTML=
-"Новостей нет";
+"Новостей пока нет";
 
 
 return;
@@ -706,7 +852,8 @@ return;
 
 
 
-result.data.forEach(n=>{
+
+result.data.forEach(item=>{
 
 
 box.innerHTML+=`
@@ -714,17 +861,14 @@ box.innerHTML+=`
 <div class="empty-card">
 
 <h3>
-${n.title}
+${item.title}
 </h3>
 
-
 <p>
-${n.text}
+${item.text}
 </p>
 
-
 </div>
-
 
 `;
 
@@ -743,16 +887,17 @@ ${n.text}
 
 
 
-// ==========================================
+// =============================================
 // CHAT
-// ==========================================
+// =============================================
 
 
 async function loadMessages(){
 
 
+
 let result =
-await db
+await supabaseClient
 .from("messages")
 .select("*")
 .order(
@@ -764,9 +909,15 @@ ascending:true
 
 
 
+
 let box =
 document
 .getElementById("messages");
+
+
+
+if(!box)
+return;
 
 
 
@@ -774,14 +925,17 @@ box.innerHTML="";
 
 
 
-result.data.forEach(m=>{
+(result.data || [])
+.forEach(m=>{
 
 
 box.innerHTML+=`
 
 <div class="room-card">
 
-<b>${m.nickname}</b>
+<b>
+${m.nickname}
+</b>
 
 <br>
 
@@ -795,7 +949,6 @@ ${m.text}
 });
 
 
-
 }
 
 
@@ -803,9 +956,24 @@ ${m.text}
 
 
 
+
+function setupChat(){
+
+
+
+let button =
 document
-.getElementById("send-message")
-.onclick=async()=>{
+.getElementById("send-message");
+
+
+
+if(!button)
+return;
+
+
+
+button.onclick=async()=>{
+
 
 
 let input =
@@ -827,7 +995,7 @@ return;
 
 
 let profile =
-await db
+await supabaseClient
 .from("profiles")
 .select("nickname")
 .eq(
@@ -840,18 +1008,15 @@ currentUser.id
 
 
 
-
-await db
+await supabaseClient
 .from("messages")
 .insert({
 
 user_id:
 currentUser.id,
 
-
 nickname:
 profile.data.nickname,
-
 
 text:text
 
@@ -867,6 +1032,9 @@ input.value="";
 
 
 
+}
+
+
 
 
 
@@ -876,7 +1044,9 @@ input.value="";
 function startChatRealtime(){
 
 
-db.channel("chat")
+supabaseClient
+
+.channel("chat")
 
 .on(
 
@@ -892,12 +1062,9 @@ table:"messages"
 
 },
 
-
 ()=>{
 
-
 loadMessages();
-
 
 }
 
@@ -906,6 +1073,7 @@ loadMessages();
 .subscribe();
 
 
+
 }
 
 
@@ -916,18 +1084,17 @@ loadMessages();
 
 
 
-
-
-// ==========================================
+// =============================================
 // CONFERENCE ROOMS
-// ==========================================
+// =============================================
 
 
 async function loadRooms(){
 
 
-let rooms =
-await db
+
+let result =
+await supabaseClient
 .from("conference_rooms")
 .select("*");
 
@@ -941,17 +1108,37 @@ document
 
 
 
+if(!box)
+return;
+
+
+
 box.innerHTML="";
 
 
 
 
-for(let room of rooms.data){
+if(result.error){
+
+box.innerHTML=
+"Комнаты пока недоступны";
+
+
+return;
+
+
+}
+
+
+
+
+
+for(let room of result.data){
 
 
 
 let users =
-await db
+await supabaseClient
 .from("conference_users")
 .select("*")
 .eq(
@@ -967,27 +1154,22 @@ box.innerHTML+=`
 
 <div class="room-card">
 
-
 <h3>
 ${room.name}
 </h3>
 
-
 <p>
-${room.description}
+${room.description || ""}
 </p>
 
-
-
 <p>
-👥 ${users.data.length}
+👥 ${(users.data || []).length}
 </p>
-
 
 
 <button
 class="main-button"
-onclick="joinRoom(${room.id},'${room.name}')"
+onclick="joinRoom(${room.id})"
 >
 
 Войти
@@ -997,7 +1179,6 @@ onclick="joinRoom(${room.id},'${room.name}')"
 
 </div>
 
-
 `;
 
 
@@ -1005,6 +1186,7 @@ onclick="joinRoom(${room.id},'${room.name}')"
 }
 
 
+
 }
 
 
@@ -1013,32 +1195,15 @@ onclick="joinRoom(${room.id},'${room.name}')"
 
 
 
-
-
-async function joinRoom(id,name){
-
-
-
-await leaveRoom();
-
+async function joinRoom(id){
 
 
 currentRoom=id;
 
 
 
-document
-.getElementById(
-"current-room-title"
-)
-.textContent=name;
-
-
-
-
-
 let profile =
-await db
+await supabaseClient
 .from("profiles")
 .select("nickname")
 .eq(
@@ -1051,7 +1216,7 @@ currentUser.id
 
 
 
-await db
+await supabaseClient
 .from("conference_users")
 .insert({
 
@@ -1059,7 +1224,6 @@ room_id:id,
 
 user_id:
 currentUser.id,
-
 
 nickname:
 profile.data.nickname
@@ -1069,9 +1233,8 @@ profile.data.nickname
 
 
 
-
-
 loadRooms();
+
 
 
 }
@@ -1082,7 +1245,9 @@ loadRooms();
 
 
 
+
 async function leaveRoom(){
+
 
 
 if(!currentRoom)
@@ -1090,7 +1255,8 @@ return;
 
 
 
-await db
+
+await supabaseClient
 .from("conference_users")
 .delete()
 .eq(
@@ -1107,20 +1273,11 @@ currentRoom
 currentRoom=null;
 
 
-document
-.getElementById(
-"current-room-title"
-)
-.textContent=
-"Комната не выбрана";
-
 
 loadRooms();
 
 
 }
-
-
 
 
 
@@ -1137,14 +1294,20 @@ leaveRoom;
 
 
 
+function setupConference(){
+
+
+
+}
+
+
 
 function startConferenceRealtime(){
 
 
-db.channel(
-"conference"
-)
+supabaseClient
 
+.channel("conference")
 
 .on(
 
@@ -1160,7 +1323,6 @@ table:"conference_users"
 
 },
 
-
 ()=>{
 
 
@@ -1172,6 +1334,7 @@ loadRooms();
 )
 
 .subscribe();
+
 
 
 }
