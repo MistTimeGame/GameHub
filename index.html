@@ -9,7 +9,9 @@
 
 <title>GamePlatform</title>
 
+
 <link rel="stylesheet" href="style.css">
+
 
 </head>
 
@@ -19,6 +21,8 @@
 
 <div class="layout">
 
+
+<!-- ЛЕВАЯ ПАНЕЛЬ -->
 
 <aside class="sidebar">
 
@@ -33,7 +37,7 @@
 
 <button class="menu-btn" onclick="showAuth()">
 
-🔐 Войти
+🔐 Вход / Регистрация
 
 </button>
 
@@ -63,7 +67,7 @@
 
 
 
-<button class="menu-btn">
+<button class="menu-btn" onclick="showConference()">
 
 💬 Конференция
 
@@ -76,6 +80,8 @@
 
 
 
+
+<!-- ОСНОВНАЯ ОБЛАСТЬ -->
 
 <section class="content">
 
@@ -92,7 +98,7 @@
 
 
 <p>
-Игровая платформа нового поколения
+Игровая платформа для игроков и гильдий
 </p>
 
 
@@ -114,9 +120,11 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+
 <script src="app.js"></script>
 
 
 </body>
+
 
 </html>
