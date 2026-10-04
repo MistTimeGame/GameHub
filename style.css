@@ -366,9 +366,9 @@ input:focus{
 .room-status.err{ color:#c33; }
 .room-status.ok{ color:#1e8f4a; }
 
-/* ============ BRIE.FI/NG CONTAINER ============ */
+/* ============ MIROTALK CONTAINER ============ */
 
-.brie-container{
+.mirotalk-container{
     width:100%;
     height:550px;
     border-radius:20px;
@@ -379,14 +379,14 @@ input:focus{
     border:1px solid #334155;
 }
 
-.brie-container iframe{
+.mirotalk-container iframe{
     width:100%;
     height:100%;
     border:0;
     display:block;
 }
 
-.brie-placeholder{
+.mirotalk-placeholder{
     width:100%;
     height:100%;
     display:flex;
@@ -398,13 +398,13 @@ input:focus{
     padding:40px;
 }
 
-.brie-placeholder-icon{
+.mirotalk-placeholder-icon{
     font-size:64px;
     margin-bottom:16px;
     opacity:.6;
 }
 
-.brie-placeholder p{
+.mirotalk-placeholder p{
     font-size:15px;
     max-width:320px;
     line-height:1.5;
@@ -509,5 +509,5 @@ input:focus{
     .rightbar{ width:100%; }
     .conference-layout{ flex-direction:column; }
     .rooms-panel{ width:100%; }
-    .brie-container{ height:450px; }
+    .mirotalk-container{ height:450px; }
 }
