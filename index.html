@@ -1,135 +1,102 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
 
-    <meta charset="UTF-8">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+<title>Game Platform</title>
 
-    <title>GameHub</title>
-
-    <link
-        rel="stylesheet"
-        href="./core/core.css"
-    >
+<link rel="stylesheet" href="assets/css/main.css">
 
 </head>
 
 <body>
 
-    <main
-        id="gamehub-app"
-        style="
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 40px 20px;
-        "
-    >
 
-        <section
-            class="gh-card"
-            style="
-                padding: 40px;
-                text-align: center;
-            "
-        >
+<header class="header">
 
-            <h1
-                style="
-                    margin: 0 0 10px;
-                    font-size: 36px;
-                "
-            >
-                GameHub
-            </h1>
-
-            <p
-                style="
-                    margin: 0 0 30px;
-                    color: var(--gh-text-secondary);
-                "
-            >
-                Игровая платформа
-            </p>
-
-            <div
-                id="connection-status"
-                class="gh-loading"
-            >
-                Подключение к GameHub...
-            </div>
-
-        </section>
-
-    </main>
+    <div class="logo">
+        🎮 GAME PLATFORM
+    </div>
 
 
-    <!-- Supabase -->
-    <script
-        src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
-    ></script>
+    <nav>
+
+        <button id="loginBtn">
+            Войти
+        </button>
+
+        <button id="registerBtn">
+            Регистрация
+        </button>
 
 
-    <!-- GameHub Core -->
-    <script src="./core/supabase.js"></script>
-    <script src="./core/session.js"></script>
-    <script src="./core/router.js"></script>
+        <button id="profileBtn" hidden>
+            Профиль
+        </button>
 
 
-    <script>
+        <button id="logoutBtn" hidden>
+            Выйти
+        </button>
 
-        document.addEventListener(
-            "DOMContentLoaded",
-            async () => {
+    </nav>
 
-                const status =
-                    document.getElementById(
-                        "connection-status"
-                    );
+</header>
 
-                try {
 
-                    const user =
-                        await window.GameHub.session.init();
 
-                    if (user) {
+<main>
 
-                        status.className =
-                            "gh-success";
 
-                        status.textContent =
-                            "GameHub подключён. Пользователь авторизован.";
+<section class="hero">
 
-                    } else {
+<h1>
+Игровая платформа
+</h1>
 
-                        status.className =
-                            "gh-success";
+<p>
+Игры • Гильдии • Сообщества • Конференции
+</p>
 
-                        status.textContent =
-                            "GameHub подключён. Пользователь не авторизован.";
 
-                    }
+<div class="actions">
 
-                } catch (error) {
 
-                    console.error(error);
+<button id="addGameBtn">
+➕ Добавить игру
+</button>
 
-                    status.className =
-                        "gh-error";
 
-                    status.textContent =
-                        "Ошибка подключения к GameHub.";
-                }
+<button id="searchGameBtn">
+🔎 Поиск игр
+</button>
 
-            }
-        );
 
-    </script>
+</div>
+
+
+</section>
+
+
+
+<section id="content">
+
+</section>
+
+
+
+</main>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="supabase/config.js"></script>
+
+<script src="assets/js/main.js"></script>
+
 
 </body>
-
 </html>
