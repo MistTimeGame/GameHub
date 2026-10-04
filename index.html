@@ -1,127 +1,70 @@
+```html
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>GamePlatform</title>
+<title>Game Platform</title>
 
 <link rel="stylesheet" href="style.css">
 
-<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 </head>
 
-
 <body>
 
-
-<div class="app">
-
-
-    <!-- Левая панель -->
+<div class="layout">
 
     <aside class="sidebar">
 
-
         <div class="logo">
-            GAME
-            <span>PLATFORM</span>
+            GAME HUB
         </div>
 
 
-        <div class="user-mini">
-
-            <img id="mini-avatar"
-            src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png">
-
-            <div>
-
-                <div id="mini-name">
-                    Гость
-                </div>
-
-                <small id="mini-status">
-                    Не авторизован
-                </small>
-
-            </div>
-
-        </div>
+        <button class="menu-btn" onclick="showSection('home')">
+            🏠 Главная
+        </button>
 
 
+        <button class="menu-btn" onclick="showSection('games')">
+            🎮 Игры
+        </button>
 
-        <nav>
+
+        <button class="menu-btn" onclick="showSection('guilds')">
+            ⚔ Гильдии
+        </button>
 
 
-            <button class="menu-btn active"
-            data-page="home">
+        <button class="menu-btn" onclick="showSection('profile')">
+            👤 Профиль
+        </button>
 
-                🏠 Главная
 
+        <button class="menu-btn" onclick="showSection('conference')">
+            💬 Конференция
+        </button>
+
+
+        <div class="sidebar-bottom">
+
+            <button 
+            id="loginBtn"
+            class="menu-btn"
+            onclick="showSection('auth')">
+                🔐 Войти
             </button>
 
 
-            <button class="menu-btn"
-            data-page="profile">
-
-                👤 Профиль
-
+            <button 
+            id="logoutBtn"
+            class="menu-btn hidden"
+            onclick="logout()">
+                🚪 Выйти
             </button>
-
-
-
-            <button class="menu-btn"
-            data-page="games">
-
-                🎮 Игры
-
-            </button>
-
-
-
-            <button class="menu-btn"
-            data-page="guilds">
-
-                ⚔ Гильдии
-
-            </button>
-
-
-
-            <button class="menu-btn"
-            data-page="conference">
-
-                💬 Конференция
-
-            </button>
-
-
-        </nav>
-
-
-
-        <div class="auth-buttons">
-
-
-            <button id="open-login"
-            class="glass-btn">
-
-                Войти
-
-            </button>
-
-
-
-            <button id="logout"
-            class="glass-btn hidden">
-
-                Выйти
-
-            </button>
-
 
         </div>
 
@@ -130,43 +73,21 @@
 
 
 
-
-
-    <!-- Основная область -->
-
     <main class="content">
 
 
-
-        <!-- Главная -->
-
-
-        <section id="home"
-        class="page active">
-
+        <section id="home" class="page active">
 
             <h1>
-                GamePlatform
+                Добро пожаловать в Game Platform
             </h1>
 
-
             <p>
-                Игровая платформа для игроков,
-                гильдий и сообществ.
+                Игровая платформа для игроков, гильдий и сообществ.
             </p>
 
 
-            <div class="welcome-box">
-
-                <h2>
-                    Добро пожаловать
-                </h2>
-
-                <p>
-                    Создавайте профиль,
-                    добавляйте игры и объединяйтесь
-                    в гильдии.
-                </p>
+            <div id="userInfo">
 
             </div>
 
@@ -177,17 +98,9 @@
 
 
 
+        <section id="auth" class="page">
 
-
-        <!-- Авторизация -->
-
-
-        <section id="auth"
-        class="page">
-
-
-            <div class="panel">
-
+            <div class="card">
 
                 <h2>
                     Авторизация
@@ -200,12 +113,10 @@
                 placeholder="Email">
 
 
-
                 <input 
                 id="password"
                 type="password"
                 placeholder="Пароль">
-
 
 
                 <input 
@@ -213,31 +124,24 @@
                 placeholder="Никнейм">
 
 
-
                 <button 
-                id="register"
-                class="glass-btn">
-
+                class="main-btn"
+                onclick="register()">
                     Регистрация
-
                 </button>
-
 
 
                 <button 
-                id="login"
-                class="glass-btn">
-
+                class="main-btn"
+                onclick="login()">
                     Войти
-
                 </button>
 
 
-                <div id="auth-message"></div>
+                <div id="authMessage"></div>
 
 
             </div>
-
 
         </section>
 
@@ -247,67 +151,46 @@
 
 
 
-        <!-- Профиль -->
+        <section id="profile" class="page">
 
 
-        <section id="profile"
-        class="page">
-
-
-            <div class="panel">
-
+            <div class="card">
 
                 <h2>
-                    Профиль
+                    Профиль игрока
                 </h2>
 
 
-                <img id="profile-avatar"
-                class="big-avatar"
-                src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png">
-
+                <img 
+                id="avatar"
+                class="avatar"
+                src="https://i.imgur.com/6VBx3io.png">
 
 
                 <input
-                id="avatar-url"
+                id="avatarUrl"
                 placeholder="Ссылка на аватар">
 
 
-
                 <input
-                id="profile-nickname"
-                placeholder="Никнейм">
-
+                id="profileNickname"
+                placeholder="Ник">
 
 
                 <input
-                id="profile-city"
+                id="city"
                 placeholder="Город">
 
 
-
                 <input
-                id="profile-age"
+                id="age"
                 type="number"
                 placeholder="Возраст">
 
 
-
-                <div class="vip">
-
-                    VIP уровень:
-
-                    <span id="vip-level">
-                        0
-                    </span>
-
-                </div>
-
-
-
                 <button
-                id="save-profile"
-                class="glass-btn">
+                class="main-btn"
+                onclick="saveProfile()">
 
                     Сохранить
 
@@ -325,42 +208,19 @@
 
 
 
+        <section id="games" class="page">
 
-        <!-- Игры -->
-
-
-        <section id="games"
-        class="page">
-
-
-            <div class="panel">
-
+            <div class="card">
 
                 <h2>
                     Игры
                 </h2>
 
-
-                <input
-                id="game-name"
-                placeholder="Название игры">
-
-
-                <button
-                class="glass-btn">
-
-                    Добавить игру
-
-                </button>
-
-
-                <div id="games-list">
-
-                </div>
-
+                <p>
+                    Здесь будет каталог игр.
+                </p>
 
             </div>
-
 
         </section>
 
@@ -370,32 +230,19 @@
 
 
 
-        <!-- Гильдии -->
+        <section id="guilds" class="page">
 
 
-        <section id="guilds"
-        class="page">
-
-
-            <div class="panel">
-
+            <div class="card">
 
                 <h2>
                     Гильдии
                 </h2>
 
 
-                <input
-                placeholder="Название гильдии">
-
-
-
-                <button
-                class="glass-btn">
-
-                    Создать гильдию
-
-                </button>
+                <p>
+                    Здесь будут игровые сообщества.
+                </p>
 
 
             </div>
@@ -409,36 +256,19 @@
 
 
 
-        <!-- Конференция -->
+        <section id="conference" class="page">
 
 
-        <section id="conference"
-        class="page">
-
-
-            <div class="panel">
-
+            <div class="card">
 
                 <h2>
                     Конференция
                 </h2>
 
 
-                <textarea
-                placeholder="Сообщение"></textarea>
-
-
-                <button
-                class="glass-btn">
-
-                    Отправить
-
-                </button>
-
-
-                <div id="chat">
-
-                </div>
+                <p>
+                    Чат будет подключен отдельным модулем позже.
+                </p>
 
 
             </div>
@@ -451,7 +281,6 @@
     </main>
 
 
-
 </div>
 
 
@@ -460,5 +289,5 @@
 
 
 </body>
-
 </html>
+```
