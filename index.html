@@ -128,6 +128,7 @@
           <div class="video-panel">
 
             <h2 id="current-room-title">Комната не выбрана</h2>
+            <div id="room-status" class="room-status"></div>
 
             <div id="video-area" class="video-area">
               <div class="video-placeholder" id="video-placeholder">🎥 Нет активной трансляции</div>
@@ -182,8 +183,8 @@
 
   </div>
 
-  <!-- Аудио-контейнер: НЕ display:none (иначе браузер блокирует автоплей) -->
-  <div id="remote-audio" style="position:absolute;width:0;height:0;overflow:hidden;pointer-events:none;"></div>
+  <!-- Аудио вне потока и вне display:none -->
+  <div id="remote-audio" style="position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;"></div>
 
 </div>
 
