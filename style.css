@@ -8,99 +8,230 @@ box-sizing:border-box;
 
 body{
 
+
 margin:0;
 
-font-family:Arial, sans-serif;
+font-family:Arial,sans-serif;
 
-background:#eef1f5;
+background:#151b25;
 
-color:#222;
+color:white;
 
 }
 
 
 
-header{
 
-background:white;
+.layout{
 
-padding:20px;
 
 display:flex;
 
-justify-content:space-between;
-
-align-items:center;
-
-box-shadow:
-0 3px 15px rgba(0,0,0,.15);
+height:100vh;
 
 }
 
 
 
-h1{
 
-margin:0;
-
-}
+.sidebar{
 
 
+width:260px;
 
-.menu button{
+background:
 
+linear-gradient(
+180deg,
+#3c424b,
+#151920
+);
 
-background:#ffd400;
-
-border:none;
-
-border-radius:15px;
-
-padding:12px 22px;
-
-margin:5px;
-
-cursor:pointer;
-
-font-size:16px;
-
-}
-
-
-
-.menu button:hover{
-
-opacity:.8;
-
-}
-
-
-
-#app{
-
-padding:30px;
-
-}
-
-
-
-.card{
-
-
-background:white;
-
-border-radius:20px;
 
 padding:25px;
 
-max-width:600px;
-
-margin:auto;
 
 box-shadow:
-0 5px 20px rgba(0,0,0,.1);
+
+5px 0 25px rgba(0,0,0,.7);
 
 }
+
+
+
+
+
+.logo{
+
+
+font-size:25px;
+
+font-weight:bold;
+
+text-align:center;
+
+margin-bottom:40px;
+
+color:#fff;
+
+
+text-shadow:
+
+0 0 10px #258cff;
+
+
+}
+
+
+
+
+.menu-btn{
+
+
+width:100%;
+
+
+height:55px;
+
+
+margin-bottom:18px;
+
+
+border-radius:15px;
+
+
+border:1px solid #777;
+
+
+
+background:
+
+
+linear-gradient(
+145deg,
+#777,
+#222
+);
+
+
+
+color:white;
+
+
+font-size:18px;
+
+
+cursor:pointer;
+
+
+
+box-shadow:
+
+
+inset 0 2px 5px rgba(255,255,255,.4),
+
+0 6px 12px rgba(0,0,0,.7),
+
+
+0 0 12px rgba(0,120,255,.5);
+
+
+
+transition:.2s;
+
+
+}
+
+
+
+
+
+.menu-btn:hover{
+
+
+transform:translateY(-3px);
+
+
+box-shadow:
+
+
+inset 0 2px 8px white,
+
+0 10px 20px black,
+
+
+0 0 20px #008cff;
+
+
+}
+
+
+
+
+.menu-btn:active{
+
+
+transform:translateY(3px);
+
+
+box-shadow:
+
+
+inset 0 5px 10px black;
+
+
+}
+
+
+
+
+.content{
+
+
+flex:1;
+
+
+padding:40px;
+
+
+overflow:auto;
+
+
+}
+
+
+
+
+
+.welcome,
+.card{
+
+
+background:
+
+
+linear-gradient(
+145deg,
+#252c38,
+#11151b
+);
+
+
+border-radius:25px;
+
+
+padding:30px;
+
+
+box-shadow:
+
+
+0 10px 30px black;
+
+
+}
+
+
 
 
 
@@ -109,46 +240,43 @@ input{
 
 width:100%;
 
+
 padding:12px;
+
 
 margin:8px 0;
 
+
 border-radius:10px;
 
-border:1px solid #ccc;
+
+border:none;
+
 
 }
+
 
 
 
 .card button{
 
 
-background:#ffd400;
+background:#1685ff;
+
+
+color:white;
+
 
 border:0;
 
-padding:12px;
 
 border-radius:12px;
 
-width:100%;
+
+padding:12px;
+
 
 cursor:pointer;
 
-}
-
-
-
-.avatar{
-
-
-width:120px;
-
-height:120px;
-
-border-radius:50%;
-
-object-fit:cover;
 
 }
