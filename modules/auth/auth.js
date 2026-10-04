@@ -1,259 +1,65 @@
-/* ============================================================
-   GAME PLATFORM
-   AUTH MODULE
-   Supabase Auth
-   ============================================================ */
+/*
+====================================================
+GAME PLATFORM
+AUTH MODULE
+
+modules/auth/auth.js
+
+Supabase Auth
++ profiles create
++ login
++ register
++ logout
+
+====================================================
+*/
 
 
-console.log("[AUTH] module loaded");
+(function(){
+
+"use strict";
 
 
 
-const loginForm =
+let currentUser = null;
+
+
+
+/*
+====================================================
+LOAD AUTH WINDOW
+====================================================
+*/
+
+
+async function loadAuthHTML(){
+
+
+const container =
 document.getElementById(
-    "loginForm"
-);
-
-
-const registerForm =
-document.getElementById(
-    "registerForm"
-);
-
-
-
-const message =
-document.getElementById(
-    "authMessage"
-);
-
-
-
-
-/* ============================================================
-   TABS
-   ============================================================ */
-
-
-const loginTab =
-document.getElementById(
-    "showLogin"
-);
-
-
-const registerTab =
-document.getElementById(
-    "showRegister"
+"auth-container"
 );
 
 
 
-if(loginTab){
-
-loginTab.onclick = function(){
-
-    loginForm.style.display =
-        "block";
-
-    registerForm.style.display =
-        "none";
-
-    clearMessage();
-
-};
-
-}
+if(!container)
+return;
 
 
 
-if(registerTab){
-
-registerTab.onclick = function(){
-
-    loginForm.style.display =
-        "none";
-
-    registerForm.style.display =
-        "block";
-
-    clearMessage();
-
-};
-
-}
-
-
-
-
-
-/* ============================================================
-   REGISTER
-   ============================================================ */
-
-
-const registerButton =
-document.getElementById(
-    "registerSubmit"
+const response =
+await fetch(
+"modules/auth/auth.html"
 );
 
 
 
-if(registerButton){
+container.innerHTML =
+await response.text();
 
 
-registerButton.onclick =
-async function(){
 
-
-    const nickname =
-    document.getElementById(
-        "regNickname"
-    ).value.trim();
-
-
-
-    const email =
-    document.getElementById(
-        "regEmail"
-    ).value.trim();
-
-
-
-    const password =
-    document.getElementById(
-        "regPassword"
-    ).value;
-
-
-
-    if(!nickname ||
-       !email ||
-       !password){
-
-        showMessage(
-            "Заполните все поля"
-        );
-
-        return;
-
-    }
-
-
-
-    showMessage(
-        "Создание аккаунта..."
-    );
-
-
-
-    const {
-        data,
-        error
-    } =
-    await supabaseClient.auth.signUp({
-
-        email:
-            email,
-
-        password:
-            password
-
-    });
-
-
-
-    if(error){
-
-        showMessage(
-            error.message
-        );
-
-        return;
-
-    }
-
-
-
-    if(!data.user){
-
-        showMessage(
-            "Пользователь создан. Проверьте почту."
-        );
-
-        return;
-
-    }
-
-
-
-    /*
-       Создаем профиль
-    */
-
-
-    const {
-        error:
-        profileError
-
-    } =
-    await supabaseClient
-    .from("profiles")
-    .insert({
-
-        id:
-            data.user.id,
-
-        nickname:
-            nickname,
-
-        vip_level:
-            0
-
-    });
-
-
-
-    if(profileError){
-
-
-        console.error(
-            profileError
-        );
-
-
-        showMessage(
-            "Аккаунт создан, но профиль не создан: "
-            +
-            profileError.message
-        );
-
-
-        return;
-
-    }
-
-
-
-    showMessage(
-        "Регистрация успешна!"
-    );
-
-
-
-    setTimeout(
-
-        function(){
-
-            location.reload();
-
-        },
-
-        1500
-
-    );
-
-
-};
+bindButtons();
 
 
 }
@@ -261,119 +67,45 @@ async function(){
 
 
 
+/*
+====================================================
+BUTTONS
+====================================================
+*/
 
-/* ============================================================
-   LOGIN
-   ============================================================ */
+
+function bindButtons(){
 
 
-const loginButton =
+const login =
 document.getElementById(
-    "loginSubmit"
+"do-login"
 );
 
 
 
-if(loginButton){
-
-
-loginButton.onclick =
-async function(){
-
-
-    const email =
-    document.getElementById(
-        "loginEmail"
-    ).value.trim();
+const register =
+document.getElementById(
+"do-register"
+);
 
 
 
-    const password =
-    document.getElementById(
-        "loginPassword"
-    ).value;
+if(login){
+
+login.onclick =
+loginUser;
+
+}
 
 
 
-    if(!email ||
-       !password){
+if(register){
 
+register.onclick =
+registerUser;
 
-        showMessage(
-            "Введите email и пароль"
-        );
-
-
-        return;
-
-    }
-
-
-
-
-    showMessage(
-        "Вход..."
-    );
-
-
-
-    const {
-
-        data,
-
-        error
-
-    } =
-    await supabaseClient
-    .auth
-    .signInWithPassword({
-
-        email:
-            email,
-
-        password:
-            password
-
-    });
-
-
-
-    if(error){
-
-
-        showMessage(
-            error.message
-        );
-
-
-        return;
-
-    }
-
-
-
-
-    showMessage(
-        "Добро пожаловать!"
-    );
-
-
-
-    setTimeout(
-
-        function(){
-
-            location.reload();
-
-        },
-
-        1000
-
-    );
-
-
-
-};
+}
 
 
 }
@@ -381,35 +113,420 @@ async function(){
 
 
 
+/*
+====================================================
+REGISTER
+====================================================
+*/
 
-/* ============================================================
-   CHECK USER
-   ============================================================ */
+
+async function registerUser(){
 
 
-async function checkAuth(){
+const email =
+document.getElementById(
+"auth-email"
+).value.trim();
+
+
+
+const password =
+document.getElementById(
+"auth-password"
+).value;
+
+
+
+const nickname =
+document.getElementById(
+"auth-nickname"
+).value.trim();
+
+
+
+if(!email || !password){
+
+alert(
+"Введите email и пароль"
+);
+
+return;
+
+}
+
+
+
+
+const {
+data,
+error
+
+}=
+
+await window.supabaseClient.auth
+.signUp({
+
+email,
+
+password
+
+});
+
+
+
+
+if(error){
+
+alert(
+error.message
+);
+
+return;
+
+}
+
+
+
+const user =
+data.user;
+
+
+
+if(!user){
+
+alert(
+"Проверьте email для подтверждения"
+);
+
+return;
+
+}
+
+
+
+
+/*
+Создание профиля
+*/
+
+
+const {
+error:profileError
+
+}=
+
+await window.supabaseClient
+.from("profiles")
+.insert({
+
+id:user.id,
+
+nickname:
+nickname ||
+"Player",
+
+avatar_url:null,
+
+city:null,
+
+age:null,
+
+vip_level:0
+
+});
+
+
+
+
+
+if(profileError){
+
+
+console.error(
+profileError
+);
+
+
+
+alert(
+"Аккаунт создан, но профиль не создан:\n\n"
++
+profileError.message
+);
+
+
+return;
+
+}
+
+
+
+alert(
+"Регистрация успешна"
+);
+
+
+
+updateUI(user);
+
+
+
+}
+
+
+
+
+/*
+====================================================
+LOGIN
+====================================================
+*/
+
+
+async function loginUser(){
+
+
+
+const email =
+document.getElementById(
+"auth-email"
+).value.trim();
+
+
+
+const password =
+document.getElementById(
+"auth-password"
+).value;
+
+
 
 
 const {
 
-    data
+data,
+
+error
+
+}=
+
+await window.supabaseClient.auth
+.signInWithPassword({
+
+email,
+
+password
+
+});
+
+
+
+
+if(error){
+
+
+alert(
+error.message
+);
+
+
+return;
+
 
 }
-=
-await supabaseClient
-.auth
-.getUser();
+
+
+
+currentUser =
+data.user;
+
+
+
+alert(
+"Вход выполнен"
+);
+
+
+
+updateUI(
+currentUser
+);
+
+
+
+}
+
+
+
+
+/*
+====================================================
+LOGOUT
+====================================================
+*/
+
+
+async function logoutUser(){
+
+
+await window.supabaseClient.auth
+.signOut();
+
+
+
+currentUser=null;
+
+
+updateUI(null);
+
+
+}
+
+
+
+
+/*
+====================================================
+SESSION CHECK
+====================================================
+*/
+
+
+async function checkSession(){
+
+
+const {
+
+data
+
+}=
+
+await window.supabaseClient.auth
+.getSession();
 
 
 
 if(
-    data.user
+data.session
 ){
 
-    console.log(
-        "[AUTH] User:",
-        data.user.email
-    );
+
+currentUser =
+data.session.user;
+
+
+
+}
+
+
+
+updateUI(
+currentUser
+);
+
+
+
+}
+
+
+
+
+
+/*
+====================================================
+UPDATE HEADER
+====================================================
+*/
+
+
+function updateUI(user){
+
+
+
+const login =
+document.getElementById(
+"login-button"
+);
+
+
+
+const register =
+document.getElementById(
+"register-button"
+);
+
+
+
+const profile =
+document.getElementById(
+"profile-button"
+);
+
+
+
+const logout =
+document.getElementById(
+"logout-button"
+);
+
+
+
+const name =
+document.getElementById(
+"user-name"
+);
+
+
+
+
+if(user){
+
+
+if(login)
+login.style.display="none";
+
+
+if(register)
+register.style.display="none";
+
+
+if(profile)
+profile.style.display="inline-block";
+
+
+if(logout)
+logout.style.display="inline-block";
+
+
+
+if(name)
+name.textContent =
+user.email;
+
+
+
+}
+else{
+
+
+if(login)
+login.style.display="inline-block";
+
+
+if(register)
+register.style.display="inline-block";
+
+
+if(profile)
+profile.style.display="none";
+
+
+if(logout)
+logout.style.display="none";
+
+
+if(name)
+name.textContent="";
 
 
 }
@@ -420,24 +537,75 @@ if(
 
 
 
-checkAuth();
+
+
+/*
+====================================================
+HEADER BUTTONS
+====================================================
+*/
+
+
+function bindHeader(){
+
+
+const login =
+document.getElementById(
+"login-button"
+);
 
 
 
+const register =
+document.getElementById(
+"register-button"
+);
 
 
-/* ============================================================
-   HELPERS
-   ============================================================ */
+
+const logout =
+document.getElementById(
+"logout-button"
+);
 
 
-function showMessage(text){
+
+if(login){
+
+login.onclick=function(){
+
+document
+.getElementById(
+"auth-container"
+)
+.scrollIntoView();
+
+};
+
+}
 
 
-if(message){
 
-    message.innerText =
-        text;
+if(register){
+
+register.onclick=function(){
+
+document
+.getElementById(
+"auth-container"
+)
+.scrollIntoView();
+
+};
+
+}
+
+
+
+if(logout){
+
+logout.onclick =
+logoutUser;
 
 }
 
@@ -446,15 +614,92 @@ if(message){
 
 
 
-function clearMessage(){
+/*
+====================================================
+START
+====================================================
+*/
 
 
-if(message){
+async function init(){
 
-    message.innerText =
-        "";
+
+await loadAuthHTML();
+
+
+bindHeader();
+
+
+await checkSession();
+
+
+
+window.supabaseClient.auth
+.onAuthStateChange(
+
+function(
+event,
+session
+){
+
+
+if(session){
+
+
+currentUser =
+session.user;
+
+
+}
+else{
+
+
+currentUser=null;
+
 
 }
 
 
+updateUI(
+currentUser
+);
+
+
+
 }
+
+);
+
+
+
+}
+
+
+
+
+document.addEventListener(
+"DOMContentLoaded",
+init
+);
+
+
+
+
+window.GameAuth={
+
+
+getUser:function(){
+
+return currentUser;
+
+},
+
+
+logout:logoutUser
+
+
+};
+
+
+
+})();
