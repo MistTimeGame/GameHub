@@ -9,7 +9,6 @@
 
 <title>GamePlatform</title>
 
-
 <link rel="stylesheet" href="style.css">
 
 </head>
@@ -18,69 +17,102 @@
 <body>
 
 
-<header>
+<div class="layout">
 
-<h1>
+
+<aside class="sidebar">
+
+
+<div class="logo">
+
 🎮 GamePlatform
-</h1>
-
-
-<div class="menu">
-
-<button onclick="showAuth()">
-Войти
-</button>
-
-
-<button onclick="showProfile()">
-Профиль
-</button>
-
-
-<button onclick="showGames()">
-Игры
-</button>
-
-
-<button onclick="showGuilds()">
-Гильдии
-</button>
-
 
 </div>
 
 
-</header>
+
+<button class="menu-btn" onclick="showAuth()">
+
+🔐 Войти
+
+</button>
+
+
+
+<button class="menu-btn" onclick="showProfile()">
+
+👤 Профиль
+
+</button>
+
+
+
+<button class="menu-btn" onclick="showGames()">
+
+🎮 Игры
+
+</button>
+
+
+
+<button class="menu-btn" onclick="showGuilds()">
+
+⚔ Гильдии
+
+</button>
+
+
+
+<button class="menu-btn">
+
+💬 Конференция
+
+</button>
+
+
+
+</aside>
 
 
 
 
-<main id="app">
+
+<section class="content">
+
+
+<div id="app">
 
 
 <div class="welcome">
 
 
-<h2>
-Игровая платформа
-</h2>
+<h1>
+Добро пожаловать
+</h1>
 
 
 <p>
-Создавай профиль, добавляй игры и вступай в гильдии.
+Игровая платформа нового поколения
 </p>
 
 
 </div>
 
 
-</main>
+</div>
+
+
+</section>
+
+
+
+</div>
+
 
 
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 
 <script src="app.js"></script>
 
