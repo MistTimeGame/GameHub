@@ -1,60 +1,347 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
+
 <meta charset="UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Game Platform</title>
+<title>GAME PLATFORM</title>
 
 <link rel="stylesheet" href="style.css">
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 </head>
 
+
 <body>
+
+
+<!-- =========================
+     AUTH
+========================= -->
+
+
+<section id="auth-screen" class="auth-screen">
+
+
+<div class="auth-card">
+
+
+<div class="logo">
+
+GP
+
+</div>
+
+
+<h1>
+GAME PLATFORM
+</h1>
+
+
+<p class="subtitle">
+Игровая социальная платформа
+</p>
+
+
+
+<div class="auth-switch">
+
+
+<button id="show-login" class="active">
+Вход
+</button>
+
+
+<button id="show-register">
+Регистрация
+</button>
+
+
+</div>
+
+
+
+
+<div id="auth-message"></div>
+
+
+
+
+
+<form id="login-form">
+
+
+<input
+id="login-email"
+type="email"
+placeholder="Email"
+required
+>
+
+
+<input
+id="login-password"
+type="password"
+placeholder="Пароль"
+required
+>
+
+
+<button class="main-button">
+
+Войти
+
+</button>
+
+
+</form>
+
+
+
+
+
+
+
+<form id="register-form" class="hidden">
+
+
+<input
+id="register-nickname"
+placeholder="Игровой ник"
+required
+>
+
+
+<input
+id="register-email"
+type="email"
+placeholder="Email"
+required
+>
+
+
+<input
+id="register-password"
+type="password"
+placeholder="Пароль"
+required
+>
+
+
+<button class="main-button">
+
+Создать аккаунт
+
+</button>
+
+
+</form>
+
+
+
+</div>
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<!-- =========================
+     APP
+========================= -->
+
+
+<div id="app" class="hidden">
+
+
+
+
+
+
+<header class="topbar">
+
+
+<div class="brand">
+
+
+<div class="brand-logo">
+
+GP
+
+</div>
+
+
+<div>
+
+<h2>
+GAME PLATFORM
+</h2>
+
+
+<span>
+COMMUNITY
+</span>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<div class="top-user">
+
+
+<img
+id="top-avatar"
+src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png"
+>
+
+
+<div>
+
+<strong id="top-name">
+Player
+</strong>
+
+
+<span>
+Online
+</span>
+
+
+</div>
+
+
+</div>
+
+
+</header>
+
+
+
+
+
+
+
 
 
 <div class="layout">
 
 
-<!-- ЛЕВАЯ ПАНЕЛЬ -->
+
+
+
+<!-- LEFT -->
 
 <aside class="sidebar">
 
-<div class="logo">
-GAME HUB
+
+
+<div class="menu-title">
+
+PLATFORM
+
 </div>
 
 
-<button class="menu-btn" onclick="showPage('home')">
-Главная
+
+
+<button class="menu-button active" data-page="home">
+
+🏠 Главная
+
 </button>
 
 
-<button class="menu-btn" onclick="showPage('profile')">
-Профиль
+
+<button class="menu-button" data-page="games">
+
+🎮 Игры
+
 </button>
 
 
-<button class="menu-btn" onclick="showPage('games')">
-Игры
+
+<button class="menu-button" data-page="guilds">
+
+⚔ Гильдии
+
 </button>
 
 
-<button class="menu-btn" onclick="showPage('guilds')">
-Гильдии
+
+<button class="menu-button" data-page="news">
+
+📰 Новости
+
 </button>
 
 
-<button class="menu-btn" onclick="showPage('conference')">
-Конференция
+
+
+<div class="menu-title">
+
+COMMUNITY
+
+</div>
+
+
+
+
+<button class="menu-button" data-page="chat">
+
+💬 Чат
+
 </button>
 
 
-<button class="menu-btn" onclick="logout()">
-Выход
+
+<button class="menu-button" data-page="conference">
+
+🎙 Конференции
+
 </button>
+
+
+
+<button class="menu-button" data-page="profile">
+
+👤 Профиль
+
+</button>
+
+
+
+
+
+<div class="sidebar-bottom">
+
+
+<button
+id="logout"
+class="menu-button logout"
+>
+
+Выйти
+
+</button>
+
+
+</div>
+
 
 
 </aside>
@@ -63,140 +350,49 @@ GAME HUB
 
 
 
-<!-- ОСНОВНОЕ ОКНО -->
+
+
+
+
+<!-- CENTER -->
+
 
 <main class="content">
+
 
 
 <section id="home" class="page active">
 
 
+
 <h1>
-Добро пожаловать в Game Platform
+Главная
 </h1>
 
 
-<div class="news-box">
 
-<h2>
-Новости
-</h2>
-
-
-<div id="news">
-
-Новости пока отсутствуют
-
-</div>
-
-
-</div>
-
-
-
-</section>
-
-
-
-
-
-
-<section id="auth" class="page">
+<div class="news-panel">
 
 
 <h2>
-Авторизация
+Новости платформы
 </h2>
 
 
-<input id="loginEmail"
-placeholder="Email">
+<div id="news-list">
 
 
-<input id="loginPassword"
-type="password"
-placeholder="Пароль">
+Загрузка новостей...
 
-
-<button class="menu-btn"
-onclick="login()">
-
-Войти
-
-</button>
-
-
-
-
-<h3>
-Регистрация
-</h3>
-
-
-<input id="regEmail"
-placeholder="Email">
-
-
-<input id="regPassword"
-type="password"
-placeholder="Пароль">
-
-
-<input id="regNickname"
-placeholder="Ник">
-
-
-<button class="menu-btn"
-onclick="register()">
-
-Создать аккаунт
-
-</button>
-
-
-
-</section>
-
-
-
-
-
-
-
-
-<section id="profile" class="page">
-
-
-<h2>
-Профиль
-</h2>
-
-
-<div class="profile-card">
-
-
-<img id="avatar"
-src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png">
-
-
-<input id="avatarUrl"
-placeholder="Ссылка на аватар">
-
-
-<button class="menu-btn"
-onclick="saveProfile()">
-
-Сохранить
-
-</button>
-
-
-<div id="profileInfo">
 
 </div>
 
 
+
 </div>
+
+
+
 
 
 </section>
@@ -211,14 +407,17 @@ onclick="saveProfile()">
 
 <section id="games" class="page">
 
-<h2>
+
+<h1>
 Игры
-</h2>
+</h1>
 
 
-<div class="white-box">
+<div class="empty-card">
+
 
 Добавление игр будет здесь
+
 
 </div>
 
@@ -234,14 +433,17 @@ onclick="saveProfile()">
 
 <section id="guilds" class="page">
 
-<h2>
+
+<h1>
 Гильдии
-</h2>
+</h1>
 
 
-<div class="white-box">
+<div class="empty-card">
 
-Раздел гильдий
+
+Создание игровых сообществ
+
 
 </div>
 
@@ -255,30 +457,182 @@ onclick="saveProfile()">
 
 
 
-<section id="conference" class="page">
+
+<section id="news" class="page">
 
 
-<h2>
-Конференция
-</h2>
+<h1>
+Новости
+</h1>
+
+
+<div id="news-page">
+
+
+</div>
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<section id="chat" class="page">
+
+
+<h1>
+Общий чат
+</h1>
+
+
 
 
 <div class="chat-box">
 
 
+
 <div id="messages">
+
 
 </div>
 
 
-<input id="messageInput"
-placeholder="Сообщение">
 
 
-<button class="menu-btn"
-onclick="sendMessage()">
+<div class="chat-input">
+
+
+<input
+id="message-text"
+placeholder="Введите сообщение..."
+>
+
+
+<button
+id="send-message"
+class="main-button"
+>
 
 Отправить
+
+</button>
+
+
+</div>
+
+
+</div>
+
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<section id="conference" class="page">
+
+
+<h1>
+Конференции
+</h1>
+
+
+<div class="empty-card">
+
+
+Голосовые комнаты
+
+
+</div>
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<section id="profile" class="page">
+
+
+<h1>
+Профиль
+</h1>
+
+
+<div class="profile-card">
+
+
+
+<img
+id="profile-avatar"
+src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png"
+>
+
+
+
+<h2 id="profile-name">
+
+Player
+
+</h2>
+
+
+
+
+<div id="vip">
+
+VIP 0
+
+</div>
+
+
+
+
+
+<input
+id="avatar-url"
+placeholder="Ссылка на аватар"
+>
+
+
+
+<input
+id="profile-city"
+placeholder="Город"
+>
+
+
+
+<input
+id="profile-age"
+type="number"
+placeholder="Возраст"
+>
+
+
+
+<button
+id="save-profile"
+class="main-button"
+>
+
+Сохранить
 
 </button>
 
@@ -295,16 +649,107 @@ onclick="sendMessage()">
 
 
 
-
 </main>
+
+
+
+
+
+
+
+
+
+<!-- RIGHT -->
+
+
+<aside class="rightbar">
+
+
+<h3>
+PROFILE
+</h3>
+
+
+
+
+<div class="side-profile">
+
+
+<img
+id="side-avatar"
+src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png"
+>
+
+
+<h2 id="side-name">
+
+Player
+
+</h2>
+
+
+<div id="side-vip">
+
+VIP 0
+
+</div>
+
 
 
 </div>
 
 
 
+
+
+
+<div class="online-card">
+
+
+<span class="online-dot"></span>
+
+
+Игроки онлайн:
+
+
+<strong id="online-count">
+
+0
+
+</strong>
+
+
+</div>
+
+
+
+
+
+</aside>
+
+
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script src="app.js"></script>
 
 
 </body>
+
 </html>
