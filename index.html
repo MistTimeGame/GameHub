@@ -1,120 +1,60 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
-
 <meta charset="UTF-8">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Game Platform</title>
 
-
 <link rel="stylesheet" href="style.css">
-
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-
 </head>
-
 
 <body>
 
 
-<div class="app">
+<div class="layout">
 
 
-<!-- =========================
-     ЛЕВАЯ ПАНЕЛЬ
-========================= -->
+<!-- ЛЕВАЯ ПАНЕЛЬ -->
 
 <aside class="sidebar">
 
-
 <div class="logo">
-
-GAME PLATFORM
-
+GAME HUB
 </div>
 
 
-
-<div class="menu">
-
-
-<button class="menu-btn"
-onclick="openPage('home')">
-
-🏠 Главная
-
+<button class="menu-btn" onclick="showPage('home')">
+Главная
 </button>
 
 
-<button class="menu-btn"
-onclick="openPage('auth')">
-
-🔐 Вход
-
+<button class="menu-btn" onclick="showPage('profile')">
+Профиль
 </button>
 
 
-
-<button class="menu-btn"
-onclick="openPage('profile')">
-
-👤 Профиль
-
+<button class="menu-btn" onclick="showPage('games')">
+Игры
 </button>
 
 
-
-<button class="menu-btn"
-onclick="openPage('games')">
-
-🎮 Игры
-
+<button class="menu-btn" onclick="showPage('guilds')">
+Гильдии
 </button>
 
 
-
-<button class="menu-btn"
-onclick="openPage('guilds')">
-
-⚔ Гильдии
-
+<button class="menu-btn" onclick="showPage('conference')">
+Конференция
 </button>
 
 
-
-<button class="menu-btn"
-onclick="openPage('chat')">
-
-💬 Чат
-
+<button class="menu-btn" onclick="logout()">
+Выход
 </button>
-
-
-
-<button class="menu-btn"
-onclick="openPage('conference')">
-
-📢 Конференция
-
-</button>
-
-
-
-<button class="menu-btn"
-onclick="openPage('admin')">
-
-⚙ Админ
-
-</button>
-
-
-</div>
-
 
 
 </aside>
@@ -123,60 +63,35 @@ onclick="openPage('admin')">
 
 
 
-
-<!-- =========================
-     ОСНОВНОЙ ЭКРАН
-========================= -->
-
+<!-- ОСНОВНОЕ ОКНО -->
 
 <main class="content">
 
 
-
-
-
-<!-- =========================
-     ГЛАВНАЯ
-========================= -->
-
-
-<section id="home"
-class="page">
+<section id="home" class="page active">
 
 
 <h1>
-Game Platform
+Добро пожаловать в Game Platform
 </h1>
 
 
-
-<div class="news-panel">
-
+<div class="news-box">
 
 <h2>
-Новости и важная информация
+Новости
 </h2>
 
 
+<div id="news">
 
-<div id="newsContent">
-
-
-Добро пожаловать!
-
-
-<br><br>
-
-
-Здесь будут отображаться новости,
-объявления и важная информация.
-
+Новости пока отсутствуют
 
 </div>
 
 
-
 </div>
+
 
 
 </section>
@@ -185,62 +100,211 @@ Game Platform
 
 
 
-<!-- =========================
-     АВТОРИЗАЦИЯ
-========================= -->
+
+<section id="auth" class="page">
 
 
-<section id="auth"
-class="page hidden">
-
-
-<h1>
+<h2>
 Авторизация
-</h1>
+</h2>
 
 
-
-<div class="card">
-
-
-<input
-id="nickname"
-placeholder="Никнейм">
-
-
-
-<input
-id="email"
+<input id="loginEmail"
 placeholder="Email">
 
 
-
-<input
-id="password"
+<input id="loginPassword"
 type="password"
 placeholder="Пароль">
 
 
-
-<button
-id="registerBtn">
-
-Регистрация
-
-</button>
-
-
-
-<button
-id="loginBtn">
+<button class="menu-btn"
+onclick="login()">
 
 Войти
 
 </button>
 
 
+
+
+<h3>
+Регистрация
+</h3>
+
+
+<input id="regEmail"
+placeholder="Email">
+
+
+<input id="regPassword"
+type="password"
+placeholder="Пароль">
+
+
+<input id="regNickname"
+placeholder="Ник">
+
+
+<button class="menu-btn"
+onclick="register()">
+
+Создать аккаунт
+
+</button>
+
+
+
+</section>
+
+
+
+
+
+
+
+
+<section id="profile" class="page">
+
+
+<h2>
+Профиль
+</h2>
+
+
+<div class="profile-card">
+
+
+<img id="avatar"
+src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png">
+
+
+<input id="avatarUrl"
+placeholder="Ссылка на аватар">
+
+
+<button class="menu-btn"
+onclick="saveProfile()">
+
+Сохранить
+
+</button>
+
+
+<div id="profileInfo">
+
+</div>
+
+
+</div>
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<section id="games" class="page">
+
+<h2>
+Игры
+</h2>
+
+
+<div class="white-box">
+
+Добавление игр будет здесь
+
+</div>
+
+
+</section>
+
+
+
+
+
+
+
+
+<section id="guilds" class="page">
+
+<h2>
+Гильдии
+</h2>
+
+
+<div class="white-box">
+
+Раздел гильдий
+
+</div>
+
+
+</section>
+
+
+
+
+
+
+
+
+<section id="conference" class="page">
+
+
+<h2>
+Конференция
+</h2>
+
+
+<div class="chat-box">
+
+
+<div id="messages">
+
+</div>
+
+
+<input id="messageInput"
+placeholder="Сообщение">
+
+
+<button class="menu-btn"
+onclick="sendMessage()">
+
+Отправить
+
+</button>
+
+
+
 </div>
 
 
 
 </section>
+
+
+
+
+
+
+
+</main>
+
+
+</div>
+
+
+
+<script src="app.js"></script>
+
+
+</body>
+</html>
