@@ -1,115 +1,110 @@
-/* ============================================================
-   GAMEHUB AUTH
-   ============================================================ */
+.profile-card{
 
 
-.auth-page {
+max-width:420px;
 
-    min-height: 100vh;
+margin:30px auto;
 
-    display: flex;
+background:white;
 
-    align-items: center;
+padding:30px;
 
-    justify-content: center;
+border-radius:25px;
 
-    padding: 20px;
+box-shadow:
 
-}
+0 15px 40px rgba(0,0,0,.12);
 
-
-
-.auth-box {
-
-    width: 100%;
-
-    max-width: 420px;
-
-    padding: 30px;
+text-align:center;
 
 }
 
 
 
-.auth-title {
-
-    text-align: center;
-
-    margin-bottom: 25px;
-
-}
+.profile-avatar-box img{
 
 
-.auth-title h1 {
+width:130px;
 
-    margin: 0;
+height:130px;
 
-    font-size: 32px;
+border-radius:50%;
 
-}
+object-fit:cover;
 
+border:
 
-
-.auth-title p {
-
-    color:
-        var(--gh-text-secondary);
-
-    margin-top: 8px;
+4px solid #ddd;
 
 }
 
 
 
-.auth-tabs {
-
-    display: flex;
-
-    gap: 10px;
-
-    margin-bottom: 20px;
-
-}
+.profile-card input{
 
 
+width:100%;
 
-.auth-tabs button {
+padding:12px;
 
-    flex: 1;
+margin:
 
-}
+8px 0 15px;
 
+border-radius:14px;
 
+border:
 
-.auth-form {
-
-    display: flex;
-
-    flex-direction: column;
-
-    gap: 14px;
+1px solid #ddd;
 
 }
 
 
 
-.auth-message {
+.profile-card label{
 
-    margin-top: 15px;
+
+display:block;
+
+text-align:left;
+
+font-size:13px;
+
+font-weight:bold;
 
 }
 
 
 
-.auth-footer {
+.vip-badge{
 
-    margin-top: 20px;
 
-    text-align: center;
+margin:15px auto;
 
-    color:
-        var(--gh-text-secondary);
+width:max-content;
 
-    font-size: 13px;
+padding:10px 20px;
+
+border-radius:20px;
+
+
+background:
+
+linear-gradient(
+145deg,
+#fff4a8,
+#d49b00
+);
+
+
+color:#8a5a00;
+
+
+font-weight:900;
+
+
+box-shadow:
+
+0 5px 15px rgba(212,155,0,.35);
 
 }
