@@ -1,135 +1,165 @@
+/* =====================================
+   GAME PLATFORM STYLE
+===================================== */
+
+
 *{
-    box-sizing:border-box;
-    font-family:Arial, Helvetica, sans-serif;
+
+box-sizing:border-box;
+
+margin:0;
+
+padding:0;
+
+font-family:
+"Segoe UI",
+Arial,
+sans-serif;
+
 }
+
 
 
 body{
 
-    margin:0;
+background:#ffffff;
 
-    background:#ffffff;
+color:#20242a;
 
-    color:#222;
-
-}
-
-
-
-/* ОСНОВНАЯ СЕТКА */
-
-.layout{
-
-    display:flex;
-
-    min-height:100vh;
+min-height:100vh;
 
 }
 
 
 
-/* ЛЕВАЯ ПАНЕЛЬ */
 
-.sidebar{
 
-    width:260px;
 
-    background:
-    linear-gradient(
-        180deg,
-        #f8f8f8,
-        #e7e7e7
-    );
+.hidden{
 
-    border-right:1px solid #ccc;
-
-    padding:20px;
-
-    box-shadow:
-    5px 0 15px rgba(0,0,0,0.15);
+display:none!important;
 
 }
+
+
+
+
+
+
+
+/* =====================================
+   AUTH
+===================================== */
+
+
+.auth-screen{
+
+
+width:100%;
+
+height:100vh;
+
+
+display:flex;
+
+justify-content:center;
+
+align-items:center;
+
+
+
+background:
+
+
+radial-gradient(
+circle at top,
+#d9ecff,
+transparent 45%
+),
+
+#f5f6f8;
+
+
+}
+
+
+
+.auth-card{
+
+
+width:420px;
+
+padding:40px;
+
+
+background:white;
+
+
+border-radius:28px;
+
+
+box-shadow:
+
+0 20px 50px rgba(0,0,0,.18);
+
+
+text-align:center;
+
+
+}
+
 
 
 
 
 .logo{
 
-    height:80px;
 
-    display:flex;
+width:90px;
 
-    align-items:center;
+height:90px;
 
-    justify-content:center;
 
-    font-size:28px;
+margin:auto;
 
-    font-weight:bold;
 
-    color:#333;
+display:flex;
 
-    margin-bottom:30px;
+align-items:center;
 
-    text-shadow:
-    0 1px 0 white,
-    0 3px 5px rgba(0,0,0,.3);
-
-}
+justify-content:center;
 
 
 
+border-radius:25px;
 
 
 
-/* 3D КНОПКИ */
+font-size:38px;
 
-.menu-btn{
-
-
-    width:100%;
-
-    margin:8px 0;
-
-    padding:14px;
-
-
-    border-radius:14px;
-
-
-    border:1px solid #bcbcbc;
-
-
-    background:
-
-    linear-gradient(
-        145deg,
-        #eeeeee,
-        #bcbcbc
-    );
-
-
-    color:#333;
-
-
-    font-size:16px;
-
-    font-weight:bold;
-
-
-    cursor:pointer;
+font-weight:900;
 
 
 
-    box-shadow:
-
-    inset 0 2px 4px rgba(255,255,255,.8),
-
-    0 5px 10px rgba(0,0,0,.25);
+color:#222;
 
 
 
-    transition:.25s;
+background:
+
+linear-gradient(
+145deg,
+#ffffff,
+#bfc5cc
+);
+
+
+
+box-shadow:
+
+inset 0 3px 8px white,
+
+0 10px 25px rgba(0,0,0,.3);
 
 
 }
@@ -138,35 +168,139 @@ body{
 
 
 
-.menu-btn:hover{
+.auth-card h1{
 
 
-    background:
+margin-top:20px;
 
-    linear-gradient(
-        145deg,
-        #ffffff,
-        #9fc9ff
-    );
+font-size:30px;
 
 
-    color:#003b80;
+}
 
 
-    box-shadow:
 
 
-    inset 0 2px 5px white,
+
+.subtitle{
 
 
-    0 0 15px rgba(0,120,255,.8),
+color:#777;
+
+margin:10px 0 25px;
+
+}
 
 
-    0 5px 12px rgba(0,0,0,.3);
 
 
-    transform:
-    translateY(-2px);
+
+
+.auth-switch{
+
+
+display:flex;
+
+gap:10px;
+
+margin-bottom:20px;
+
+
+}
+
+
+
+.auth-switch button{
+
+
+flex:1;
+
+height:45px;
+
+
+border-radius:14px;
+
+
+border:0;
+
+
+
+background:#ddd;
+
+
+font-weight:700;
+
+
+cursor:pointer;
+
+
+}
+
+
+
+.auth-switch button.active{
+
+
+background:#9ecbff;
+
+color:#003d80;
+
+
+}
+
+
+
+
+
+input{
+
+
+width:100%;
+
+
+height:48px;
+
+
+margin:8px 0;
+
+
+padding:0 15px;
+
+
+
+border-radius:14px;
+
+
+border:
+
+1px solid #ccc;
+
+
+
+background:white;
+
+
+font-size:15px;
+
+
+
+}
+
+
+
+input:focus{
+
+
+outline:none;
+
+
+border-color:#3399ff;
+
+
+
+box-shadow:
+
+0 0 12px rgba(0,140,255,.4);
 
 
 }
@@ -176,31 +310,521 @@ body{
 
 
 
-/* ОСНОВНОЕ ОКНО */
+/* =====================================
+ BUTTONS
+===================================== */
+
+
+
+.main-button{
+
+
+height:50px;
+
+
+padding:0 25px;
+
+
+
+border-radius:16px;
+
+
+border:
+
+1px solid #999;
+
+
+
+cursor:pointer;
+
+
+
+font-size:16px;
+
+
+font-weight:700;
+
+
+
+background:
+
+
+linear-gradient(
+145deg,
+#fafafa,
+#aeb4bb
+);
+
+
+
+color:#222;
+
+
+
+box-shadow:
+
+
+inset 0 3px 6px rgba(255,255,255,.9),
+
+
+0 7px 15px rgba(0,0,0,.25);
+
+
+
+transition:.25s;
+
+
+
+}
+
+
+
+.main-button:hover{
+
+
+transform:translateY(-3px);
+
+
+
+background:
+
+
+linear-gradient(
+145deg,
+white,
+#9bcfff
+);
+
+
+
+color:#0050a0;
+
+
+
+box-shadow:
+
+
+0 0 18px rgba(0,140,255,.7),
+
+
+0 10px 20px rgba(0,0,0,.3);
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+/* =====================================
+ TOPBAR
+===================================== */
+
+
+.topbar{
+
+
+height:85px;
+
+
+
+display:flex;
+
+justify-content:space-between;
+
+align-items:center;
+
+
+
+padding:0 30px;
+
+
+
+background:white;
+
+
+
+border-bottom:
+
+1px solid #ddd;
+
+
+
+box-shadow:
+
+0 5px 20px rgba(0,0,0,.12);
+
+
+
+}
+
+
+
+
+
+.brand{
+
+
+display:flex;
+
+align-items:center;
+
+gap:15px;
+
+
+}
+
+
+
+.brand-logo{
+
+
+width:55px;
+
+height:55px;
+
+
+border-radius:18px;
+
+
+display:flex;
+
+align-items:center;
+
+justify-content:center;
+
+
+
+font-size:25px;
+
+font-weight:900;
+
+
+
+background:
+
+linear-gradient(
+145deg,
+#fff,
+#aaa
+);
+
+
+
+box-shadow:
+
+0 6px 15px rgba(0,0,0,.3);
+
+
+}
+
+
+
+
+
+.brand span{
+
+
+color:#777;
+
+font-size:12px;
+
+
+}
+
+
+
+
+
+
+.top-user{
+
+
+display:flex;
+
+align-items:center;
+
+gap:12px;
+
+
+}
+
+
+
+
+.top-user img{
+
+
+width:55px;
+
+height:55px;
+
+
+border-radius:50%;
+
+
+object-fit:cover;
+
+
+
+border:
+
+3px solid white;
+
+
+
+box-shadow:
+
+0 5px 15px rgba(0,0,0,.3);
+
+
+
+}
+
+
+
+
+
+
+
+
+/* =====================================
+ LAYOUT
+===================================== */
+
+
+.layout{
+
+
+display:flex;
+
+
+min-height:calc(100vh - 85px);
+
+
+
+}
+
+
+
+
+
+
+/* =====================================
+ LEFT SIDEBAR
+===================================== */
+
+
+.sidebar{
+
+
+width:270px;
+
+
+background:
+
+
+linear-gradient(
+180deg,
+#f1f2f4,
+#d9dce1
+);
+
+
+
+padding:20px;
+
+
+
+box-shadow:
+
+5px 0 25px rgba(0,0,0,.15);
+
+
+}
+
+
+
+
+
+.menu-title{
+
+
+font-size:12px;
+
+font-weight:800;
+
+
+color:#777;
+
+
+margin:20px 10px 10px;
+
+
+letter-spacing:2px;
+
+
+}
+
+
+
+
+
+
+
+
+.menu-button{
+
+
+width:100%;
+
+
+height:52px;
+
+
+margin-bottom:14px;
+
+
+border-radius:16px;
+
+
+border:
+
+1px solid #999;
+
+
+
+cursor:pointer;
+
+
+
+background:
+
+
+linear-gradient(
+145deg,
+#fafafa,
+#b7bdc4
+);
+
+
+
+font-size:16px;
+
+font-weight:700;
+
+
+
+box-shadow:
+
+
+inset 0 3px 5px white,
+
+
+0 6px 12px rgba(0,0,0,.25);
+
+
+
+transition:.25s;
+
+
+
+}
+
+
+
+
+
+.menu-button:hover,
+.menu-button.active{
+
+
+transform:translateY(-3px);
+
+
+
+background:
+
+
+linear-gradient(
+145deg,
+white,
+#b6ddff
+);
+
+
+
+color:#004c99;
+
+
+
+box-shadow:
+
+
+0 0 20px rgba(0,140,255,.7),
+
+
+0 8px 18px rgba(0,0,0,.3);
+
+
+
+}
+
+
+
+
+
+.logout{
+
+
+margin-top:40px;
+
+
+}
+
+
+
+
+
+
+
+
+
+
+/* =====================================
+ CENTER
+===================================== */
 
 
 .content{
 
 
-    flex:1;
+flex:1;
 
 
-    padding:30px;
+padding:35px;
 
 
-    background:#fff;
+
+background:white;
 
 
 }
-
-
 
 
 
 
 .page{
 
-    display:none;
+
+display:none;
+
 
 }
 
@@ -208,22 +832,8 @@ body{
 
 .page.active{
 
-    display:block;
 
-}
-
-
-
-
-
-h1,h2{
-
-
-    color:#333;
-
-
-    text-shadow:
-    0 1px 1px #aaa;
+display:block;
 
 
 }
@@ -232,49 +842,12 @@ h1,h2{
 
 
 
+.content h1{
 
 
+font-size:34px;
 
-/* НОВОСТИ */
-
-
-.news-box{
-
-
-    background:white;
-
-
-    min-height:300px;
-
-
-    border-radius:18px;
-
-
-    border:1px solid #ddd;
-
-
-    padding:25px;
-
-
-    box-shadow:
-
-
-    0 5px 20px rgba(0,0,0,.15);
-
-
-
-}
-
-
-
-
-#news{
-
-
-    padding:20px;
-
-
-    font-size:18px;
+margin-bottom:25px;
 
 
 }
@@ -284,95 +857,37 @@ h1,h2{
 
 
 
-/* ПОЛЯ */
 
 
-input{
-
-
-    display:block;
-
-
-    width:350px;
-
-
-    padding:14px;
-
-
-    margin:12px 0;
-
-
-    border-radius:12px;
-
-
-    border:1px solid #ccc;
-
-
-    font-size:16px;
-
-
-
-    box-shadow:
-
-    inset 0 2px 5px rgba(0,0,0,.15);
-
-
-}
-
-
-
-
-
-/* ПРОФИЛЬ */
-
-
+.news-panel,
+.empty-card,
+.chat-box,
 .profile-card{
 
 
-    background:white;
-
-
-    padding:30px;
-
-
-    border-radius:20px;
-
-
-    box-shadow:
-
-    0 5px 20px rgba(0,0,0,.15);
-
-
-    width:400px;
-
-
-}
+background:white;
 
 
 
-
-#avatar{
-
-
-    width:140px;
+border-radius:25px;
 
 
-    height:140px;
+
+padding:30px;
 
 
-    border-radius:50%;
+
+box-shadow:
 
 
-    object-fit:cover;
+0 10px 35px rgba(0,0,0,.15);
 
 
-    display:block;
 
+border:
 
-    margin-bottom:20px;
+1px solid #eee;
 
-
-    border:4px solid #ddd;
 
 
 }
@@ -383,96 +898,32 @@ input{
 
 
 
-.white-box{
-
-
-    background:white;
-
-
-    min-height:300px;
-
-
-    border-radius:20px;
-
-
-    padding:30px;
-
-
-    box-shadow:
-
-    0 5px 20px rgba(0,0,0,.15);
-
-
-}
-
-
-
-
-
-
-
-/* ЧАТ */
-
-
-.chat-box{
-
-
-    background:white;
-
-
-    border-radius:20px;
-
-
-    padding:20px;
-
-
-    box-shadow:
-
-    0 5px 20px rgba(0,0,0,.15);
-
-
-}
-
+/* =====================================
+ CHAT
+===================================== */
 
 
 #messages{
 
 
-    height:400px;
+height:400px;
 
 
-    overflow-y:auto;
+overflow:auto;
 
 
-    border:1px solid #ddd;
-
-
-    padding:15px;
-
-
-    margin-bottom:15px;
-
-
-    border-radius:12px;
-
-
-}
+background:#f4f6f8;
 
 
 
-.message{
+padding:20px;
 
 
-    background:#eeeeee;
+
+border-radius:20px;
 
 
-    padding:10px;
-
-
-    margin:8px;
-
-
-    border-radius:10px;
+margin-bottom:20px;
 
 
 }
@@ -480,23 +931,282 @@ input{
 
 
 
+.chat-input{
 
 
-@media(max-width:800px){
+display:flex;
 
-
-.sidebar{
-
-
-    width:180px;
+gap:10px;
 
 
 }
 
 
-input{
 
-    width:100%;
+
+
+
+
+
+
+/* =====================================
+ PROFILE
+===================================== */
+
+
+.profile-card{
+
+
+max-width:450px;
+
+
+text-align:center;
+
+
+}
+
+
+
+
+
+.profile-card img{
+
+
+width:150px;
+
+height:150px;
+
+
+border-radius:50%;
+
+
+object-fit:cover;
+
+
+
+box-shadow:
+
+0 10px 25px rgba(0,0,0,.3);
+
+
+
+margin-bottom:20px;
+
+
+
+}
+
+
+
+
+
+#vip,
+#side-vip{
+
+
+display:inline-block;
+
+
+padding:8px 18px;
+
+
+border-radius:20px;
+
+
+background:
+
+linear-gradient(
+145deg,
+#ffe57a,
+#d89b00
+);
+
+
+
+font-weight:900;
+
+
+
+margin:15px;
+
+
+}
+
+
+
+
+
+
+
+
+
+
+/* =====================================
+ RIGHT
+===================================== */
+
+
+.rightbar{
+
+
+width:300px;
+
+
+
+padding:25px;
+
+
+
+background:#fafafa;
+
+
+
+border-left:
+
+1px solid #ddd;
+
+
+}
+
+
+
+
+
+.side-profile{
+
+
+text-align:center;
+
+
+background:white;
+
+
+padding:25px;
+
+
+border-radius:25px;
+
+
+box-shadow:
+
+0 10px 25px rgba(0,0,0,.12);
+
+
+
+}
+
+
+
+
+
+.side-profile img{
+
+
+width:120px;
+
+height:120px;
+
+
+border-radius:50%;
+
+
+object-fit:cover;
+
+
+}
+
+
+
+
+
+.online-card{
+
+
+margin-top:25px;
+
+
+background:white;
+
+
+padding:20px;
+
+
+border-radius:20px;
+
+
+box-shadow:
+
+0 8px 20px rgba(0,0,0,.12);
+
+
+
+}
+
+
+
+.online-dot{
+
+
+display:inline-block;
+
+
+width:12px;
+
+height:12px;
+
+
+background:#00d000;
+
+
+border-radius:50%;
+
+
+margin-right:8px;
+
+
+
+}
+
+
+
+
+
+
+
+/* =====================================
+ MOBILE
+===================================== */
+
+
+@media(max-width:1000px){
+
+
+.layout{
+
+
+flex-direction:column;
+
+
+}
+
+
+
+.sidebar,
+.rightbar{
+
+
+width:100%;
+
+
+}
+
+
+
+.content{
+
+
+padding:20px;
+
 
 }
 
