@@ -21,13 +21,13 @@
 
     <div id="auth-message"></div>
 
-    <form id="login-form">
+    <form id="login-form" autocomplete="on">
       <input id="login-email" type="email" placeholder="Email" required autocomplete="email">
       <input id="login-password" type="password" placeholder="Пароль" required autocomplete="current-password">
       <button class="main-button" type="submit">Войти</button>
     </form>
 
-    <form id="register-form" class="hidden">
+    <form id="register-form" class="hidden" autocomplete="on">
       <input id="register-nickname" placeholder="Игровой ник" required maxlength="30">
       <input id="register-email" type="email" placeholder="Email" required autocomplete="email">
       <input id="register-password" type="password" placeholder="Пароль" required minlength="6" autocomplete="new-password">
@@ -116,10 +116,10 @@
           <div class="rooms-panel">
             <h2>Комнаты</h2>
 
-            <form id="create-room-form" class="create-room-form">
+            <form id="create-room-form" class="create-room-form" onsubmit="return false">
               <input id="room-name-input" placeholder="Название комнаты" maxlength="60" required>
               <input id="room-desc-input" placeholder="Описание (необязательно)" maxlength="120">
-              <button class="main-button" type="submit">Создать</button>
+              <button id="create-room-btn" class="main-button" type="button">Создать</button>
             </form>
 
             <div id="rooms-list">Загрузка комнат…</div>
@@ -183,7 +183,6 @@
 
   </div>
 
-  <!-- Аудио вне потока и вне display:none -->
   <div id="remote-audio" style="position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;"></div>
 
 </div>
