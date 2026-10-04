@@ -1,14 +1,17 @@
-// ===============================
-// GamePlatform APP.JS
-// Auth + Profile + Chat + Conference
-// ===============================
+// =====================================
+// SUPABASE CONFIG
+// =====================================
 
 
-// ---------- SUPABASE ----------
+// ВСТАВЬ СЮДА СВОИ ДАННЫЕ
 
-const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
+const SUPABASE_URL = 
+"https://uvzaoobtysostmfwyfxm.supabase.co";
 
-const SUPABASE_KEY = "sb_publishable_-7M1kuwWOeRq21SfrLiojg_0qngL_7s";
+
+const SUPABASE_KEY =
+"sb_publishable_-7M1kuwWOeRq21SfrLiojg_0qngL_7s";
+
 
 
 const supabaseClient = supabase.createClient(
@@ -18,56 +21,45 @@ const supabaseClient = supabase.createClient(
 
 
 
-// ---------- GLOBAL ----------
+
+// =====================================
+// GLOBAL
+// =====================================
+
 
 let currentUser = null;
 
 
 
-// ---------- START ----------
 
-document.addEventListener(
-    "DOMContentLoaded",
-    async () => {
 
-        await checkSession();
+// =====================================
+// ПЕРЕКЛЮЧЕНИЕ СТРАНИЦ
+// =====================================
 
-        initButtons();
 
-        loadChat();
+function showPage(page){
 
-        loadConference();
 
-    }
-);
-
+    document
+    .querySelectorAll(".page")
+    .forEach(p=>{
+        p.classList.remove("active");
+    });
 
 
 
-// ===============================
-// AUTH
-// ===============================
+    let element =
+    document.getElementById(page);
 
 
 
-async function checkSession(){
+    if(element){
 
-    const {
-        data
-    } = await supabaseClient
-        .auth
-        .getSession();
-
-
-    if(data.session){
-
-        currentUser =
-            data.session.user;
-
-
-        showProfile();
+        element.classList.add("active");
 
     }
+
 
 }
 
@@ -75,26 +67,93 @@ async function checkSession(){
 
 
 
+// =====================================
+// ПРОВЕРКА СЕССИИ
+// =====================================
+
+
+async function checkSession(){
+
+
+    const {
+
+        data
+
+    } =
+    await supabaseClient.auth.getSession();
+
+
+
+    if(data.session){
+
+
+        currentUser =
+        data.session.user;
+
+
+
+        showPage("home");
+
+
+        loadProfile();
+
+    }
+    else{
+
+
+        showPage("auth");
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+// =====================================
+// РЕГИСТРАЦИЯ
+// =====================================
+
+
 async function register(){
 
 
+
     const email =
-        document.getElementById("email").value;
+    document
+    .getElementById("regEmail")
+    .value;
 
 
     const password =
-        document.getElementById("password").value;
+    document
+    .getElementById("regPassword")
+    .value;
+
 
 
     const nickname =
-        document.getElementById("nickname").value;
+    document
+    .getElementById("regNickname")
+    .value;
+
+
 
 
 
     const {
+
         data,
         error
+
     } =
+
     await supabaseClient
     .auth
     .signUp({
@@ -106,7 +165,10 @@ async function register(){
 
 
 
+
+
     if(error){
+
 
         alert(error.message);
 
@@ -116,57 +178,71 @@ async function register(){
 
 
 
+
+
+
     const user =
-        data.user;
+    data.user;
 
 
 
-    if(user){
 
 
-        const {
-            error:profileError
-        }
-        =
-        await supabaseClient
-        .from("profiles")
-        .insert({
+    const {
 
-            id:user.id,
+        error:profileError
 
-            nickname:nickname,
-
-            avatar_url:"",
-
-            city:"",
-
-            age:null,
-
-            vip_level:0
-
-        });
+    } =
 
 
+    await supabaseClient
+    .from("profiles")
+    .insert({
 
-        if(profileError){
+        id:user.id,
 
-            console.log(profileError);
+        nickname:nickname,
 
-            alert(
-              "Аккаунт создан, но профиль не создан"
-            );
+        avatar_url:
+        "https://cdn-icons-png.flaticon.com/512/4712/4712109.png",
 
-            return;
+        city:"",
 
-        }
+        age:null,
+
+        vip_level:0
+
+
+    });
+
+
+
+
+
+
+    if(profileError){
 
 
         alert(
-        "Регистрация успешна"
+        "Аккаунт создан, но профиль ошибка: "
+        +
+        profileError.message
         );
 
 
+        return;
+
+
     }
+
+
+
+
+
+    alert(
+    "Регистрация успешна"
+    );
+
 
 
 }
@@ -176,24 +252,40 @@ async function register(){
 
 
 
+
+
+// =====================================
+// ВХОД
+// =====================================
+
+
 async function login(){
 
 
+
     const email =
-    document.getElementById("email").value;
+    document
+    .getElementById("loginEmail")
+    .value;
 
 
 
     const password =
-    document.getElementById("password").value;
+    document
+    .getElementById("loginPassword")
+    .value;
+
 
 
 
     const {
+
         data,
         error
-    }
-    =
+
+    } =
+
+
     await supabaseClient
     .auth
     .signInWithPassword({
@@ -206,7 +298,12 @@ async function login(){
 
 
 
+
+
+
+
     if(error){
+
 
         alert(error.message);
 
@@ -216,12 +313,24 @@ async function login(){
 
 
 
+
+
     currentUser =
     data.user;
 
 
 
-    showProfile();
+
+    alert(
+    "Вход выполнен"
+    );
+
+
+
+    showPage("home");
+
+
+    loadProfile();
 
 
 }
@@ -229,6 +338,14 @@ async function login(){
 
 
 
+
+
+
+
+
+// =====================================
+// ВЫХОД
+// =====================================
 
 
 async function logout(){
@@ -240,7 +357,11 @@ async function logout(){
 
 
 
-    location.reload();
+    currentUser=null;
+
+
+
+    showPage("auth");
 
 
 }
@@ -250,13 +371,16 @@ async function logout(){
 
 
 
-// ===============================
-// PROFILE
-// ===============================
+
+
+// =====================================
+// ПРОФИЛЬ
+// =====================================
 
 
 
-async function showProfile(){
+async function loadProfile(){
+
 
 
     if(!currentUser)
@@ -264,19 +388,31 @@ async function showProfile(){
 
 
 
+
+
     const {
+
         data,
         error
-    }
-    =
+
+    } =
+
+
     await supabaseClient
+
     .from("profiles")
+
     .select("*")
+
     .eq(
         "id",
         currentUser.id
     )
+
     .single();
+
+
+
 
 
 
@@ -290,63 +426,46 @@ async function showProfile(){
 
 
 
-    let box =
-    document.getElementById(
-        "profileBox"
-    );
+
+
+    document
+    .getElementById("avatar")
+    .src =
+    data.avatar_url;
 
 
 
-    if(!box)
-    return;
+    document
+    .getElementById("avatarUrl")
+    .value =
+    data.avatar_url;
 
 
 
-    box.innerHTML = `
+    document
+    .getElementById("profileInfo")
+    .innerHTML =
 
-    <div class="profile">
+    `
 
-        <img class="avatar"
-        src="${
-        data.avatar_url ||
-        'https://i.imgur.com/8Km9tLL.png'
-        }">
+    <h3>
+    ${data.nickname}
+    </h3>
 
-
-        <h2>
-        ${data.nickname}
-        </h2>
-
-
-        <p>
-        Город:
-        ${data.city || "-"}
-        </p>
-
-
-        <p>
-        Возраст:
-        ${data.age || "-"}
-        </p>
-
-
-        <p>
-        VIP:
-        ${data.vip_level}
-        </p>
-
-
-        <button onclick="logout()">
-        Выйти
-        </button>
-
-
-    </div>
+    <p>
+    VIP уровень:
+    ${data.vip_level}
+    </p>
 
     `;
 
 
+
+
 }
+
+
+
 
 
 
@@ -354,37 +473,50 @@ async function showProfile(){
 async function saveProfile(){
 
 
+
+    if(!currentUser){
+
+        alert(
+        "Сначала войдите"
+        );
+
+        return;
+
+    }
+
+
+
+
+
     const avatar =
-    document.getElementById(
-        "avatar"
-    ).value;
+
+    document
+    .getElementById("avatarUrl")
+    .value;
 
 
-    const city =
-    document.getElementById(
-        "city"
-    ).value;
 
 
-    const age =
-    document.getElementById(
-        "age"
-    ).value;
 
+
+    const {
+
+        error
+
+    } =
 
 
     await supabaseClient
+
     .from("profiles")
+
     .update({
 
-        avatar_url:avatar,
-
-        city:city,
-
-        age:
-        age ? Number(age):null
+        avatar_url:avatar
 
     })
+
+
     .eq(
         "id",
         currentUser.id
@@ -392,36 +524,143 @@ async function saveProfile(){
 
 
 
-    showProfile();
+
+
+
+    if(error){
+
+
+        alert(error.message);
+
+
+        return;
+
+    }
+
+
+
+
+    document
+    .getElementById("avatar")
+    .src=avatar;
+
+
 
 }
 
 
 
 
-// ===============================
-// CHAT
-// ===============================
+
+
+
+
+// =====================================
+// ЧАТ
+// =====================================
+
+
+
+async function loadMessages(){
+
+
+
+    const {
+
+        data
+
+    } =
+
+
+    await supabaseClient
+
+    .from("messages")
+
+    .select("*")
+
+    .order(
+        "created_at",
+        {
+            ascending:true
+        }
+    );
+
+
+
+
+
+    const box =
+    document
+    .getElementById("messages");
+
+
+
+    box.innerHTML="";
+
+
+
+
+
+    data.forEach(msg=>{
+
+
+        box.innerHTML +=
+
+
+        `
+
+        <div class="message">
+
+        <b>
+        ${msg.nickname || "User"}
+        </b>
+
+        :
+
+        ${msg.text}
+
+        </div>
+
+        `;
+
+
+    });
+
+
+
+}
+
+
 
 
 
 async function sendMessage(){
 
 
-    if(!currentUser)
-    return alert(
-        "Сначала войдите"
-    );
+
+    if(!currentUser){
+
+        alert(
+        "Войдите"
+        );
+
+        return;
+
+    }
+
+
 
 
     const input =
-    document.getElementById(
-        "messageInput"
-    );
+    document
+    .getElementById("messageInput");
+
 
 
     let text =
     input.value.trim();
+
+
 
 
 
@@ -430,191 +669,64 @@ async function sendMessage(){
 
 
 
+
+
+
+
     const {
-        data:profile
-    }
-    =
+
+        data:userProfile
+
+    } =
+
+
     await supabaseClient
+
     .from("profiles")
-    .select("*")
+
+    .select("nickname")
+
     .eq(
         "id",
         currentUser.id
     )
+
     .single();
 
 
 
+
+
+
+
+
     await supabaseClient
+
     .from("messages")
+
     .insert({
 
         user_id:
         currentUser.id,
 
         nickname:
-        profile.nickname,
-
-        avatar_url:
-        profile.avatar_url,
-
-        message:text
-
-    });
-
-
-
-    input.value="";
-
-
-    loadChat();
-
-
-}
-
-
-
-
-async function loadChat(){
-
-
-    const {
-        data
-    }
-    =
-    await supabaseClient
-    .from("messages")
-    .select("*")
-    .order(
-        "created_at",
-        {
-            ascending:true
-        }
-    );
-
-
-
-    let box =
-    document.getElementById(
-        "chatMessages"
-    );
-
-
-    if(!box || !data)
-    return;
-
-
-
-    box.innerHTML="";
-
-
-
-    data.forEach(
-        m=>{
-
-
-        box.innerHTML += `
-
-        <div class="message">
-
-
-        <b>
-        ${m.nickname}
-        </b>
-
-        :
-
-        ${m.message}
-
-
-        </div>
-
-        `;
-
-
-        }
-    );
-
-
-
-}
-
-
-
-
-
-
-// ===============================
-// CONFERENCE
-// ===============================
-
-
-
-async function sendConference(){
-
-
-    if(!currentUser)
-    return;
-
-
-
-    let input =
-    document.getElementById(
-        "conferenceInput"
-    );
-
-
-    let text =
-    input.value.trim();
-
-
-
-    if(!text)
-    return;
-
-
-
-    const {
-        data:profile
-    }
-    =
-    await supabaseClient
-    .from("profiles")
-    .select("*")
-    .eq(
-        "id",
-        currentUser.id
-    )
-    .single();
-
-
-
-    await supabaseClient
-    .from("conference")
-    .insert({
-
-        user_id:
-        currentUser.id,
-
-
-        nickname:
-        profile.nickname,
-
-
-        avatar_url:
-        profile.avatar_url,
-
+        userProfile.nickname,
 
         text:text
 
+
     });
+
+
+
 
 
 
     input.value="";
 
 
-    loadConference();
+    loadMessages();
+
 
 
 }
@@ -625,64 +737,49 @@ async function sendConference(){
 
 
 
-async function loadConference(){
 
 
-    const {
-        data
-    }
-    =
-    await supabaseClient
-    .from("conference")
-    .select("*")
-    .order(
-        "created_at",
-        {
-            ascending:true
-        }
-    );
+// =====================================
+// REALTIME CHAT
+// =====================================
+
+
+function startChat(){
 
 
 
-    const box =
-    document.getElementById(
-        "conferenceMessages"
-    );
+supabaseClient
+
+.channel("messages-room")
 
 
+.on(
 
-    if(!box || !data)
-    return;
+"postgres_changes",
 
+{
 
+event:"INSERT",
 
-    box.innerHTML="";
+schema:"public",
 
+table:"messages"
 
+},
 
-    data.forEach(
-        c=>{
-
-
-        box.innerHTML += `
-
-        <div class="conference-message">
-
-        <b>
-        ${c.nickname}
-        </b>
-
-        :
-
-        ${c.text}
-
-        </div>
-
-        `;
+(payload)=>{
 
 
-        }
-    );
+loadMessages();
+
+
+}
+
+)
+
+
+.subscribe();
+
 
 
 }
@@ -693,71 +790,130 @@ async function loadConference(){
 
 
 
-// ===============================
-// BUTTONS
-// ===============================
 
 
-function initButtons(){
+// =====================================
+// НОВОСТИ
+// =====================================
 
 
-const reg =
-document.getElementById(
-"registerBtn"
+async function loadNews(){
+
+
+
+const {
+
+data
+
+}=
+
+
+await supabaseClient
+
+.from("news")
+
+.select("*")
+
+.order(
+
+"created_at",
+
+{
+
+ascending:false
+
+}
+
 );
 
 
-if(reg)
-reg.onclick =
-register;
 
 
 
-const log =
-document.getElementById(
-"loginBtn"
-);
-
-
-if(log)
-log.onclick =
-login;
+const box =
+document.getElementById("news");
 
 
 
-const save =
-document.getElementById(
-"saveProfileBtn"
-);
+if(!data || data.length===0)
+
+{
+
+box.innerHTML=
+"Новостей пока нет";
 
 
-if(save)
-save.onclick =
-saveProfile;
+return;
 
-
-
-const send =
-document.getElementById(
-"sendMessageBtn"
-);
-
-
-if(send)
-send.onclick =
-sendMessage;
+}
 
 
 
-const conf =
-document.getElementById(
-"sendConferenceBtn"
-);
+box.innerHTML="";
 
 
-if(conf)
-conf.onclick =
-sendConference;
+
+data.forEach(item=>{
+
+
+box.innerHTML +=
+
+
+`
+
+<div class="message">
+
+<h3>
+
+${item.title}
+
+</h3>
+
+
+<p>
+
+${item.text}
+
+</p>
+
+
+</div>
+
+
+`;
+
+
+
+});
+
 
 
 }
+
+
+
+
+
+
+
+
+
+// =====================================
+// START
+// =====================================
+
+
+
+window.onload=function(){
+
+
+checkSession();
+
+
+loadNews();
+
+
+startChat();
+
+
+};
