@@ -262,17 +262,8 @@ input:focus{
     margin-bottom:14px;
 }
 
-.news-item h3{
-    font-size:17px;
-    margin-bottom:8px;
-    color:#1a2332;
-}
-
-.news-item p{
-    color:#5a6577;
-    font-size:14px;
-    line-height:1.5;
-}
+.news-item h3{ font-size:17px; margin-bottom:8px; color:#1a2332; }
+.news-item p{ color:#5a6577; font-size:14px; line-height:1.5; }
 
 /* ============ CHAT ============ */
 
@@ -364,6 +355,16 @@ input:focus{
     height:42px;
     font-size:14px;
 }
+
+.room-status{
+    min-height:20px;
+    margin-bottom:10px;
+    font-size:12.5px;
+    color:#7a849a;
+    font-weight:600;
+}
+.room-status.err{ color:#c33; }
+.room-status.ok{ color:#1e8f4a; }
 
 .video-area{
     min-height:350px;
