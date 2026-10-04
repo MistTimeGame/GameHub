@@ -1,6 +1,7 @@
 /* =====================================================
    GAME PLATFORM — app.js
    Auth + Profile + Chat + Conference + Online + Games + Guilds
+   Guilds привязаны к играм; игры добавляются пользователями.
 ===================================================== */
 
 const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -22,20 +23,22 @@ let joiningRoom = false;
 let savingProfile = false;
 let avatarPreviewTimer = null;
 
-// online presence
+// online
 let presenceChannel = null;
-let onlineUsers = {}; // userId -> { user_id, nickname, avatar_url, online_at }
-
-// games
-let tttBoard = ["","","","","","","","",""];
-let tttGameOver = false;
-let tttScore = { wins:0, draws:0, losses:0 };
+let onlineUsers = {};
 
 // guilds
 let guildsCache = [];
 let guildMembersCache = {};
 let currentGuildId = null;
 let guildsAvailable = true;
+let guildsGameIdAvailable = true;
+let currentGameFilter = 0; // 0 = все
+
+// games
+let gamesCache = [];
+let gamesAvailable = true;
+let gameIconTimer = null;
 
 /* ===== ХЕЛПЕРЫ ===== */
 function $(id){ return document.getElementById(id); }
@@ -63,8 +66,12 @@ function setProfileStatus(t, cls){
 }
 function setAvatarHint(t, cls){
     const el = $("pf-avatar-hint"); if(!el) return;
-    el.textContent = t || "Прямая ссылка на картинку (jpg, png, webp, gif). Не ссылка на страницу!";
+    el.textContent = t || "Прямая ссылка на картинку (jpg, png, webp, gif).";
     el.className = "field-hint" + (cls ? " " + cls : "");
+}
+function setGameStatus(t, cls){
+    const el = $("game-status"); if(!el) return;
+    el.textContent = t || ""; el.className = "profile-status" + (cls ? " " + cls : "");
 }
 
 async function ensureAuth(){
@@ -80,7 +87,7 @@ async function ensureAuth(){
     return null;
 }
 
-/* ===== URL ===== */
+/* ===== URL / IMG ===== */
 function isValidHttpUrl(str){
     if(!str) return true;
     try{ const u = new URL(str); return u.protocol === "http:" || u.protocol === "https:"; }
@@ -98,6 +105,12 @@ function normalizeImageUrl(url){
     const gyazo = s.match(/^https?:\/\/(?:www\.)?gyazo\.com\/([a-f0-9]+)\/?$/i);
     if(gyazo) return "https://i.gyazo.com/" + gyazo[1] + ".png";
     return s;
+}
+function faviconFromUrl(url){
+    try{
+        const u = new URL(url);
+        return "https://www.google.com/s2/favicons?domain=" + u.hostname + "&sz=128";
+    }catch(e){ return ""; }
 }
 function testImageUrl(url){
     return new Promise((resolve) => {
@@ -191,7 +204,7 @@ document.addEventListener("DOMContentLoaded", () => {
     checkSession();
 });
 
-/* ===== АВТОРИЗАЦИЯ ===== */
+/* ===== AUTH ===== */
 function initAuth(){
     const loginTab = $("login-tab");
     const registerTab = $("register-tab");
@@ -288,7 +301,7 @@ async function checkSession(){
     }catch(e){ errLog("SESSION", e); }
 }
 
-/* ===== ОТКРЫТИЕ APP ===== */
+/* ===== APP ===== */
 async function openApp(){
     $("auth-screen").classList.add("hidden");
     $("app").classList.remove("hidden");
@@ -305,12 +318,13 @@ async function openApp(){
     await safeRun(loadMessages);
     await safeRun(loadHomeRecentMessages);
     await safeRun(loadHomeStats);
+    await safeRun(loadGames);
+    await safeRun(loadGuilds);
 
     startChatRealtime();
     initOnlinePresence();
 
     await safeRun(loadRooms);
-    await safeRun(loadGuilds);
 
     if(roomsPollTimer) clearInterval(roomsPollTimer);
     roomsPollTimer = setInterval(() => {
@@ -338,18 +352,16 @@ function initNavigation(){
             if(p === "chat") loadMessages().catch(e => errLog(e));
             if(p === "profile") loadProfile().catch(e => errLog(e));
             if(p === "home"){ loadHomeStats().catch(e => errLog(e)); loadHomeRecentMessages().catch(e => errLog(e)); }
+            if(p === "games") loadGames().catch(e => errLog(e));
             if(p === "guilds") loadGuilds().catch(e => errLog(e));
             if(p === "online") renderOnlinePage();
         };
     });
 }
 
-/* ============================================================
-   ONLINE PRESENCE
-============================================================ */
+/* ===== ONLINE PRESENCE ===== */
 function initOnlinePresence(){
-    if(!currentUser) return;
-    if(presenceChannel) return;
+    if(!currentUser || presenceChannel) return;
 
     presenceChannel = supabaseClient.channel("online-users", {
         config: { presence: { key: currentUser.id } }
@@ -357,8 +369,7 @@ function initOnlinePresence(){
 
     presenceChannel
         .on("presence", { event: "sync" }, () => {
-            const state = presenceChannel.presenceState();
-            buildOnlineUsers(state);
+            buildOnlineUsers(presenceChannel.presenceState());
             updateOnlineCounters();
             renderOnlinePage();
         })
@@ -370,7 +381,6 @@ function initOnlinePresence(){
                     avatar_url: currentProfile?.avatar_url || DEFAULT_AVATAR,
                     online_at: new Date().toISOString()
                 });
-                log("PRESENCE TRACKED");
             }
         });
 }
@@ -378,22 +388,18 @@ function initOnlinePresence(){
 function buildOnlineUsers(state){
     onlineUsers = {};
     Object.keys(state).forEach(key => {
-        const arr = state[key] || [];
-        arr.forEach(item => {
+        (state[key] || []).forEach(item => {
             if(item && item.user_id) onlineUsers[item.user_id] = item;
         });
     });
 }
-
 function updateOnlineCounters(){
     const count = Object.keys(onlineUsers).length;
     setText("online-count", String(count));
     setText("dash-online", String(count));
 }
-
 function renderOnlinePage(){
-    const box = $("online-list-page");
-    if(!box) return;
+    const box = $("online-list-page"); if(!box) return;
     const list = Object.values(onlineUsers);
     setText("online-page-count", String(list.length));
 
@@ -401,9 +407,8 @@ function renderOnlinePage(){
         box.innerHTML = "<div class='dash-recent-empty'>Никого нет онлайн</div>";
         return;
     }
-
     box.innerHTML = "";
-    list.sort((a,b) => (a.nickname || "").localeCompare(b.nickname || ""));
+    list.sort((a,b) => (a.nickname||"").localeCompare(b.nickname||""));
     list.forEach(u => {
         const div = document.createElement("div");
         div.className = "online-user-card";
@@ -413,7 +418,7 @@ function renderOnlinePage(){
         div.innerHTML =
             "<div class='online-user-avatar'>" +
                 (u.avatar_url
-                    ? "<img referrerpolicy='no-referrer' src='" + escapeHtml(u.avatar_url) + "' onerror=\"this.style.display='none';this.parentNode.textContent='" + escapeHtml(initial) + "'\">"
+                    ? "<img referrerpolicy='no-referrer' src='" + escapeHtml(u.avatar_url) + "'>"
                     : escapeHtml(initial)) +
             "</div>" +
             "<div>" +
@@ -424,47 +429,33 @@ function renderOnlinePage(){
     });
 }
 
-/* ============================================================
-   ГЛАВНАЯ — ДАШБОРД
-============================================================ */
+/* ===== ГЛАВНАЯ ===== */
 async function loadHomeStats(){
-    // Онлайн — из presence
     updateOnlineCounters();
-
-    // Комнаты
     try{
         const { data } = await supabaseClient.from("conference_rooms").select("id");
         setText("dash-rooms", String((data || []).length));
     }catch(e){ setText("dash-rooms", "—"); }
-
-    // Сообщения
     try{
-        const { count } = await supabaseClient
-            .from("messages").select("*", { count: "exact", head: true });
+        const { count } = await supabaseClient.from("messages").select("*", { count:"exact", head:true });
         setText("dash-messages", String(count || 0));
     }catch(e){ setText("dash-messages", "—"); }
-
-    // Гильдии
     try{
-        const { count } = await supabaseClient
-            .from("guilds").select("*", { count: "exact", head: true });
+        const { count } = await supabaseClient.from("guilds").select("*", { count:"exact", head:true });
         setText("dash-guilds", String(count || 0));
     }catch(e){ setText("dash-guilds", "—"); }
 }
 
 async function loadHomeRecentMessages(){
-    const box = $("home-recent-messages");
-    if(!box) return;
-
+    const box = $("home-recent-messages"); if(!box) return;
     const { data, error } = await supabaseClient
         .from("messages").select("nickname, text, created_at")
-        .order("created_at", { ascending: false }).limit(8);
+        .order("created_at", { ascending:false }).limit(8);
 
     if(error || !data || data.length === 0){
         box.innerHTML = "<div class='dash-recent-empty'>Сообщений пока нет</div>";
         return;
     }
-
     box.innerHTML = "";
     data.forEach(m => {
         const div = document.createElement("div");
@@ -472,7 +463,7 @@ async function loadHomeRecentMessages(){
         const time = m.created_at
             ? new Date(m.created_at).toLocaleTimeString("ru-RU", { hour:"2-digit", minute:"2-digit" })
             : "";
-        const text = (m.text || "").slice(0, 90) + ((m.text || "").length > 90 ? "…" : "");
+        const text = (m.text||"").slice(0, 90) + ((m.text||"").length > 90 ? "…" : "");
         div.innerHTML =
             "<b>" + escapeHtml(m.nickname || "Гость") + "</b>" +
             "<span class='dash-recent-time'>" + escapeHtml(time) + "</span>" +
@@ -482,577 +473,382 @@ async function loadHomeRecentMessages(){
 }
 
 /* ============================================================
-   ПРОФИЛЬ
+   ИГРЫ (динамические, с авто-иконкой)
 ============================================================ */
-async function loadProfile(){
-    const user = await ensureAuth();
-    if(!user) return;
+function initGames(){
+    const toggleBtn = $("toggle-add-game");
+    const cancelBtn = $("cancel-game-btn");
+    const saveBtn = $("save-game-btn");
+    const urlInput = $("game-url-input");
+    const iconInput = $("game-icon-input");
 
-    if(!availableColumns){
-        const { columns, row } = await detectProfileColumns(user.id);
-        availableColumns = columns;
-        log("SCHEMA:", Array.from(columns));
-        applySchemaVisibility();
-        if(row){
-            currentProfile = row;
-            applyProfileToUI(row);
-            fillProfileForm(row);
-            return;
-        }
-    }
-
-    const cols = Array.from(availableColumns).join(",");
-    let result = await supabaseClient
-        .from("profiles").select(cols).eq("id", user.id).maybeSingle();
-
-    if(result.error){ errLog("PROFILE SELECT", result.error.message); return; }
-
-    if(!result.data){
-        const nick = user.email ? user.email.split("@")[0] : "Player";
-        const payload = { id: user.id, nickname: nick };
-        if(availableColumns.has("avatar_url")) payload.avatar_url = DEFAULT_AVATAR;
-        if(availableColumns.has("vip_level")) payload.vip_level = 0;
-        const create = await supabaseClient.from("profiles").insert(payload);
-        if(create.error){ errLog("PROFILE INSERT", create.error.message); return; }
-        return loadProfile();
-    }
-
-    currentProfile = result.data;
-    applyProfileToUI(currentProfile);
-    fillProfileForm(currentProfile);
-}
-
-function applyProfileToUI(p){
-    if(!p) return;
-    setText("top-name", p.nickname || "Player");
-    setImage("top-avatar", p.avatar_url);
-    setText("profile-name", p.nickname || "Player");
-    setText("vip-level", "VIP " + (p.vip_level || 0));
-    setImage("profile-avatar", p.avatar_url);
-    setText("profile-id", p.id || "—");
-    setText("side-name", p.nickname || "Player");
-    setText("side-vip", "VIP " + (p.vip_level || 0));
-    setImage("side-avatar", p.avatar_url);
-}
-
-function fillProfileForm(p){
-    if(!p) return;
-    if($("pf-nickname")) $("pf-nickname").value = p.nickname || "";
-    if($("pf-avatar") && availableColumns.has("avatar_url")) $("pf-avatar").value = p.avatar_url || "";
-    if($("pf-city")   && availableColumns.has("city"))       $("pf-city").value = p.city || "";
-    if($("pf-age")    && availableColumns.has("age"))        $("pf-age").value = (p.age == null ? "" : p.age);
-    if($("pf-about")  && availableColumns.has("about"))      $("pf-about").value = p.about || "";
-    updateAboutCounter();
-}
-function updateAboutCounter(){
-    const ta = $("pf-about"), counter = $("pf-about-count");
-    if(ta && counter) counter.textContent = ta.value.length;
-}
-
-function initProfileForm(){
-    const form = $("profile-form"); if(!form) return;
-
-    const avatarInput = $("pf-avatar");
-    if(avatarInput){
-        avatarInput.addEventListener("input", () => {
-            if(avatarPreviewTimer) clearTimeout(avatarPreviewTimer);
-            avatarPreviewTimer = setTimeout(previewAvatar, 500);
-        });
-    }
-    const aboutInput = $("pf-about");
-    if(aboutInput) aboutInput.addEventListener("input", updateAboutCounter);
-
-    const saveBtn = $("save-profile"); if(saveBtn) saveBtn.onclick = saveProfileChanges;
-    const resetBtn = $("reset-profile");
-    if(resetBtn) resetBtn.onclick = () => {
-        if(!currentProfile) return;
-        fillProfileForm(currentProfile);
-        setImage("profile-avatar", currentProfile.avatar_url);
-        setAvatarHint("");
-        setProfileStatus("Изменения сброшены");
-        setTimeout(() => setProfileStatus(""), 1500);
-    };
-}
-
-async function previewAvatar(){
-    const input = $("pf-avatar"), img = $("profile-avatar");
-    if(!input || !img) return;
-
-    const raw = input.value.trim();
-    const url = normalizeImageUrl(raw);
-
-    if(!raw){ setImage("profile-avatar", ""); setAvatarHint(""); return; }
-    if(!isValidHttpUrl(url)){
-        setAvatarHint("Некорректная ссылка", "err"); setImage("profile-avatar", ""); return;
-    }
-    if(url !== raw){
-        input.value = url;
-        setAvatarHint("Ссылка нормализована: " + url, "loading");
-    }
-    setAvatarHint("Проверка ссылки…", "loading");
-    const ok = await testImageUrl(url);
-    if(ok){
-        setAvatarHint("✓ Картинка загружена", "ok");
-        setImage("profile-avatar", url);
-    } else {
-        setAvatarHint("✗ Не удалось загрузить. Проверьте прямую ссылку.", "err");
-        setImage("profile-avatar", "");
-    }
-}
-
-async function saveProfileChanges(){
-    if(savingProfile) return;
-    const user = await ensureAuth();
-    if(!user){ setProfileStatus("Нет авторизации", "err"); return; }
-    if(!availableColumns){ setProfileStatus("Обновите страницу", "err"); return; }
-
-    const nickname = ($("pf-nickname").value || "").trim();
-    const avatarRaw = availableColumns.has("avatar_url") ? ($("pf-avatar").value || "").trim() : "";
-    const avatarUrl = normalizeImageUrl(avatarRaw);
-    const city = availableColumns.has("city") ? ($("pf-city").value || "").trim() : "";
-    const ageRaw = availableColumns.has("age") ? $("pf-age").value : "";
-    const about = availableColumns.has("about") ? ($("pf-about").value || "").trim() : "";
-
-    if(!isValidNickname(nickname)){
-        setProfileStatus("Никнейм: 2–30 символов", "err"); return;
-    }
-    if(avatarUrl && !isValidHttpUrl(avatarUrl)){
-        setProfileStatus("Ссылка на аватар некорректна", "err"); return;
-    }
-    let age = null;
-    if(ageRaw !== ""){
-        const n = parseInt(ageRaw, 10);
-        if(isNaN(n) || n < 1 || n > 120){ setProfileStatus("Возраст: 1–120", "err"); return; }
-        age = n;
-    }
-    if(city.length > 40){ setProfileStatus("Город: до 40 символов", "err"); return; }
-    if(about.length > 300){ setProfileStatus("О себе: до 300 символов", "err"); return; }
-
-    if(!currentProfile || nickname !== currentProfile.nickname){
-        savingProfile = true;
-        setProfileStatus("Проверка никнейма…", "loading");
-        const { data: dup } = await supabaseClient
-            .from("profiles").select("id").eq("nickname", nickname).neq("id", user.id).maybeSingle();
-        if(dup && dup.id){ savingProfile = false; setProfileStatus("Никнейм занят", "err"); return; }
-        savingProfile = false;
-    }
-
-    if(avatarUrl){
-        setProfileStatus("Проверка ссылки на аватар…", "loading");
-        const ok = await testImageUrl(avatarUrl);
-        if(!ok){ setProfileStatus("Аватар не загрузился: ссылка не ведёт на изображение", "err"); return; }
-    }
-
-    const payload = { nickname };
-    if(availableColumns.has("avatar_url")) payload.avatar_url = avatarUrl || null;
-    if(availableColumns.has("city"))       payload.city = city || null;
-    if(availableColumns.has("age"))        payload.age = age;
-    if(availableColumns.has("about"))      payload.about = about || null;
-
-    savingProfile = true;
-    setProfileStatus("Сохранение…", "loading");
-
-    try{
-        const update = await supabaseClient
-            .from("profiles").update(payload).eq("id", user.id).select().single();
-
-        if(update.error){
-            const m = (update.error.message||"").match(/Could not find the '([^']+)' column/);
-            if(m && m[1]){
-                const bad = m[1];
-                availableColumns.delete(bad);
-                applySchemaVisibility();
-                delete payload[bad];
-                const retry = await supabaseClient.from("profiles")
-                    .update(payload).eq("id", user.id).select().single();
-                if(retry.error){ setProfileStatus("Ошибка: " + retry.error.message, "err"); savingProfile = false; return; }
-                currentProfile = retry.data || Object.assign({}, currentProfile, payload);
-                applyProfileToUI(currentProfile);
-                setProfileStatus("Сохранено (схема скорректирована) ✓");
-                setTimeout(() => setProfileStatus(""), 2500);
-                savingProfile = false;
-                return;
+    if(toggleBtn){
+        toggleBtn.onclick = () => {
+            const panel = $("add-game-panel");
+            if(!panel) return;
+            panel.classList.toggle("hidden");
+            if(!panel.classList.contains("hidden")){
+                $("game-name-input")?.focus();
             }
-            setProfileStatus("Ошибка: " + update.error.message, "err");
-            savingProfile = false;
-            return;
-        }
-
-        currentProfile = update.data || Object.assign({}, currentProfile, payload);
-        applyProfileToUI(currentProfile);
-
-        // Обновляем presence, чтобы в онлайне подтянулся новый ник
-        if(presenceChannel && presenceChannel.state === "joined"){
-            try{
-                await presenceChannel.track({
-                    user_id: user.id,
-                    nickname: currentProfile.nickname || "Player",
-                    avatar_url: currentProfile.avatar_url || DEFAULT_AVATAR,
-                    online_at: new Date().toISOString()
-                });
-            }catch(e){ errLog("PRESENCE UPDATE", e); }
-        }
-
-        setProfileStatus("Сохранено ✓");
-        setTimeout(() => setProfileStatus(""), 2200);
-    }catch(err){
-        setProfileStatus("Ошибка: " + err.message, "err");
-    }finally{ savingProfile = false; }
-}
-
-/* ============================================================
-   НОВОСТИ
-============================================================ */
-async function loadNews(){
-    const boxHome = $("news-list");
-    const boxPage = $("news-page-list");
-
-    const { data, error } = await supabaseClient
-        .from("news").select("*").order("created_at", { ascending: false });
-
-    const empty = "<p style='color:#888'>Новостей пока нет</p>";
-
-    if(error){
-        if(boxHome) boxHome.innerHTML = empty;
-        if(boxPage) boxPage.innerHTML = empty;
-        return;
+        };
     }
-    if(!data || data.length === 0){
-        if(boxHome) boxHome.innerHTML = empty;
-        if(boxPage) boxPage.innerHTML = empty;
-        return;
+    if(cancelBtn){
+        cancelBtn.onclick = () => closeAddGameForm();
+    }
+    if(saveBtn){
+        saveBtn.onclick = saveNewGame;
     }
 
-    const render = (list, limit) => {
-        const frag = document.createDocumentFragment();
-        (limit ? list.slice(0, limit) : list).forEach(item => {
-            const div = document.createElement("div");
-            div.className = "news-item";
-            div.innerHTML =
-                "<h3>" + escapeHtml(item.title || "") + "</h3>" +
-                "<p>" + escapeHtml(item.text || "") + "</p>";
-            frag.appendChild(div);
+    // Автопревью иконки при вводе URL или своей иконки
+    if(urlInput){
+        urlInput.addEventListener("input", () => {
+            if(gameIconTimer) clearTimeout(gameIconTimer);
+            gameIconTimer = setTimeout(previewGameIcon, 400);
         });
-        return frag;
-    };
-
-    if(boxHome){ boxHome.innerHTML = ""; boxHome.appendChild(render(data, 3)); }
-    if(boxPage){ boxPage.innerHTML = ""; boxPage.appendChild(render(data, 0)); }
-}
-
-/* ============================================================
-   ЧАТ
-============================================================ */
-function initChat(){
-    const button = $("send-message");
-    if(button) button.onclick = sendMessage;
-    const input = $("message-text");
-    if(input){
-        input.addEventListener("keydown", (e) => {
-            if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); sendMessage(); }
+    }
+    if(iconInput){
+        iconInput.addEventListener("input", () => {
+            if(gameIconTimer) clearTimeout(gameIconTimer);
+            gameIconTimer = setTimeout(previewGameIcon, 400);
         });
     }
 }
 
-async function sendMessage(){
-    const user = await ensureAuth();
-    if(!user){ alert("Нет авторизации"); return; }
-
-    const input = $("message-text"); if(!input) return;
-    const text = input.value.trim(); if(!text) return;
-
-    let nickname = "Player";
-    if(currentProfile && currentProfile.nickname) nickname = currentProfile.nickname;
-
-    const result = await supabaseClient.from("messages").insert({
-        user_id: user.id, nickname, text
-    });
-    if(result.error){ errLog("MSG INSERT", result.error.message); alert("Ошибка: " + result.error.message); return; }
-
-    input.value = "";
-    loadHomeRecentMessages().catch(e => errLog(e));
+function closeAddGameForm(){
+    const panel = $("add-game-panel");
+    if(panel) panel.classList.add("hidden");
+    if($("game-name-input")) $("game-name-input").value = "";
+    if($("game-url-input")) $("game-url-input").value = "";
+    if($("game-desc-input")) $("game-desc-input").value = "";
+    if($("game-icon-input")) $("game-icon-input").value = "";
+    setGameStatus("");
+    resetGamePreview();
 }
 
-async function loadMessages(){
-    const box = $("messages");
-    if(!box) return;
+function resetGamePreview(){
+    const wrap = $("game-icon-preview-wrap");
+    const text = $("game-icon-preview-text");
+    if(wrap) wrap.innerHTML = "<span>🎮</span>";
+    if(text){ text.textContent = "Превью иконки появится здесь"; text.className = "game-icon-preview-text"; }
+}
 
-    const { data, error } = await supabaseClient
-        .from("messages").select("*").order("created_at", { ascending: true }).limit(300);
+function renderGamePreviewIcon(url){
+    const wrap = $("game-icon-preview-wrap"); if(!wrap) return;
+    wrap.innerHTML = "";
+    if(!url){
+        wrap.innerHTML = "<span>🎮</span>";
+        return;
+    }
+    const img = document.createElement("img");
+    img.referrerPolicy = "no-referrer";
+    img.alt = "";
+    img.onerror = () => { wrap.innerHTML = "<span>🎮</span>"; };
+    img.src = url;
+    wrap.appendChild(img);
+}
 
-    if(error){
-        box.innerHTML = "<div class='chat-message'><div class='chat-body'>Ошибка: " +
-            escapeHtml(error.message) + "</div></div>";
+function previewGameIcon(){
+    const urlInput = $("game-url-input");
+    const iconInput = $("game-icon-input");
+    const text = $("game-icon-preview-text");
+    if(!urlInput || !text) return;
+
+    const siteUrl = (urlInput.value || "").trim();
+    const customIcon = (iconInput?.value || "").trim();
+
+    if(!siteUrl && !customIcon){
+        resetGamePreview();
         return;
     }
 
-    // Подгружаем профили для аватарок
-    const userIds = Array.from(new Set((data || []).map(m => m.user_id).filter(Boolean)));
-    const profiles = {};
-    if(userIds.length){
-        const pRes = await supabaseClient
-            .from("profiles").select("id, nickname, avatar_url").in("id", userIds);
-        (pRes.data || []).forEach(p => profiles[p.id] = p);
+    if(!isValidHttpUrl(siteUrl) && siteUrl){
+        text.textContent = "Некорректная ссылка на сайт";
+        text.className = "game-icon-preview-text err";
+        renderGamePreviewIcon("");
+        return;
+    }
+
+    // Если задана своя иконка — используем её
+    if(customIcon && isValidHttpUrl(customIcon)){
+        text.textContent = "Своя иконка будет использована";
+        text.className = "game-icon-preview-text ok";
+        renderGamePreviewIcon(customIcon);
+        return;
+    }
+
+    // Иначе — favicon с сайта
+    const fav = faviconFromUrl(siteUrl);
+    if(!fav){
+        text.textContent = "Не удалось определить сайт";
+        text.className = "game-icon-preview-text err";
+        renderGamePreviewIcon("");
+        return;
+    }
+    text.textContent = "Иконка подтянута с сайта игры";
+    text.className = "game-icon-preview-text ok";
+    renderGamePreviewIcon(fav);
+}
+
+async function loadGames(){
+    const box = $("games-list"); if(!box) return;
+
+    const { data, error } = await supabaseClient
+        .from("games").select("*").order("created_at", { ascending: false });
+
+    if(error){
+        gamesAvailable = false;
+        box.innerHTML =
+            "<div class='dash-recent-empty'>" +
+            "Раздел «Игры» требует создания таблицы <code>games</code> в Supabase.<br>" +
+            "Откройте SQL Editor и выполните SQL из комментария в начале <code>app.js</code>." +
+            "</div>";
+        return;
+    }
+    gamesAvailable = true;
+    gamesCache = data || [];
+
+    // Загружаем количество гильдий по каждой игре
+    const guildCounts = {};
+    try{
+        const gRes = await supabaseClient.from("guilds").select("game_id");
+        (gRes.data || []).forEach(g => {
+            if(g.game_id) guildCounts[g.game_id] = (guildCounts[g.game_id] || 0) + 1;
+        });
+    }catch(e){ /* column game_id может отсутствовать */ }
+
+    if(gamesCache.length === 0){
+        box.innerHTML = "<div class='dash-recent-empty'>Игр пока нет. Добавьте первую!</div>";
+        return;
     }
 
     box.innerHTML = "";
-    (data || []).forEach(m => appendMessage(m, profiles[m.user_id]));
-    box.scrollTop = box.scrollHeight;
-}
+    gamesCache.forEach(g => {
+        const card = document.createElement("div");
+        card.className = "game-card";
 
-function appendMessage(m, profile){
-    const box = $("messages"); if(!box) return;
+        const guildCount = guildCounts[g.id] || 0;
+        const isOwn = g.added_by === currentUser.id;
+        const icon = g.icon_url || faviconFromUrl(g.url) || "";
 
-    const isOwn = currentUser && m.user_id === currentUser.id;
-    const nick = (profile && profile.nickname) || m.nickname || "Гость";
-    const avatar = (profile && profile.avatar_url) || DEFAULT_AVATAR;
+        card.innerHTML =
+            "<div class='game-card-header'>" +
+                "<div class='game-card-icon'>" +
+                    (icon
+                        ? "<img referrerpolicy='no-referrer' src='" + escapeHtml(icon) +
+                          "' onerror=\"this.style.display='none';this.parentNode.textContent='🎮'\">"
+                        : "🎮") +
+                "</div>" +
+                "<div class='game-card-title'>" + escapeHtml(g.name) + "</div>" +
+            "</div>" +
+            "<div class='game-card-desc'>" + escapeHtml(g.description || "Без описания") + "</div>" +
+            "<div class='game-card-actions'></div>";
 
-    const div = document.createElement("div");
-    div.className = "chat-message" + (isOwn ? " own" : "");
-    div.dataset.id = m.id;
+        const actions = card.querySelector(".game-card-actions");
 
-    const time = m.created_at
-        ? new Date(m.created_at).toLocaleTimeString("ru-RU", { hour:"2-digit", minute:"2-digit" })
-        : "";
+        const openBtn = document.createElement("button");
+        openBtn.className = "main-button";
+        openBtn.type = "button";
+        openBtn.textContent = "🌐 Сайт";
+        openBtn.onclick = () => window.open(g.url, "_blank", "noopener");
+        actions.appendChild(openBtn);
 
-    const initial = nick[0].toUpperCase();
-
-    div.innerHTML =
-        "<div class='chat-avatar'>" +
-            "<img referrerpolicy='no-referrer' src='" + escapeHtml(avatar) +
-            "' onerror=\"this.style.display='none';this.parentNode.textContent='" +
-            escapeHtml(initial) + "'\">" +
-        "</div>" +
-        "<div class='chat-body'>" +
-            "<div class='chat-head'><b>" + escapeHtml(nick) + "</b>" +
-                "<span class='msg-time'>" + escapeHtml(time) + "</span></div>" +
-            "<div class='chat-text'>" + escapeHtml(m.text || "") + "</div>" +
-        "</div>";
-
-    if(isOwn){
-        const del = document.createElement("button");
-        del.className = "chat-delete";
-        del.title = "Удалить";
-        del.textContent = "×";
-        del.onclick = () => deleteMessage(m.id);
-        div.appendChild(del);
-    }
-
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
-}
-
-async function deleteMessage(id){
-    if(!confirm("Удалить сообщение?")) return;
-    const { error } = await supabaseClient.from("messages").delete().eq("id", id);
-    if(error){ errLog("MSG DELETE", error.message); alert("Ошибка: " + error.message); return; }
-    const el = document.querySelector(".chat-message[data-id='" + id + "']");
-    if(el) el.remove();
-}
-
-function startChatRealtime(){
-    if(chatChannel) return;
-    chatChannel = supabaseClient
-        .channel("public-messages")
-        .on("postgres_changes",
-            { event: "INSERT", schema: "public", table: "messages" },
-            async (payload) => {
-                const m = payload.new;
-                const pRes = await supabaseClient
-                    .from("profiles").select("nickname, avatar_url")
-                    .eq("id", m.user_id).maybeSingle();
-                appendMessage(m, pRes.data);
-                loadHomeRecentMessages().catch(e => errLog(e));
-            })
-        .on("postgres_changes",
-            { event: "DELETE", schema: "public", table: "messages" },
-            (payload) => {
-                const el = document.querySelector(".chat-message[data-id='" + payload.old.id + "']");
-                if(el) el.remove();
-            })
-        .subscribe();
-}
-
-/* ============================================================
-   ИГРЫ — Крестики-нолики
-============================================================ */
-function initGames(){
-    const board = $("ttt-board");
-    if(!board) return;
-
-    const saved = localStorage.getItem("ttt-score");
-    if(saved){
-        try{ tttScore = JSON.parse(saved); }catch(e){}
-    }
-    renderTttScore();
-
-    document.getElementById("ttt-reset")?.addEventListener("click", newTttGame);
-
-    // Переключение карточек (пока только ttt активна)
-    document.querySelectorAll(".game-card").forEach(card => {
-        card.onclick = () => {
-            if(card.classList.contains("disabled")) return;
-            document.querySelectorAll(".game-card").forEach(c => c.classList.remove("active"));
-            card.classList.add("active");
+        const guildBtn = document.createElement("button");
+        guildBtn.className = "main-button";
+        guildBtn.type = "button";
+        guildBtn.textContent = "⚔ " + (guildCount ? "Гильдии (" + guildCount + ")" : "Создать гильдию");
+        guildBtn.onclick = () => {
+            currentGameFilter = g.id;
+            switchPage("guilds");
+            loadGuilds().catch(e => errLog(e));
         };
-    });
+        actions.appendChild(guildBtn);
 
-    newTttGame();
-}
+        if(isOwn){
+            const del = document.createElement("button");
+            del.className = "game-delete";
+            del.type = "button";
+            del.title = "Удалить игру";
+            del.textContent = "×";
+            del.onclick = (e) => {
+                e.stopPropagation();
+                deleteGame(g.id, g.name);
+            };
+            card.appendChild(del);
+        }
 
-function newTttGame(){
-    tttBoard = ["","","","","","","","",""];
-    tttGameOver = false;
-    setText("ttt-status", "Ваш ход (❌)");
-    renderTttBoard();
-}
-
-function renderTttBoard(){
-    const board = $("ttt-board"); if(!board) return;
-    board.innerHTML = "";
-    tttBoard.forEach((val, i) => {
-        const cell = document.createElement("div");
-        cell.className = "ttt-cell";
-        if(val){ cell.classList.add("filled"); cell.classList.add(val.toLowerCase()); }
-        cell.textContent = val === "X" ? "❌" : val === "O" ? "⭕" : "";
-        cell.onclick = () => tttPlay(i);
-        board.appendChild(cell);
+        box.appendChild(card);
     });
 }
 
-function tttPlay(i){
-    if(tttGameOver || tttBoard[i] !== "") return;
-    tttBoard[i] = "X";
-    renderTttBoard();
-    if(checkTTTEnd()) return;
-    setTimeout(() => {
-        const aiMove = tttBestMove(tttBoard, "O");
-        if(aiMove !== -1){
-            tttBoard[aiMove] = "O";
-            renderTttBoard();
-            checkTTTEnd();
-        }
-    }, 250);
-}
+async function saveNewGame(){
+    const user = await ensureAuth();
+    if(!user){ setGameStatus("Нет авторизации", "err"); return; }
+    if(!gamesAvailable){ setGameStatus("Таблица games не создана", "err"); return; }
 
-function checkTTTEnd(){
-    const win = tttWinner(tttBoard);
-    if(win){
-        tttGameOver = true;
-        highlightTTTWin(win.line);
-        if(win.player === "X"){
-            tttScore.wins++;
-            setText("ttt-status", "🎉 Вы победили!");
-        } else {
-            tttScore.losses++;
-            setText("ttt-status", "🤖 ИИ победил");
-        }
-        saveTttScore();
-        renderTttScore();
-        return true;
+    const name = ($("game-name-input").value || "").trim();
+    const url = ($("game-url-input").value || "").trim();
+    const description = ($("game-desc-input").value || "").trim();
+    const customIcon = ($("game-icon-input").value || "").trim();
+
+    if(!name || name.length < 2){
+        setGameStatus("Название: минимум 2 символа", "err");
+        $("game-name-input").focus();
+        return;
     }
-    if(tttBoard.every(v => v !== "")){
-        tttGameOver = true;
-        tttScore.draws++;
-        setText("ttt-status", "🤝 Ничья");
-        saveTttScore();
-        renderTttScore();
-        return true;
+    if(!isValidHttpUrl(url) || !url){
+        setGameStatus("Ссылка на сайт некорректна", "err");
+        $("game-url-input").focus();
+        return;
     }
-    setText("ttt-status", "Ваш ход (❌)");
-    return false;
-}
-
-function tttWinner(b){
-    const lines = [
-        [0,1,2],[3,4,5],[6,7,8],
-        [0,3,6],[1,4,7],[2,5,8],
-        [0,4,8],[2,4,6]
-    ];
-    for(const [a,b2,c] of lines){
-        if(b[a] && b[a] === b[b2] && b[a] === b[c]){
-            return { player: b[a], line: [a,b2,c] };
-        }
+    if(customIcon && !isValidHttpUrl(customIcon)){
+        setGameStatus("Ссылка на иконку некорректна", "err");
+        return;
     }
-    return null;
-}
 
-function highlightTTTWin(line){
-    const cells = document.querySelectorAll(".ttt-cell");
-    line.forEach(idx => cells[idx]?.classList.add("win"));
-}
+    // Итоговая иконка: своя или favicon с сайта
+    const iconUrl = customIcon || faviconFromUrl(url);
 
-function tttBestMove(b, ai){
-    const human = ai === "O" ? "X" : "O";
+    setGameStatus("Сохранение…", "loading");
 
-    // 1. Победить
-    for(let i=0;i<9;i++){
-        if(b[i] === ""){
-            b[i] = ai;
-            if(tttWinner(b)){ b[i] = ""; return i; }
-            b[i] = "";
-        }
+    const payload = {
+        name,
+        description: description || null,
+        url,
+        icon_url: iconUrl,
+        added_by: user.id
+    };
+
+    const ins = await supabaseClient.from("games").insert(payload).select().single();
+
+    if(ins.error){
+        errLog("CREATE GAME", ins.error.message);
+        setGameStatus("Ошибка: " + ins.error.message, "err");
+        return;
     }
-    // 2. Заблокировать
-    for(let i=0;i<9;i++){
-        if(b[i] === ""){
-            b[i] = human;
-            if(tttWinner(b)){ b[i] = ""; return i; }
-            b[i] = "";
-        }
-    }
-    // 3. Центр
-    if(b[4] === "") return 4;
-    // 4. Углы
-    const corners = [0,2,6,8].filter(i => b[i] === "");
-    if(corners.length) return corners[Math.floor(Math.random()*corners.length)];
-    // 5. Любой свободный
-    const free = b.map((v,i) => v === "" ? i : -1).filter(i => i !== -1);
-    return free.length ? free[Math.floor(Math.random()*free.length)] : -1;
+
+    setGameStatus("Игра добавлена ✓");
+    setTimeout(() => setGameStatus(""), 1500);
+    closeAddGameForm();
+    await loadGames();
+    populateGuildGameSelect();
+    renderGuildGameFilter();
 }
 
-function renderTttScore(){
-    setText("ttt-wins", String(tttScore.wins));
-    setText("ttt-draws", String(tttScore.draws));
-    setText("ttt-losses", String(tttScore.losses));
-}
-function saveTttScore(){
-    try{ localStorage.setItem("ttt-score", JSON.stringify(tttScore)); }catch(e){}
+async function deleteGame(id, name){
+    if(!confirm("Удалить игру «" + name + "»? Гильдии этой игры останутся, но потеряют привязку.")) return;
+
+    const del = await supabaseClient.from("games").delete().eq("id", id);
+    if(del.error){
+        errLog("DELETE GAME", del.error.message);
+        alert("Ошибка: " + del.error.message);
+        return;
+    }
+    if(currentGameFilter === id) currentGameFilter = 0;
+    await loadGames();
+    await loadGuilds();
+    populateGuildGameSelect();
+    renderGuildGameFilter();
 }
 
 /* ============================================================
-   ГИЛЬДИИ
+   ГИЛЬДИИ (привязаны к играм)
 ============================================================ */
 function initGuilds(){
     const btn = $("guild-create-btn");
     if(btn) btn.onclick = createGuild;
 }
 
-async function loadGuilds(){
-    const box = $("guilds-list");
-    if(!box) return;
+function renderGuildGameFilter(){
+    const box = $("guilds-game-filter"); if(!box) return;
 
-    const { data, error } = await supabaseClient
-        .from("guilds").select("*").order("created_at", { ascending: false });
+    box.innerHTML = "";
+
+    // Чип "Все"
+    const allChip = document.createElement("div");
+    allChip.className = "guild-filter-chip" + (currentGameFilter === 0 ? " active" : "");
+    allChip.textContent = "Все игры";
+    allChip.onclick = () => {
+        currentGameFilter = 0;
+        loadGuilds().catch(e => errLog(e));
+    };
+    box.appendChild(allChip);
+
+    // Чипы игр
+    gamesCache.forEach(g => {
+        const chip = document.createElement("div");
+        chip.className = "guild-filter-chip" + (currentGameFilter === g.id ? " active" : "");
+        const icon = g.icon_url || faviconFromUrl(g.url);
+        chip.innerHTML =
+            (icon ? "<img referrerpolicy='no-referrer' src='" + escapeHtml(icon) +
+                "' onerror=\"this.style.display='none'\">" : "") +
+            "<span>" + escapeHtml(g.name) + "</span>";
+        chip.onclick = () => {
+            currentGameFilter = g.id;
+            loadGuilds().catch(e => errLog(e));
+        };
+        box.appendChild(chip);
+    });
+}
+
+function populateGuildGameSelect(){
+    const sel = $("guild-game-select"); if(!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">— Выберите игру —</option>';
+    gamesCache.forEach(g => {
+        const opt = document.createElement("option");
+        opt.value = String(g.id);
+        opt.textContent = g.name;
+        sel.appendChild(opt);
+    });
+    // Если отфильтровано — предвыберем
+    if(currentGameFilter > 0){
+        sel.value = String(currentGameFilter);
+    } else if(current){
+        sel.value = current;
+    }
+}
+
+async function loadGuilds(){
+    const box = $("guilds-list"); if(!box) return;
+
+    // Загружаем список игр для фильтра и селекта
+    if(gamesCache.length === 0 && gamesAvailable){
+        await loadGames();
+    }
+    populateGuildGameSelect();
+    renderGuildGameFilter();
+
+    // Запрос гильдий (с фильтром по игре)
+    let query = supabaseClient.from("guilds").select("*");
+    if(currentGameFilter > 0) query = query.eq("game_id", currentGameFilter);
+
+    let { data, error } = await query.order("created_at", { ascending: false });
+
+    // Если колонки game_id нет — показываем предупреждение
+    if(error && /column.*game_id.*does not exist/i.test(error.message || "")){
+        guildsGameIdAvailable = false;
+        // Запрашиваем без фильтра
+        const fallback = await supabaseClient.from("guilds").select("*")
+            .order("created_at", { ascending: false });
+        data = fallback.data;
+        error = fallback.error;
+    } else {
+        guildsGameIdAvailable = true;
+    }
 
     if(error){
         guildsAvailable = false;
         box.innerHTML =
             "<div class='dash-recent-empty'>" +
-            "Раздел «Гильдии» требует создания таблиц в Supabase.<br><br>" +
-            "Откройте SQL Editor и выполните запрос из комментария в начале файла <code>app.js</code>." +
+            "Раздел «Гильдии» требует создания таблиц <code>guilds</code> и <code>guild_members</code>.<br>" +
+            "Смотрите SQL в комментарии в начале <code>app.js</code>." +
             "</div>";
         return;
     }
     guildsAvailable = true;
     guildsCache = data || [];
 
-    if(guildsCache.length === 0){
-        box.innerHTML = "<div class='dash-recent-empty'>Гильдий пока нет. Создайте первую!</div>";
-        return;
-    }
-
-    // Загружаем состав гильдий
+    // Подтягиваем состав гильдий
     guildMembersCache = {};
     try{
         const { data: members } = await supabaseClient
@@ -1063,10 +859,19 @@ async function loadGuilds(){
         });
     }catch(e){ errLog("GUILD MEMBERS", e); }
 
+    if(guildsCache.length === 0){
+        const msg = currentGameFilter > 0
+            ? "В этой игре пока нет гильдий. Создайте первую!"
+            : "Гильдий пока нет. Создайте первую!";
+        box.innerHTML = "<div class='dash-recent-empty'>" + msg + "</div>";
+        return;
+    }
+
     box.innerHTML = "";
     guildsCache.forEach(g => {
         const members = guildMembersCache[g.id] || [];
         const isMember = members.some(m => m.user_id === currentUser.id);
+        const game = gamesCache.find(x => x.id === g.game_id);
 
         const card = document.createElement("div");
         card.className = "guild-card" + (currentGuildId === g.id ? " active" : "");
@@ -1074,6 +879,7 @@ async function loadGuilds(){
             "<h3>⚔ " + escapeHtml(g.name) + "</h3>" +
             "<p>" + escapeHtml((g.description || "").slice(0, 80)) + "</p>" +
             "<div class='guild-meta'>" +
+                (game ? "<span class='guild-game-badge'>🎮 " + escapeHtml(game.name) + "</span>" : "") +
                 "<span>👥 " + members.length + "</span>" +
                 (isMember ? "<span class='joined-badge'>Вы в гильдии</span>" : "") +
             "</div>";
@@ -1081,21 +887,40 @@ async function loadGuilds(){
         box.appendChild(card);
     });
 
-    // Если открыта какая-то — обновим детали
-    if(currentGuildId) openGuild(currentGuildId);
+    if(currentGuildId){
+        const still = guildsCache.find(x => x.id === currentGuildId);
+        if(still) openGuild(currentGuildId);
+        else {
+            currentGuildId = null;
+            $("guild-detail").innerHTML =
+                "<div class='guild-detail-empty'><div class='guild-detail-icon'>⚔</div>" +
+                "<p>Выберите гильдию из списка</p></div>";
+        }
+    }
 }
 
 async function createGuild(){
     const user = await ensureAuth();
     if(!user){ alert("Нет авторизации"); return; }
     if(!guildsAvailable){ alert("Таблицы гильдий не созданы"); return; }
+    if(!guildsGameIdAvailable){
+        alert("Колонка guilds.game_id отсутствует. Выполните SQL:\n\n" +
+              "alter table guilds add column if not exists game_id bigint references games(id) on delete set null;");
+        return;
+    }
 
+    const gameId = parseInt($("guild-game-select").value, 10);
     const name = $("guild-name-input").value.trim();
     const description = $("guild-desc-input").value.trim();
-    if(!name){ alert("Введите название"); return; }
+
+    if(!gameId){ alert("Выберите игру"); $("guild-game-select").focus(); return; }
+    if(!name || name.length < 2){ alert("Название: минимум 2 символа"); return; }
 
     const ins = await supabaseClient.from("guilds").insert({
-        name, description: description || null, owner_id: user.id
+        name,
+        description: description || null,
+        owner_id: user.id,
+        game_id: gameId
     }).select().single();
 
     if(ins.error){
@@ -1104,7 +929,6 @@ async function createGuild(){
         return;
     }
 
-    // Автоматически вступаем как владелец
     await supabaseClient.from("guild_members").insert({
         guild_id: ins.data.id,
         user_id: user.id,
@@ -1121,13 +945,13 @@ async function createGuild(){
 
 async function openGuild(guildId){
     currentGuildId = guildId;
-    document.querySelectorAll(".guild-card").forEach(c => c.classList.remove("active"));
 
     const guild = guildsCache.find(g => g.id === guildId);
     if(!guild) return;
 
     const members = guildMembersCache[guildId] || [];
     const isMember = members.some(m => m.user_id === currentUser.id);
+    const game = gamesCache.find(x => x.id === guild.game_id);
 
     // Владелец
     let ownerNick = "—";
@@ -1135,7 +959,8 @@ async function openGuild(guildId){
         const ownerMember = members.find(m => m.user_id === guild.owner_id);
         if(ownerMember) ownerNick = ownerMember.nickname || "—";
         else {
-            const p = await supabaseClient.from("profiles").select("nickname").eq("id", guild.owner_id).maybeSingle();
+            const p = await supabaseClient.from("profiles").select("nickname")
+                .eq("id", guild.owner_id).maybeSingle();
             if(p.data) ownerNick = p.data.nickname || "—";
         }
     }
@@ -1143,6 +968,13 @@ async function openGuild(guildId){
     const detail = $("guild-detail");
     detail.innerHTML =
         "<h2>⚔ " + escapeHtml(guild.name) + "</h2>" +
+        (game
+            ? "<div class='guild-detail-game'>" +
+                "<img referrerpolicy='no-referrer' src='" +
+                escapeHtml(game.icon_url || faviconFromUrl(game.url)) +
+                "' onerror=\"this.style.display='none'\">" +
+                "🎮 " + escapeHtml(game.name) + "</div>"
+            : "<div class='guild-detail-game' style='background:#f8fafc;border-color:#e3e9f2;color:#98a2b5'>🎮 Игра не привязана</div>") +
         "<div class='guild-owner'>Владелец: <b>" + escapeHtml(ownerNick) + "</b></div>" +
         "<div class='guild-detail-desc'>" + escapeHtml(guild.description || "Без описания") + "</div>" +
         "<div class='guild-members-title'>Участники · " + members.length + "</div>" +
@@ -1165,6 +997,17 @@ async function openGuild(guildId){
     }
 
     const actions = $("guild-detail-actions");
+
+    // Кнопка перехода к игре в каталоге
+    if(game){
+        const openSite = document.createElement("button");
+        openSite.className = "main-button secondary";
+        openSite.type = "button";
+        openSite.textContent = "🌐 Сайт игры";
+        openSite.onclick = () => window.open(game.url, "_blank", "noopener");
+        actions.appendChild(openSite);
+    }
+
     if(isMember){
         const leave = document.createElement("button");
         leave.className = "main-button secondary";
@@ -1213,6 +1056,7 @@ async function leaveGuild(guildId, isOwner){
             "<div class='guild-detail-empty'><div class='guild-detail-icon'>⚔</div>" +
             "<p>Выберите гильдию из списка</p></div>";
         await loadGuilds();
+        await loadGames();
         return;
     }
 
@@ -1220,44 +1064,387 @@ async function leaveGuild(guildId, isOwner){
         .eq("guild_id", guildId).eq("user_id", user.id);
     if(del.error){ alert("Ошибка: " + del.error.message); return; }
     await loadGuilds();
+    await loadGames();
 }
 
-/* ============================================================
-   КОНФЕРЕНЦИЯ (MiroTalk P2P)
-============================================================ */
+/* ===== ПРОФИЛЬ ===== */
+async function loadProfile(){
+    const user = await ensureAuth();
+    if(!user) return;
+
+    if(!availableColumns){
+        const { columns, row } = await detectProfileColumns(user.id);
+        availableColumns = columns;
+        applySchemaVisibility();
+        if(row){
+            currentProfile = row;
+            applyProfileToUI(row);
+            fillProfileForm(row);
+            return;
+        }
+    }
+    const cols = Array.from(availableColumns).join(",");
+    let result = await supabaseClient.from("profiles").select(cols).eq("id", user.id).maybeSingle();
+    if(result.error){ errLog("PROFILE SELECT", result.error.message); return; }
+
+    if(!result.data){
+        const nick = user.email ? user.email.split("@")[0] : "Player";
+        const payload = { id: user.id, nickname: nick };
+        if(availableColumns.has("avatar_url")) payload.avatar_url = DEFAULT_AVATAR;
+        if(availableColumns.has("vip_level")) payload.vip_level = 0;
+        const create = await supabaseClient.from("profiles").insert(payload);
+        if(create.error){ errLog("PROFILE INSERT", create.error.message); return; }
+        return loadProfile();
+    }
+    currentProfile = result.data;
+    applyProfileToUI(currentProfile);
+    fillProfileForm(currentProfile);
+}
+
+function applyProfileToUI(p){
+    if(!p) return;
+    setText("top-name", p.nickname || "Player");
+    setImage("top-avatar", p.avatar_url);
+    setText("profile-name", p.nickname || "Player");
+    setText("vip-level", "VIP " + (p.vip_level || 0));
+    setImage("profile-avatar", p.avatar_url);
+    setText("profile-id", p.id || "—");
+    setText("side-name", p.nickname || "Player");
+    setText("side-vip", "VIP " + (p.vip_level || 0));
+    setImage("side-avatar", p.avatar_url);
+}
+
+function fillProfileForm(p){
+    if(!p) return;
+    if($("pf-nickname")) $("pf-nickname").value = p.nickname || "";
+    if($("pf-avatar") && availableColumns.has("avatar_url")) $("pf-avatar").value = p.avatar_url || "";
+    if($("pf-city")   && availableColumns.has("city"))       $("pf-city").value = p.city || "";
+    if($("pf-age")    && availableColumns.has("age"))        $("pf-age").value = (p.age == null ? "" : p.age);
+    if($("pf-about")  && availableColumns.has("about"))      $("pf-about").value = p.about || "";
+    updateAboutCounter();
+}
+function updateAboutCounter(){
+    const ta = $("pf-about"), counter = $("pf-about-count");
+    if(ta && counter) counter.textContent = ta.value.length;
+}
+
+function initProfileForm(){
+    const form = $("profile-form"); if(!form) return;
+
+    const avatarInput = $("pf-avatar");
+    if(avatarInput){
+        avatarInput.addEventListener("input", () => {
+            if(avatarPreviewTimer) clearTimeout(avatarPreviewTimer);
+            avatarPreviewTimer = setTimeout(previewAvatar, 500);
+        });
+    }
+    const aboutInput = $("pf-about");
+    if(aboutInput) aboutInput.addEventListener("input", updateAboutCounter);
+    const saveBtn = $("save-profile"); if(saveBtn) saveBtn.onclick = saveProfileChanges;
+    const resetBtn = $("reset-profile");
+    if(resetBtn) resetBtn.onclick = () => {
+        if(!currentProfile) return;
+        fillProfileForm(currentProfile);
+        setImage("profile-avatar", currentProfile.avatar_url);
+        setAvatarHint("");
+        setProfileStatus("Изменения сброшены");
+        setTimeout(() => setProfileStatus(""), 1500);
+    };
+}
+
+async function previewAvatar(){
+    const input = $("pf-avatar"); if(!input) return;
+    const raw = input.value.trim();
+    const url = normalizeImageUrl(raw);
+
+    if(!raw){ setImage("profile-avatar", ""); setAvatarHint(""); return; }
+    if(!isValidHttpUrl(url)){
+        setAvatarHint("Некорректная ссылка", "err"); setImage("profile-avatar", ""); return;
+    }
+    if(url !== raw){
+        input.value = url;
+        setAvatarHint("Ссылка нормализована: " + url, "loading");
+    }
+    setAvatarHint("Проверка ссылки…", "loading");
+    const ok = await testImageUrl(url);
+    if(ok){
+        setAvatarHint("✓ Картинка загружена", "ok");
+        setImage("profile-avatar", url);
+    } else {
+        setAvatarHint("✗ Не удалось загрузить. Проверьте прямую ссылку.", "err");
+        setImage("profile-avatar", "");
+    }
+}
+
+async function saveProfileChanges(){
+    if(savingProfile) return;
+    const user = await ensureAuth();
+    if(!user){ setProfileStatus("Нет авторизации", "err"); return; }
+    if(!availableColumns){ setProfileStatus("Обновите страницу", "err"); return; }
+
+    const nickname = ($("pf-nickname").value || "").trim();
+    const avatarRaw = availableColumns.has("avatar_url") ? ($("pf-avatar").value || "").trim() : "";
+    const avatarUrl = normalizeImageUrl(avatarRaw);
+    const city = availableColumns.has("city") ? ($("pf-city").value || "").trim() : "";
+    const ageRaw = availableColumns.has("age") ? $("pf-age").value : "";
+    const about = availableColumns.has("about") ? ($("pf-about").value || "").trim() : "";
+
+    if(!isValidNickname(nickname)){ setProfileStatus("Никнейм: 2–30 символов", "err"); return; }
+    if(avatarUrl && !isValidHttpUrl(avatarUrl)){ setProfileStatus("Ссылка на аватар некорректна", "err"); return; }
+    let age = null;
+    if(ageRaw !== ""){
+        const n = parseInt(ageRaw, 10);
+        if(isNaN(n) || n < 1 || n > 120){ setProfileStatus("Возраст: 1–120", "err"); return; }
+        age = n;
+    }
+    if(city.length > 40){ setProfileStatus("Город: до 40", "err"); return; }
+    if(about.length > 300){ setProfileStatus("О себе: до 300", "err"); return; }
+
+    if(!currentProfile || nickname !== currentProfile.nickname){
+        savingProfile = true;
+        setProfileStatus("Проверка никнейма…", "loading");
+        const { data: dup } = await supabaseClient
+            .from("profiles").select("id").eq("nickname", nickname).neq("id", user.id).maybeSingle();
+        if(dup && dup.id){ savingProfile = false; setProfileStatus("Никнейм занят", "err"); return; }
+        savingProfile = false;
+    }
+    if(avatarUrl){
+        setProfileStatus("Проверка ссылки на аватар…", "loading");
+        const ok = await testImageUrl(avatarUrl);
+        if(!ok){ setProfileStatus("Аватар не загрузился", "err"); return; }
+    }
+
+    const payload = { nickname };
+    if(availableColumns.has("avatar_url")) payload.avatar_url = avatarUrl || null;
+    if(availableColumns.has("city"))       payload.city = city || null;
+    if(availableColumns.has("age"))        payload.age = age;
+    if(availableColumns.has("about"))      payload.about = about || null;
+
+    savingProfile = true;
+    setProfileStatus("Сохранение…", "loading");
+
+    try{
+        const update = await supabaseClient
+            .from("profiles").update(payload).eq("id", user.id).select().single();
+
+        if(update.error){
+            const m = (update.error.message||"").match(/Could not find the '([^']+)' column/);
+            if(m && m[1]){
+                const bad = m[1];
+                availableColumns.delete(bad);
+                applySchemaVisibility();
+                delete payload[bad];
+                const retry = await supabaseClient.from("profiles")
+                    .update(payload).eq("id", user.id).select().single();
+                if(retry.error){ setProfileStatus("Ошибка: " + retry.error.message, "err"); savingProfile = false; return; }
+                currentProfile = retry.data || Object.assign({}, currentProfile, payload);
+                applyProfileToUI(currentProfile);
+                setProfileStatus("Сохранено (схема скорректирована) ✓");
+                setTimeout(() => setProfileStatus(""), 2500);
+                savingProfile = false;
+                return;
+            }
+            setProfileStatus("Ошибка: " + update.error.message, "err");
+            savingProfile = false;
+            return;
+        }
+
+        currentProfile = update.data || Object.assign({}, currentProfile, payload);
+        applyProfileToUI(currentProfile);
+
+        if(presenceChannel && presenceChannel.state === "joined"){
+            try{
+                await presenceChannel.track({
+                    user_id: user.id,
+                    nickname: currentProfile.nickname || "Player",
+                    avatar_url: currentProfile.avatar_url || DEFAULT_AVATAR,
+                    online_at: new Date().toISOString()
+                });
+            }catch(e){ errLog("PRESENCE UPDATE", e); }
+        }
+
+        setProfileStatus("Сохранено ✓");
+        setTimeout(() => setProfileStatus(""), 2200);
+    }catch(err){
+        setProfileStatus("Ошибка: " + err.message, "err");
+    }finally{ savingProfile = false; }
+}
+
+/* ===== НОВОСТИ ===== */
+async function loadNews(){
+    const boxHome = $("news-list");
+    const boxPage = $("news-page-list");
+
+    const { data, error } = await supabaseClient
+        .from("news").select("*").order("created_at", { ascending: false });
+
+    const empty = "<p style='color:#888'>Новостей пока нет</p>";
+    if(error){
+        if(boxHome) boxHome.innerHTML = empty;
+        if(boxPage) boxPage.innerHTML = empty;
+        return;
+    }
+    if(!data || data.length === 0){
+        if(boxHome) boxHome.innerHTML = empty;
+        if(boxPage) boxPage.innerHTML = empty;
+        return;
+    }
+    const render = (list, limit) => {
+        const frag = document.createDocumentFragment();
+        (limit ? list.slice(0, limit) : list).forEach(item => {
+            const div = document.createElement("div");
+            div.className = "news-item";
+            div.innerHTML =
+                "<h3>" + escapeHtml(item.title || "") + "</h3>" +
+                "<p>" + escapeHtml(item.text || "") + "</p>";
+            frag.appendChild(div);
+        });
+        return frag;
+    };
+    if(boxHome){ boxHome.innerHTML = ""; boxHome.appendChild(render(data, 3)); }
+    if(boxPage){ boxPage.innerHTML = ""; boxPage.appendChild(render(data, 0)); }
+}
+
+/* ===== ЧАТ ===== */
+function initChat(){
+    const button = $("send-message");
+    if(button) button.onclick = sendMessage;
+    const input = $("message-text");
+    if(input){
+        input.addEventListener("keydown", (e) => {
+            if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); sendMessage(); }
+        });
+    }
+}
+async function sendMessage(){
+    const user = await ensureAuth();
+    if(!user){ alert("Нет авторизации"); return; }
+    const input = $("message-text"); if(!input) return;
+    const text = input.value.trim(); if(!text) return;
+
+    const nickname = (currentProfile && currentProfile.nickname) || "Player";
+    const result = await supabaseClient.from("messages").insert({
+        user_id: user.id, nickname, text
+    });
+    if(result.error){ errLog("MSG INSERT", result.error.message); alert("Ошибка: " + result.error.message); return; }
+    input.value = "";
+    loadHomeRecentMessages().catch(e => errLog(e));
+}
+async function loadMessages(){
+    const box = $("messages"); if(!box) return;
+    const { data, error } = await supabaseClient
+        .from("messages").select("*").order("created_at", { ascending: true }).limit(300);
+
+    if(error){
+        box.innerHTML = "<div class='chat-message'><div class='chat-body'>Ошибка: " +
+            escapeHtml(error.message) + "</div></div>";
+        return;
+    }
+    const userIds = Array.from(new Set((data || []).map(m => m.user_id).filter(Boolean)));
+    const profiles = {};
+    if(userIds.length){
+        const pRes = await supabaseClient
+            .from("profiles").select("id, nickname, avatar_url").in("id", userIds);
+        (pRes.data || []).forEach(p => profiles[p.id] = p);
+    }
+    box.innerHTML = "";
+    (data || []).forEach(m => appendMessage(m, profiles[m.user_id]));
+    box.scrollTop = box.scrollHeight;
+}
+function appendMessage(m, profile){
+    const box = $("messages"); if(!box) return;
+    const isOwn = currentUser && m.user_id === currentUser.id;
+    const nick = (profile && profile.nickname) || m.nickname || "Гость";
+    const avatar = (profile && profile.avatar_url) || DEFAULT_AVATAR;
+
+    const div = document.createElement("div");
+    div.className = "chat-message" + (isOwn ? " own" : "");
+    div.dataset.id = m.id;
+
+    const time = m.created_at
+        ? new Date(m.created_at).toLocaleTimeString("ru-RU", { hour:"2-digit", minute:"2-digit" })
+        : "";
+    const initial = nick[0].toUpperCase();
+
+    div.innerHTML =
+        "<div class='chat-avatar'>" +
+            "<img referrerpolicy='no-referrer' src='" + escapeHtml(avatar) +
+            "' onerror=\"this.style.display='none';this.parentNode.textContent='" +
+            escapeHtml(initial) + "'\">" +
+        "</div>" +
+        "<div class='chat-body'>" +
+            "<div class='chat-head'><b>" + escapeHtml(nick) + "</b>" +
+                "<span class='msg-time'>" + escapeHtml(time) + "</span></div>" +
+            "<div class='chat-text'>" + escapeHtml(m.text || "") + "</div>" +
+        "</div>";
+
+    if(isOwn){
+        const del = document.createElement("button");
+        del.className = "chat-delete";
+        del.title = "Удалить";
+        del.textContent = "×";
+        del.onclick = () => deleteMessage(m.id);
+        div.appendChild(del);
+    }
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+async function deleteMessage(id){
+    if(!confirm("Удалить сообщение?")) return;
+    const { error } = await supabaseClient.from("messages").delete().eq("id", id);
+    if(error){ errLog("MSG DELETE", error.message); alert("Ошибка: " + error.message); return; }
+    const el = document.querySelector(".chat-message[data-id='" + id + "']");
+    if(el) el.remove();
+}
+function startChatRealtime(){
+    if(chatChannel) return;
+    chatChannel = supabaseClient
+        .channel("public-messages")
+        .on("postgres_changes",
+            { event: "INSERT", schema: "public", table: "messages" },
+            async (payload) => {
+                const m = payload.new;
+                const pRes = await supabaseClient
+                    .from("profiles").select("nickname, avatar_url")
+                    .eq("id", m.user_id).maybeSingle();
+                appendMessage(m, pRes.data);
+                loadHomeRecentMessages().catch(e => errLog(e));
+            })
+        .on("postgres_changes",
+            { event: "DELETE", schema: "public", table: "messages" },
+            (payload) => {
+                const el = document.querySelector(".chat-message[data-id='" + payload.old.id + "']");
+                if(el) el.remove();
+            })
+        .subscribe();
+}
+
+/* ===== КОНФЕРЕНЦИЯ ===== */
 function initConference(){
     const createBtn = $("create-room-btn");
     if(createBtn) createBtn.onclick = createRoom;
     const leave = $("leave-room");
     if(leave) leave.onclick = leaveRoom;
 }
-
 async function createRoom(){
     const user = await ensureAuth();
     if(!user){ alert("Нет авторизации"); return; }
-
     const name = $("room-name-input").value.trim();
     const description = $("room-desc-input").value.trim();
-    if(!name){ alert("Введите название комнаты"); return; }
+    if(!name){ alert("Введите название"); return; }
 
-    setRoomStatus("Создание комнаты…");
+    setRoomStatus("Создание…");
     const result = await supabaseClient.from("conference_rooms")
         .insert({ name, description: description || null }).select().single();
-
-    if(result.error){
-        errLog("CREATE ROOM", result.error.message);
-        setRoomStatus("Ошибка: " + result.error.message, "err"); return;
-    }
+    if(result.error){ setRoomStatus("Ошибка: " + result.error.message, "err"); return; }
     $("room-name-input").value = "";
     $("room-desc-input").value = "";
     setRoomStatus("");
     await loadRooms();
     await joinRoom(result.data);
 }
-
 async function loadRooms(){
     const box = $("rooms-list"); if(!box) return;
-
     const roomsRes = await supabaseClient.from("conference_rooms").select("*").order("id");
     if(roomsRes.error){ box.innerHTML = "<p style='color:#888'>Ошибка загрузки</p>"; return; }
     const rooms = roomsRes.data || [];
@@ -1267,13 +1454,8 @@ async function loadRooms(){
     (usersRes.data || []).forEach(u => {
         counts[u.room_id] = (counts[u.room_id] || 0) + 1;
     });
-
-    if(rooms.length === 0){
-        box.innerHTML = "<p style='color:#888'>Комнат пока нет. Создайте первую!</p>";
-        return;
-    }
-    const sorted = rooms.slice().sort((a, b) => (counts[b.id]||0) - (counts[a.id]||0));
-
+    if(rooms.length === 0){ box.innerHTML = "<p style='color:#888'>Комнат нет. Создайте первую!</p>"; return; }
+    const sorted = rooms.slice().sort((a,b) => (counts[b.id]||0)-(counts[a.id]||0));
     box.innerHTML = "";
     sorted.forEach(room => {
         const count = counts[room.id] || 0;
@@ -1282,30 +1464,26 @@ async function loadRooms(){
         card.innerHTML =
             "<h3>🎙 " + escapeHtml(room.name || "Комната") + "</h3>" +
             "<p>" + escapeHtml(room.description || "") + "</p>" +
-            "<p>👥 " + count + (count === 1 ? " участник" : " участников") + "</p>";
+            "<p>👥 " + count + (count===1 ? " участник" : " участников") + "</p>";
         const btn = document.createElement("button");
-        btn.className = "main-button"; btn.type = "button"; btn.textContent = "Войти";
-        btn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); joinRoom(room); };
+        btn.className = "main-button"; btn.type="button"; btn.textContent="Войти";
+        btn.onclick = (e)=>{ e.preventDefault(); e.stopPropagation(); joinRoom(room); };
         card.appendChild(btn);
         box.appendChild(card);
     });
 }
-
 async function joinRoom(room){
     if(joiningRoom) return;
     joiningRoom = true;
     try{
         const user = await ensureAuth();
         if(!user){ setRoomStatus("Требуется вход", "err"); return; }
-
         await supabaseClient.from("conference_users").delete().eq("user_id", user.id);
-
         const nickname = currentProfile?.nickname || "Player";
         const ins = await supabaseClient.from("conference_users").insert({
             room_id: room.id, user_id: user.id, nickname
         });
         if(ins.error) errLog("ROOM USER INSERT", ins.error.message);
-
         currentRoom = room;
 
         const miroRoomId = "gp-" + room.id;
@@ -1313,13 +1491,11 @@ async function joinRoom(room){
             "room=" + encodeURIComponent(miroRoomId) +
             "&name=" + encodeURIComponent(nickname) +
             "&audio=1&video=1&screen=1&chat=1&notify=1";
-
         const container = $("mirotalk-container");
         container.innerHTML =
             '<iframe src="' + miroUrl + '" ' +
             'allow="camera; microphone; speaker-selection; display-capture; fullscreen; clipboard-read; clipboard-write; web-share; autoplay; picture-in-picture" ' +
             'allowfullscreen style="width:100%;height:100%;border:0;"></iframe>';
-
         setText("current-room-title", "🎙 " + (room.name || "Комната"));
         setRoomStatus("Подключено к MiroTalk P2P", "ok");
     }catch(err){
@@ -1327,7 +1503,6 @@ async function joinRoom(room){
         setRoomStatus("Ошибка: " + err.message, "err");
     }finally{ joiningRoom = false; }
 }
-
 function closeMiroTalkRoom(){
     const c = $("mirotalk-container"); if(!c) return;
     c.innerHTML =
@@ -1336,7 +1511,6 @@ function closeMiroTalkRoom(){
         "<p>Выберите комнату из списка слева, чтобы начать конференцию</p>" +
         "</div>";
 }
-
 async function leaveRoom(){
     const user = await ensureAuth();
     if(currentRoom && user){
@@ -1352,7 +1526,16 @@ async function leaveRoom(){
     await loadRooms();
 }
 
-/* ===== BEFORE UNLOAD ===== */
+/* ===== УТИЛИТЫ ===== */
+function switchPage(pageName){
+    document.querySelectorAll(".menu-button").forEach(b => {
+        b.classList.toggle("active", b.dataset.page === pageName);
+    });
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    const page = $(pageName);
+    if(page) page.classList.add("active");
+}
+
 window.addEventListener("beforeunload", () => {
     if(currentRoom && currentUser){
         try{
@@ -1365,6 +1548,3 @@ window.addEventListener("beforeunload", () => {
     }
 });
 
-/* ============================================================
-   END
-============================================================ */
