@@ -1,6 +1,6 @@
 /* =====================================================
    GAME PLATFORM — app.js
-   Auth + Profile + Chat + Conference (Brie.fi/ng)
+   Auth + Profile + Chat + Conference (MiroTalk P2P)
 ===================================================== */
 
 const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -8,7 +8,7 @@ const SUPABASE_KEY = "sb_publishable_-7M1kuwWOeRq21SfrLiojg_0qngL_7s";
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/4712/4712109.png";
-const BRIE_BASE = "https://brie.fi/ng";
+const MIROTALK_BASE = "https://p2p.mirotalk.com";
 
 /* =====================================================
    СОСТОЯНИЕ
@@ -209,7 +209,7 @@ function initAuth(){
     if(logout){
         logout.onclick = async () => {
             try{
-                closeBrieRoom();
+                closeMiroTalkRoom();
                 await supabaseClient.auth.signOut();
                 location.reload();
             }catch(e){
@@ -484,7 +484,7 @@ function startChatRealtime(){
 }
 
 /* =====================================================
-   КОНФЕРЕНЦИЯ (Brie.fi/ng)
+   КОНФЕРЕНЦИЯ (MiroTalk P2P)
 ===================================================== */
 
 function initConference(){
@@ -546,7 +546,6 @@ async function loadRooms(){
         return;
     }
 
-    // Показываем все комнаты: активные — сверху
     const sorted = rooms.slice().sort((a, b) => {
         return (counts[b.id] || 0) - (counts[a.id] || 0);
     });
@@ -598,32 +597,36 @@ async function joinRoom(room){
 
         currentRoom = room;
 
-        // Формируем имя комнаты для Brie.fi/ng
-        const brieRoomId = "gp-" + room.id;
+        // Формируем URL MiroTalk P2P
+        // Используем /join/?room=... для прямого входа в комнату с параметрами
+        const miroRoomId = "gp-" + room.id;
+        const miroUrl = MIROTALK_BASE + "/join/?" +
+            "room=" + encodeURIComponent(miroRoomId) +
+            "&name=" + encodeURIComponent(nickname) +
+            "&audio=1" +
+            "&video=1" +
+            "&screen=1" +
+            "&chat=1" +
+            "&notify=1";
 
-        // URL с параметрами интерфейса
-        const brieUrl =
-            BRIE_BASE + "/" + brieRoomId +
-            "?audio=1&video=1&fs=1&invite=1&prefs=1&share=1";
-
-        const container = $("brie-container");
+        const container = $("mirotalk-container");
         if(!container){
-            errLog("BRIE CONTAINER NOT FOUND");
+            errLog("MIROTALK CONTAINER NOT FOUND");
             joiningRoom = false;
             return;
         }
 
         container.innerHTML =
             '<iframe ' +
-            'src="' + brieUrl + '" ' +
-            'allow="camera; microphone; fullscreen; speaker; display-capture; autoplay; clipboard-write" ' +
+            'src="' + miroUrl + '" ' +
+            'allow="camera; microphone; speaker-selection; display-capture; fullscreen; clipboard-read; clipboard-write; web-share; autoplay; picture-in-picture" ' +
             'allowfullscreen ' +
             'style="width:100%;height:100%;border:0;"></iframe>';
 
         setText("current-room-title", "🎙 " + (room.name || "Комната"));
-        setRoomStatus("Подключено к комнате Brie.fi/ng", "ok");
+        setRoomStatus("Подключено к MiroTalk P2P", "ok");
 
-        log("JOINED", brieRoomId);
+        log("JOINED", miroRoomId);
     }catch(err){
         errLog("JOIN EXC", err);
         setRoomStatus("Ошибка: " + err.message, "err");
@@ -632,12 +635,12 @@ async function joinRoom(room){
     }
 }
 
-function closeBrieRoom(){
-    const container = $("brie-container");
+function closeMiroTalkRoom(){
+    const container = $("mirotalk-container");
     if(!container) return;
     container.innerHTML =
-        '<div class="brie-placeholder" id="brie-placeholder">' +
-        '<div class="brie-placeholder-icon">🎥</div>' +
+        '<div class="mirotalk-placeholder" id="mirotalk-placeholder">' +
+        '<div class="mirotalk-placeholder-icon">🎥</div>' +
         '<p>Выберите комнату из списка слева, чтобы начать конференцию</p>' +
         '</div>';
 }
@@ -655,7 +658,7 @@ async function leaveRoom(){
         }catch(e){ errLog("LEAVE DB", e); }
     }
 
-    closeBrieRoom();
+    closeMiroTalkRoom();
     setText("current-room-title", "Комната не выбрана");
     setRoomStatus("");
     currentRoom = null;
