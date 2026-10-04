@@ -1,7 +1,7 @@
 /* =====================================================
    GAME PLATFORM — app.js
-   Auth + Profile + Chat + Conference + Online + Games + Guilds
-   Guilds: иконка, заявки, роли, материалы (файлы)
+   Полноэкранная гильдия + защита от удаления
+   + материалы-кнопки с просмотром
 ===================================================== */
 
 const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -12,9 +12,7 @@ const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/4712/4712109.png"
 const MIROTALK_BASE = "https://p2p.mirotalk.com";
 const IMG_LOAD_TIMEOUT = 8000;
 
-/* ============================================================
-   СОСТОЯНИЕ
-============================================================ */
+/* ===== СОСТОЯНИЕ ===== */
 let currentUser = null;
 let currentProfile = null;
 let availableColumns = null;
@@ -42,9 +40,7 @@ let gamesCache = [];
 let gamesAvailable = true;
 let gameIconTimer = null;
 
-/* ============================================================
-   ХЕЛПЕРЫ
-============================================================ */
+/* ===== ХЕЛПЕРЫ ===== */
 function $(id){ return document.getElementById(id); }
 function log(...a){ console.log("[GP]", ...a); }
 function errLog(...a){ console.error("[GP][ОШИБКА]", ...a); }
@@ -77,6 +73,14 @@ function setGameStatus(t, cls){
     const el = $("game-status"); if(!el) return;
     el.textContent = t || ""; el.className = "profile-status" + (cls ? " " + cls : "");
 }
+function switchPage(pageName){
+    document.querySelectorAll(".menu-button").forEach(b => {
+        b.classList.toggle("active", b.dataset.page === pageName);
+    });
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    const page = $(pageName);
+    if(page) page.classList.add("active");
+}
 
 async function ensureAuth(){
     if(currentUser && currentUser.id) return currentUser;
@@ -91,9 +95,12 @@ async function ensureAuth(){
     return null;
 }
 
-/* ============================================================
-   URL / IMG утилиты
-============================================================ */
+/* ===== ADMIN CHECK ===== */
+function isAdmin(){
+    return !!(currentProfile && currentProfile.is_admin === true);
+}
+
+/* ===== URL / IMG ===== */
 function isValidHttpUrl(str){
     if(!str) return true;
     try{ const u = new URL(str); return u.protocol === "http:" || u.protocol === "https:"; }
@@ -169,20 +176,19 @@ function fileExt(name){
     const m = n.match(/\.([a-z0-9]+)$/i);
     return m ? m[1].toLowerCase() : "bin";
 }
-function switchPage(pageName){
-    document.querySelectorAll(".menu-button").forEach(b => {
-        b.classList.toggle("active", b.dataset.page === pageName);
-    });
-    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-    const page = $(pageName);
-    if(page) page.classList.add("active");
+function fileViewerKind(name, type){
+    const n = (name || "").toLowerCase();
+    const t = (type || "").toLowerCase();
+    if(t.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/.test(n)) return "image";
+    if(t.startsWith("video/") || /\.(mp4|webm|mov|ogv)$/.test(n)) return "video";
+    if(t.startsWith("audio/") || /\.(mp3|wav|ogg|flac|m4a)$/.test(n)) return "audio";
+    if(t === "application/pdf" || /\.pdf$/.test(n)) return "pdf";
+    return "other";
 }
 
-/* ============================================================
-   СХЕМА profiles (автоопределение колонок)
-============================================================ */
+/* ===== СХЕМА profiles ===== */
 async function detectProfileColumns(userId){
-    const wanted = ["id","nickname","avatar_url","vip_level","age","city","about"];
+    const wanted = ["id","nickname","avatar_url","vip_level","age","city","about","is_admin"];
     const available = new Set(["id"]);
     const trySel = async (cols) => {
         const { data, error } = await supabaseClient
@@ -216,20 +222,19 @@ function applySchemaVisibility(){
     const warn = $("schema-warning");
     if(warn){
         const missing = [];
-        if(!has("about")) missing.push("about");
-        if(!has("city"))  missing.push("city");
-        if(!has("age"))   missing.push("age");
+        if(!has("about"))    missing.push("about");
+        if(!has("city"))     missing.push("city");
+        if(!has("age"))      missing.push("age");
+        if(!has("is_admin")) missing.push("is_admin");
         if(missing.length){
             warn.classList.remove("hidden");
             warn.innerHTML = "⚠️ В <code>profiles</code> отсутствуют колонки: <b>" +
-                missing.join(", ") + "</b>.<br>Поля скрыты.";
+                missing.join(", ") + "</b>.<br>Соответствующий функционал ограничен.";
         } else warn.classList.add("hidden");
     }
 }
 
-/* ============================================================
-   СТАРТ
-============================================================ */
+/* ===== СТАРТ ===== */
 document.addEventListener("DOMContentLoaded", () => {
     log("START");
     initAuth();
@@ -239,6 +244,8 @@ document.addEventListener("DOMContentLoaded", () => {
     initProfileForm();
     initGames();
     initGuilds();
+    initGuildOverlay();
+    initFileViewer();
 
     supabaseClient.auth.onAuthStateChange((event, session) => {
         if(event === "SIGNED_OUT") currentUser = null;
@@ -248,9 +255,7 @@ document.addEventListener("DOMContentLoaded", () => {
     checkSession();
 });
 
-/* ============================================================
-   АВТОРИЗАЦИЯ
-============================================================ */
+/* ===== AUTH ===== */
 function initAuth(){
     const loginTab = $("login-tab"), registerTab = $("register-tab");
 
@@ -336,9 +341,7 @@ async function checkSession(){
     }catch(e){ errLog("SESSION", e); }
 }
 
-/* ============================================================
-   ОТКРЫТИЕ ПРИЛОЖЕНИЯ
-============================================================ */
+/* ===== APP ===== */
 async function openApp(){
     $("auth-screen").classList.add("hidden");
     $("app").classList.remove("hidden");
@@ -359,7 +362,6 @@ async function openApp(){
 
     startChatRealtime();
     initOnlinePresence();
-
     await safeRun(loadRooms);
 
     if(roomsPollTimer) clearInterval(roomsPollTimer);
@@ -367,9 +369,7 @@ async function openApp(){
 }
 async function safeRun(fn){ try{ await fn(); } catch(e){ errLog(fn.name, e); } }
 
-/* ============================================================
-   НАВИГАЦИЯ
-============================================================ */
+/* ===== НАВИГАЦИЯ ===== */
 function initNavigation(){
     const buttons = document.querySelectorAll(".menu-button[data-page]");
     buttons.forEach(btn => {
@@ -392,9 +392,7 @@ function initNavigation(){
     });
 }
 
-/* ============================================================
-   ONLINE PRESENCE
-============================================================ */
+/* ===== ONLINE ===== */
 function initOnlinePresence(){
     if(!currentUser || presenceChannel) return;
     presenceChannel = supabaseClient.channel("online-users", {
@@ -457,9 +455,7 @@ function renderOnlinePage(){
     });
 }
 
-/* ============================================================
-   ГЛАВНАЯ
-============================================================ */
+/* ===== ГЛАВНАЯ ===== */
 async function loadHomeStats(){
     updateOnlineCounters();
     try{
@@ -603,7 +599,6 @@ async function loadGames(){
         const card = document.createElement("div");
         card.className = "game-card";
         const guildCount = guildCounts[g.id] || 0;
-        const isOwn = g.added_by === currentUser.id;
         const icon = g.icon_url || faviconFromUrl(g.url) || "";
 
         card.innerHTML =
@@ -628,10 +623,11 @@ async function loadGames(){
         };
         actions.appendChild(guildBtn);
 
-        if(isOwn){
+        // Кнопка удаления — ТОЛЬКО для администратора сайта
+        if(isAdmin()){
             const del = document.createElement("button");
             del.className = "game-delete"; del.type = "button";
-            del.title = "Удалить"; del.textContent = "×";
+            del.title = "Удалить (только админ)"; del.textContent = "×";
             del.onclick = (e) => { e.stopPropagation(); deleteGame(g.id, g.name); };
             card.appendChild(del);
         }
@@ -664,9 +660,20 @@ async function saveNewGame(){
     renderGuildGameFilter();
 }
 async function deleteGame(id, name){
+    if(!isAdmin()){
+        alert("Удалять игры может только администратор сайта.");
+        return;
+    }
     if(!confirm("Удалить игру «" + name + "»?")) return;
     const del = await supabaseClient.from("games").delete().eq("id", id);
-    if(del.error){ alert("Ошибка: " + del.error.message); return; }
+    if(del.error){
+        if(/row-level security|policy/i.test(del.error.message || "")){
+            alert("Удаление запрещено политикой безопасности Supabase.\nНастройте RLS-политику для админа.");
+        } else {
+            alert("Ошибка: " + del.error.message);
+        }
+        return;
+    }
     if(currentGameFilter === id) currentGameFilter = 0;
     await loadGames();
     await loadGuilds();
@@ -678,8 +685,42 @@ async function deleteGame(id, name){
    ГИЛЬДИИ
 ============================================================ */
 function initGuilds(){
-    const btn = $("guild-create-btn");
-    if(btn) btn.onclick = createGuild;
+    const toggle = $("guild-create-toggle");
+    const cancel = $("guild-create-cancel");
+    const create = $("guild-create-btn");
+
+    if(toggle) toggle.onclick = () => {
+        const panel = $("guild-create-panel"); if(!panel) return;
+        panel.classList.toggle("hidden");
+        if(!panel.classList.contains("hidden")) $("guild-name-input")?.focus();
+    };
+    if(cancel) cancel.onclick = () => {
+        const panel = $("guild-create-panel"); if(panel) panel.classList.add("hidden");
+    };
+    if(create) create.onclick = createGuild;
+}
+
+function initGuildOverlay(){
+    const back = $("guild-overlay-back");
+    if(back) back.onclick = () => closeGuildOverlay();
+    document.addEventListener("keydown", (e) => {
+        if(e.key === "Escape"){
+            if(!$("file-viewer").classList.contains("hidden")) closeFileViewer();
+            else if(!$("guild-overlay").classList.contains("hidden")) closeGuildOverlay();
+        }
+    });
+}
+
+function openGuildOverlay(){
+    const el = $("guild-overlay");
+    if(el) el.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+}
+function closeGuildOverlay(){
+    const el = $("guild-overlay");
+    if(el) el.classList.add("hidden");
+    document.body.style.overflow = "";
+    currentGuildId = null;
 }
 
 function renderGuildGameFilter(){
@@ -754,6 +795,7 @@ async function loadGuilds(){
         box.innerHTML = "<div class='dash-recent-empty'>" + msg + "</div>";
         return;
     }
+
     box.innerHTML = "";
     guildsCache.forEach(g => {
         const members = guildMembersCache[g.id] || [];
@@ -763,14 +805,14 @@ async function loadGuilds(){
         const icon = g.icon_url || (game ? (game.icon_url || faviconFromUrl(game.url)) : "");
 
         const card = document.createElement("div");
-        card.className = "guild-card" + (currentGuildId === g.id ? " active" : "");
+        card.className = "guild-card";
         card.innerHTML =
             "<div class='guild-card-icon'>" +
             (icon ? "<img referrerpolicy='no-referrer' src='" + escapeHtml(icon) + "' onerror=\"this.style.display='none';this.parentNode.textContent='⚔'\">" : "⚔") +
             "</div>" +
             "<div class='guild-card-body'>" +
                 "<h3>⚔ " + escapeHtml(g.name) + "</h3>" +
-                "<p>" + escapeHtml((g.description || "").slice(0, 80)) + "</p>" +
+                "<p>" + escapeHtml(g.description || "Без описания") + "</p>" +
                 "<div class='guild-meta'>" +
                     (game ? "<span class='guild-game-badge'>🎮 " + escapeHtml(game.name) + "</span>" : "") +
                     "<span>👥 " + approved.length + "</span>" +
@@ -778,20 +820,9 @@ async function loadGuilds(){
                     (my && my.status === "pending" ? "<span class='pending-badge'>Заявка на рассмотрении</span>" : "") +
                 "</div>" +
             "</div>";
-        card.onclick = () => openGuild(g.id);
+        card.onclick = () => openGuildOverlayFor(g.id);
         box.appendChild(card);
     });
-
-    if(currentGuildId){
-        const still = guildsCache.find(x => x.id === currentGuildId);
-        if(still) openGuild(currentGuildId);
-        else {
-            currentGuildId = null;
-            $("guild-detail").innerHTML =
-                "<div class='guild-detail-empty'><div class='guild-detail-icon'>⚔</div>" +
-                "<p>Выберите гильдию из списка</p></div>";
-        }
-    }
 }
 
 async function createGuild(){
@@ -823,9 +854,10 @@ async function createGuild(){
 
     $("guild-name-input").value = "";
     $("guild-desc-input").value = "";
-    currentGuildId = ins.data.id;
+    $("guild-create-panel").classList.add("hidden");
     currentGuildTab = "members";
     await loadGuilds();
+    await openGuildOverlayFor(ins.data.id);
 }
 
 /* ----- Роли ----- */
@@ -846,8 +878,8 @@ function isOwner(guildId){
     return my.role === "owner";
 }
 
-/* ----- Открытие гильдии ----- */
-async function openGuild(guildId){
+/* ----- Открытие гильдии в overlay ----- */
+async function openGuildOverlayFor(guildId){
     currentGuildId = guildId;
 
     const guild = guildsCache.find(g => g.id === guildId);
@@ -860,6 +892,56 @@ async function openGuild(guildId){
     const game = gamesCache.find(x => x.id === guild.game_id);
     const icon = guild.icon_url || (game ? (game.icon_url || faviconFromUrl(game.url)) : "");
 
+    // Заголовок
+    setText("guild-overlay-header-title", "⚔ " + (guild.name || "Гильдия"));
+
+    // Кнопки в шапке
+    const headerActions = $("guild-overlay-header-actions");
+    headerActions.innerHTML = "";
+
+    // Кнопки действия — в hero
+    const heroActions = [];
+
+    if(game){
+        heroActions.push({
+            label: "🌐 Сайт игры",
+            cls: "main-button secondary",
+            onClick: () => window.open(game.url, "_blank", "noopener")
+        });
+    }
+    if(!my){
+        heroActions.push({
+            label: "✉️ Запросить вступление",
+            cls: "main-button",
+            onClick: () => requestJoinGuild(guildId)
+        });
+    } else if(my.status === "pending"){
+        heroActions.push({
+            label: "⏳ Заявка на рассмотрении",
+            cls: "main-button secondary",
+            disabled: true,
+            onClick: () => {}
+        });
+        heroActions.push({
+            label: "Отменить заявку",
+            cls: "main-button danger",
+            onClick: () => cancelJoinRequest(guildId)
+        });
+    } else if(amOwner){
+        heroActions.push({
+            label: "🗑 Распустить гильдию",
+            cls: "main-button danger",
+            onClick: () => dissolveGuild(guildId)
+        });
+    } else {
+        heroActions.push({
+            label: "Покинуть гильдию",
+            cls: "main-button secondary",
+            onClick: () => leaveGuild(guildId)
+        });
+    }
+
+    // Владелец инфо
     let ownerNick = "—";
     if(guild.owner_id){
         const ownerMember = members.find(m => m.user_id === guild.owner_id);
@@ -874,27 +956,34 @@ async function openGuild(guildId){
     const approved = members.filter(m => m.status === "approved" || !m.status);
     const pending = members.filter(m => m.status === "pending");
 
-    const detail = $("guild-detail");
-    detail.innerHTML = `
-        <div class="guild-detail-header">
-            <div class="guild-detail-icon-wrap">
-                <div class="gd-icon" id="gd-icon">${icon
+    const body = $("guild-overlay-body");
+    body.innerHTML = `
+        <div class="guild-hero">
+            <div class="guild-hero-icon" id="gd-icon">
+                ${icon
                     ? `<img referrerpolicy="no-referrer" src="${escapeHtml(icon)}" onerror="this.style.display='none';this.parentNode.textContent='⚔'">`
-                    : "⚔"}</div>
-                ${amManager ? `<button class="gd-icon-edit" id="gd-icon-edit" type="button" title="Изменить иконку">✏️</button>` : ""}
+                    : "⚔"}
+                ${amManager ? `<button class="guild-hero-icon-edit" id="gd-icon-edit" type="button" title="Изменить иконку">✏️</button>` : ""}
                 <input type="file" id="gd-icon-file" accept="image/*" hidden>
             </div>
-            <div class="guild-detail-info">
-                <h2>⚔ ${escapeHtml(guild.name)}</h2>
-                ${game
-                    ? `<div class="guild-detail-game">
-                        <img referrerpolicy="no-referrer" src="${escapeHtml(game.icon_url || faviconFromUrl(game.url))}" onerror="this.style.display='none'">
-                        🎮 ${escapeHtml(game.name)}
-                       </div>`
-                    : `<div class="guild-detail-game" style="background:#f8fafc;border-color:#e3e9f2;color:#98a2b5">🎮 Игра не привязана</div>`}
-                <div class="guild-owner">Владелец: <b>${escapeHtml(ownerNick)}</b></div>
-                <div class="guild-detail-desc">${escapeHtml(guild.description || "Без описания")}</div>
-                <div class="guild-detail-actions" id="guild-detail-actions"></div>
+            <div class="guild-hero-info">
+                <h1>⚔ ${escapeHtml(guild.name)}</h1>
+                <div class="guild-hero-meta">
+                    ${game
+                        ? `<span class="guild-game-badge">
+                             <img referrerpolicy="no-referrer" src="${escapeHtml(game.icon_url || faviconFromUrl(game.url))}" onerror="this.style.display='none'">
+                             🎮 ${escapeHtml(game.name)}
+                           </span>`
+                        : `<span class="guild-game-badge" style="background:#f8fafc;border-color:#e3e9f2;color:#98a2b5">🎮 Игра не привязана</span>`}
+                    <span class="guild-game-badge" style="background:#dff5e1;color:#155724">👥 ${approved.length} участников</span>
+                </div>
+                <div class="guild-hero-desc">
+                    ${escapeHtml(guild.description || "Без описания")}
+                </div>
+                <div class="guild-hero-desc" style="font-size:12.5px;color:#98a2b5">
+                    Владелец: <b style="color:#b9830a">${escapeHtml(ownerNick)}</b>
+                </div>
+                <div class="guild-hero-actions" id="guild-hero-actions"></div>
             </div>
         </div>
 
@@ -907,44 +996,24 @@ async function openGuild(guildId){
             </button>
         </div>
 
-        <div class="guild-tab-content ${currentGuildTab === "members" ? "active" : ""}" id="guild-tab-members"></div>
-        <div class="guild-tab-content ${currentGuildTab === "materials" ? "active" : ""}" id="guild-tab-materials"></div>
+        <div class="guild-tab-panel">
+            <div class="guild-tab-content ${currentGuildTab === "members" ? "active" : ""}" id="guild-tab-members"></div>
+            <div class="guild-tab-content ${currentGuildTab === "materials" ? "active" : ""}" id="guild-tab-materials"></div>
+        </div>
     `;
 
-    const actions = $("guild-detail-actions");
-    if(game){
-        const site = document.createElement("button");
-        site.className = "main-button secondary"; site.type = "button";
-        site.textContent = "🌐 Сайт игры";
-        site.onclick = () => window.open(game.url, "_blank", "noopener");
-        actions.appendChild(site);
-    }
-    if(!my){
-        const join = document.createElement("button");
-        join.className = "main-button"; join.type = "button";
-        join.textContent = "✉️ Запросить вступление";
-        join.onclick = () => requestJoinGuild(guildId);
-        actions.appendChild(join);
-    } else if(my.status === "pending"){
-        const pendingBtn = document.createElement("button");
-        pendingBtn.className = "main-button secondary"; pendingBtn.type = "button";
-        pendingBtn.textContent = "⏳ Заявка на рассмотрении";
-        pendingBtn.disabled = true;
-        actions.appendChild(pendingBtn);
+    // Hero action buttons
+    const heroActionsBox = $("guild-hero-actions");
+    heroActions.forEach(a => {
+        const btn = document.createElement("button");
+        btn.className = a.cls; btn.type = "button";
+        btn.textContent = a.label;
+        if(a.disabled) btn.disabled = true;
+        btn.onclick = a.onClick;
+        heroActionsBox.appendChild(btn);
+    });
 
-        const cancel = document.createElement("button");
-        cancel.className = "main-button danger"; cancel.type = "button";
-        cancel.textContent = "Отменить заявку";
-        cancel.onclick = () => cancelJoinRequest(guildId);
-        actions.appendChild(cancel);
-    } else {
-        const leave = document.createElement("button");
-        leave.className = "main-button secondary"; leave.type = "button";
-        leave.textContent = amOwner ? "🗑 Удалить гильдию" : "Покинуть гильдию";
-        leave.onclick = () => leaveGuild(guildId, amOwner);
-        actions.appendChild(leave);
-    }
-
+    // Icon edit
     if(amManager){
         const edit = $("gd-icon-edit");
         const fileInput = $("gd-icon-file");
@@ -957,19 +1026,24 @@ async function openGuild(guildId){
         }
     }
 
-    detail.querySelectorAll(".guild-tab-btn").forEach(btn => {
+    // Tabs
+    body.querySelectorAll(".guild-tab-btn").forEach(btn => {
         btn.onclick = () => {
             const t = btn.dataset.tab;
             currentGuildTab = t;
-            detail.querySelectorAll(".guild-tab-btn").forEach(b =>
+            body.querySelectorAll(".guild-tab-btn").forEach(b =>
                 b.classList.toggle("active", b.dataset.tab === t));
-            detail.querySelectorAll(".guild-tab-content").forEach(c =>
+            body.querySelectorAll(".guild-tab-content").forEach(c =>
                 c.classList.remove("active"));
             const target = $("guild-tab-" + t);
             if(target) target.classList.add("active");
         };
     });
 
+    // Показываем overlay
+    openGuildOverlay();
+
+    // Контент табов
     renderMembersTab(guildId, approved, pending, amManager, amOwner);
     await renderMaterialsTab(guildId, amManager);
 }
@@ -1100,6 +1174,7 @@ async function requestJoinGuild(guildId){
     });
     if(ins.error){ alert("Ошибка: " + ins.error.message); return; }
     await loadGuilds();
+    await openGuildOverlayFor(guildId);
 }
 async function cancelJoinRequest(guildId){
     const user = await ensureAuth();
@@ -1107,6 +1182,7 @@ async function cancelJoinRequest(guildId){
     await supabaseClient.from("guild_members").delete()
         .eq("guild_id", guildId).eq("user_id", user.id);
     await loadGuilds();
+    await openGuildOverlayFor(guildId);
 }
 async function approveMember(guildId, userId){
     const up = await supabaseClient.from("guild_members")
@@ -1114,6 +1190,7 @@ async function approveMember(guildId, userId){
         .eq("guild_id", guildId).eq("user_id", userId);
     if(up.error){ alert("Ошибка: " + up.error.message); return; }
     await loadGuilds();
+    await openGuildOverlayFor(guildId);
 }
 async function rejectMember(guildId, userId){
     if(!confirm("Отклонить заявку?")) return;
@@ -1121,6 +1198,7 @@ async function rejectMember(guildId, userId){
         .eq("guild_id", guildId).eq("user_id", userId);
     if(del.error){ alert("Ошибка: " + del.error.message); return; }
     await loadGuilds();
+    await openGuildOverlayFor(guildId);
 }
 async function kickMember(guildId, userId, nickname){
     if(!confirm("Кикнуть " + (nickname || "участника") + "?")) return;
@@ -1128,6 +1206,7 @@ async function kickMember(guildId, userId, nickname){
         .eq("guild_id", guildId).eq("user_id", userId);
     if(del.error){ alert("Ошибка: " + del.error.message); return; }
     await loadGuilds();
+    await openGuildOverlayFor(guildId);
 }
 async function changeRole(guildId, userId, newRole){
     const up = await supabaseClient.from("guild_members")
@@ -1135,6 +1214,7 @@ async function changeRole(guildId, userId, newRole){
         .eq("guild_id", guildId).eq("user_id", userId);
     if(up.error){ alert("Ошибка: " + up.error.message); return; }
     await loadGuilds();
+    await openGuildOverlayFor(guildId);
 }
 async function transferOwnership(guildId, newOwnerId, nickname){
     if(!confirm("Передать владение " + (nickname || "игроку") + "? Вы станете заместителем.")) return;
@@ -1154,40 +1234,65 @@ async function transferOwnership(guildId, newOwnerId, nickname){
         .eq("guild_id", guildId).eq("user_id", user.id);
 
     await loadGuilds();
+    await openGuildOverlayFor(guildId);
 }
 
-async function leaveGuild(guildId, isOwnerFlag){
+/* ----- Распустить гильдию (только владелец) ----- */
+async function dissolveGuild(guildId){
     const user = await ensureAuth();
-    if(!user) return;
+    if(!user){ alert("Нет авторизации"); return; }
 
-    if(isOwnerFlag){
-        const members = guildMembersCache[guildId] || [];
-        const approved = members.filter(m => m.status === "approved" || !m.status);
-        if(approved.length > 1){
-            alert("Нельзя удалить гильдию, пока в ней есть другие участники. Сначала передайте владение или удалите участников.");
-            return;
-        }
-        if(!confirm("Вы владелец. Удалить гильдию вместе со всеми материалами?")) return;
-        await supabaseClient.from("guilds").delete().eq("id", guildId);
-        await supabaseClient.from("guild_members").delete().eq("guild_id", guildId);
-        await supabaseClient.from("guild_materials").delete().eq("guild_id", guildId);
-        currentGuildId = null;
-        $("guild-detail").innerHTML =
-            "<div class='guild-detail-empty'><div class='guild-detail-icon'>⚔</div>" +
-            "<p>Выберите гильдию из списка</p></div>";
-        await loadGuilds();
-        await loadGames();
+    if(!isOwner(guildId)){
+        alert("Распустить гильдию может только её глава.");
         return;
     }
 
-    const del = await supabaseClient.from("guild_members").delete()
-        .eq("guild_id", guildId).eq("user_id", user.id);
+    const members = guildMembersCache[guildId] || [];
+    const approved = members.filter(m => m.status === "approved" || !m.status);
+    if(approved.length > 1){
+        alert("Нельзя распустить гильдию, пока в ней есть другие участники.\nСначала передайте владение или удалите участников.");
+        return;
+    }
+
+    if(!confirm("Вы глава гильдии. Распустить гильдию вместе со всеми материалами? Действие необратимо.")) return;
+
+    // Удаляем материалы из Storage
+    try{
+        const matsRes = await supabaseClient.from("guild_materials").select("file_path").eq("guild_id", guildId);
+        const paths = (matsRes.data || []).map(m => m.file_path).filter(Boolean);
+        if(paths.length > 0){
+            await supabaseClient.storage.from("guild-files").remove(paths);
+        }
+    }catch(e){ errLog("DISSOLVE STORAGE", e); }
+
+    await supabaseClient.from("guild_materials").delete().eq("guild_id", guildId);
+    await supabaseClient.from("guild_members").delete().eq("guild_id", guildId);
+    const del = await supabaseClient.from("guilds").delete().eq("id", guildId);
     if(del.error){ alert("Ошибка: " + del.error.message); return; }
+
+    closeGuildOverlay();
     await loadGuilds();
     await loadGames();
 }
 
-/* ----- Иконка гильдии (загрузка файла) ----- */
+/* ----- Покинуть гильдию (не владелец) ----- */
+async function leaveGuild(guildId){
+    const user = await ensureAuth();
+    if(!user) return;
+    if(isOwner(guildId)){
+        alert("Вы глава гильдии. Используйте «Распустить гильдию» или передайте владение.");
+        return;
+    }
+    if(!confirm("Покинуть гильдию?")) return;
+    const del = await supabaseClient.from("guild_members").delete()
+        .eq("guild_id", guildId).eq("user_id", user.id);
+    if(del.error){ alert("Ошибка: " + del.error.message); return; }
+    closeGuildOverlay();
+    await loadGuilds();
+    await loadGames();
+}
+
+/* ----- Иконка гильдии ----- */
 async function uploadGuildIcon(guildId, file){
     const user = await ensureAuth();
     if(!user) return;
@@ -1208,7 +1313,12 @@ async function uploadGuildIcon(guildId, file){
     if(iconWrap){
         const reader = new FileReader();
         reader.onload = (e) => {
-            iconWrap.innerHTML = "<img src='" + e.target.result + "' alt=''>";
+            const img = iconWrap.querySelector("img");
+            if(img) img.src = e.target.result;
+            else {
+                iconWrap.innerHTML = "<img src='" + e.target.result + "' alt=''>" +
+                    (isManager(guildId) ? '<button class="guild-hero-icon-edit" id="gd-icon-edit" type="button">✏️</button>' : "");
+            }
         };
         reader.readAsDataURL(file);
     }
@@ -1229,9 +1339,10 @@ async function uploadGuildIcon(guildId, file){
     if(upd.error){ alert("Ошибка сохранения: " + upd.error.message); return; }
 
     await loadGuilds();
+    await openGuildOverlayFor(guildId);
 }
 
-/* ----- Вкладка "Материалы" ----- */
+/* ----- Вкладка "Материалы" — кнопки + просмотр ----- */
 async function renderMaterialsTab(guildId, amManager){
     const box = $("guild-tab-materials"); if(!box) return;
     box.innerHTML = "";
@@ -1242,8 +1353,8 @@ async function renderMaterialsTab(guildId, amManager){
         form.innerHTML = `
             <h3>📤 Загрузить материал</h3>
             <div class="material-form-row">
-                <input id="mat-title" placeholder="Название материала" maxlength="80">
-                <input id="mat-desc" placeholder="Краткое описание" maxlength="200">
+                <input id="mat-title" placeholder="Название (будет на кнопке)" maxlength="80">
+                <input id="mat-desc" placeholder="Краткое описание (необязательно)" maxlength="200">
             </div>
             <label class="material-file-input">
                 <span class="file-icon">📎</span>
@@ -1291,8 +1402,8 @@ async function renderMaterialsTab(guildId, amManager){
     }
 
     const listWrap = document.createElement("div");
-    listWrap.id = "materials-grid";
-    listWrap.className = "materials-grid";
+    listWrap.id = "materials-board";
+    listWrap.className = "materials-board";
     listWrap.innerHTML = "<div class='dash-recent-empty'>Загрузка материалов…</div>";
     box.appendChild(listWrap);
 
@@ -1315,48 +1426,38 @@ async function renderMaterialsTab(guildId, amManager){
 
     listWrap.innerHTML = "";
     mats.forEach(m => {
-        const card = document.createElement("div");
-        card.className = "material-card";
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "material-btn";
+        btn.dataset.id = m.id;
+
         const ico = fileIconByName(m.file_name || m.file_url, m.file_type);
         const canDelete = amManager || (m.uploaded_by === currentUser.id);
 
-        card.innerHTML = `
-            <div class="material-card-header">
-                <div class="material-icon">${ico}</div>
-                <div class="material-info">
-                    <div class="material-title">${escapeHtml(m.title || "Без названия")}</div>
-                    <div class="material-meta">
-                        ${escapeHtml(m.file_name || "")}
-                        ${m.file_size ? " · " + humanFileSize(m.file_size) : ""}
-                    </div>
-                </div>
-            </div>
-            ${m.description ? `<div class="material-desc">${escapeHtml(m.description)}</div>` : ""}
-            <div class="material-actions">
-                <button class="main-button" data-action="download" type="button">⬇ Скачать</button>
-            </div>
-        `;
-        card.querySelector('[data-action="download"]').onclick = () => {
-            const a = document.createElement("a");
-            a.href = m.file_url;
-            a.target = "_blank";
-            a.rel = "noopener";
-            a.download = m.file_name || "";
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-        };
+        btn.innerHTML =
+            "<div class='material-btn-icon'>" + ico + "</div>" +
+            "<div class='material-btn-body'>" +
+                "<div class='material-btn-title'>" + escapeHtml(m.title || "Без названия") + "</div>" +
+                "<div class='material-btn-meta'>" +
+                    escapeHtml(m.file_name || "") +
+                    (m.file_size ? " · " + humanFileSize(m.file_size) : "") +
+                "</div>" +
+            "</div>";
+
+        btn.onclick = () => openFileViewer(m);
 
         if(canDelete){
-            const del = document.createElement("button");
-            del.className = "material-delete";
-            del.type = "button";
+            const del = document.createElement("span");
+            del.className = "material-btn-delete";
             del.title = "Удалить";
             del.textContent = "×";
-            del.onclick = (e) => { e.stopPropagation(); deleteMaterial(guildId, m); };
-            card.appendChild(del);
+            del.onclick = (e) => {
+                e.stopPropagation();
+                deleteMaterial(guildId, m);
+            };
+            btn.appendChild(del);
         }
-        listWrap.appendChild(card);
+        listWrap.appendChild(btn);
     });
 }
 
@@ -1443,7 +1544,7 @@ async function uploadMaterial(guildId){
     $("mat-file").value = "";
     $("mat-file-text").innerHTML = "<b>Выберите файл</b> или перетащите сюда";
 
-    await openGuild(guildId);
+    await openGuildOverlayFor(guildId);
 }
 
 async function deleteMaterial(guildId, mat){
@@ -1455,7 +1556,96 @@ async function deleteMaterial(guildId, mat){
         try{ await supabaseClient.storage.from("guild-files").remove([mat.file_path]); }
         catch(e){ errLog("DELETE FILE", e); }
     }
-    await openGuild(guildId);
+    await openGuildOverlayFor(guildId);
+}
+
+/* ============================================================
+   FILE VIEWER
+============================================================ */
+function initFileViewer(){
+    const close = $("file-viewer-close");
+    if(close) close.onclick = closeFileViewer;
+
+    const dl = $("file-viewer-download");
+    if(dl) dl.onclick = () => {
+        const url = dl.dataset.url;
+        const name = dl.dataset.name || "";
+        if(!url) return;
+        const a = document.createElement("a");
+        a.href = url; a.download = name; a.target = "_blank"; a.rel = "noopener";
+        document.body.appendChild(a); a.click(); a.remove();
+    };
+}
+function openFileViewer(m){
+    const wrap = $("file-viewer");
+    const title = $("file-viewer-title");
+    const body = $("file-viewer-body");
+    const dl = $("file-viewer-download");
+
+    if(!wrap || !body) return;
+
+    title.textContent = m.title || m.file_name || "Файл";
+    dl.dataset.url = m.file_url;
+    dl.dataset.name = m.file_name || "";
+
+    const kind = fileViewerKind(m.file_name, m.file_type);
+    body.innerHTML = "";
+
+    if(kind === "image"){
+        const img = document.createElement("img");
+        img.referrerPolicy = "no-referrer";
+        img.src = m.file_url;
+        img.alt = m.title || "";
+        body.appendChild(img);
+    } else if(kind === "video"){
+        const v = document.createElement("video");
+        v.src = m.file_url;
+        v.controls = true;
+        v.autoplay = false;
+        v.playsInline = true;
+        body.appendChild(v);
+    } else if(kind === "audio"){
+        const a = document.createElement("audio");
+        a.src = m.file_url;
+        a.controls = true;
+        body.appendChild(a);
+    } else if(kind === "pdf"){
+        const ifr = document.createElement("iframe");
+        ifr.src = m.file_url;
+        body.appendChild(ifr);
+    } else {
+        const fallback = document.createElement("div");
+        fallback.className = "viewer-fallback";
+        fallback.innerHTML =
+            "<span class='big'>" + fileIconByName(m.file_name, m.file_type) + "</span>" +
+            "<p>Предпросмотр для этого типа файла недоступен.<br>Скачайте файл, чтобы открыть его.</p>";
+        const btn = document.createElement("button");
+        btn.className = "main-button"; btn.type = "button";
+        btn.textContent = "⬇ Скачать файл";
+        btn.onclick = () => {
+            const a = document.createElement("a");
+            a.href = m.file_url; a.download = m.file_name || "";
+            a.target = "_blank"; a.rel = "noopener";
+            document.body.appendChild(a); a.click(); a.remove();
+        };
+        fallback.appendChild(btn);
+        body.appendChild(fallback);
+    }
+
+    if(m.description){
+        const desc = document.createElement("div");
+        desc.style.cssText = "position:absolute;bottom:16px;left:0;right:0;text-align:center;color:#e2e8f0;font-size:13px;padding:0 20px;";
+        desc.textContent = m.description;
+        body.appendChild(desc);
+    }
+
+    wrap.classList.remove("hidden");
+}
+function closeFileViewer(){
+    const wrap = $("file-viewer");
+    if(wrap) wrap.classList.add("hidden");
+    const body = $("file-viewer-body");
+    if(body) body.innerHTML = "";
 }
 
 /* ============================================================
@@ -1491,6 +1681,9 @@ async function loadProfile(){
     currentProfile = result.data;
     applyProfileToUI(currentProfile);
     fillProfileForm(currentProfile);
+
+    // Обновляем кэш игр и гильдий после подгрузки профиля — важно для isAdmin
+    loadGames().catch(e => errLog(e));
 }
 
 function applyProfileToUI(p){
@@ -1504,6 +1697,12 @@ function applyProfileToUI(p){
     setText("side-name", p.nickname || "Player");
     setText("side-vip", "VIP " + (p.vip_level || 0));
     setImage("side-avatar", p.avatar_url);
+
+    const adminBadge = $("admin-badge");
+    if(adminBadge){
+        if(p.is_admin === true) adminBadge.classList.remove("hidden");
+        else adminBadge.classList.add("hidden");
+    }
 }
 
 function fillProfileForm(p){
@@ -1522,7 +1721,6 @@ function updateAboutCounter(){
 
 function initProfileForm(){
     const form = $("profile-form"); if(!form) return;
-
     const avatarInput = $("pf-avatar");
     if(avatarInput){
         avatarInput.addEventListener("input", () => {
@@ -1657,6 +1855,9 @@ async function saveProfileChanges(){
 
         setProfileStatus("Сохранено ✓");
         setTimeout(() => setProfileStatus(""), 2200);
+
+        // После сохранения — перезагружаем игры/гильдии (на случай смены флага админа)
+        loadGames().catch(e => errLog(e));
     }catch(err){
         setProfileStatus("Ошибка: " + err.message, "err");
     }finally{ savingProfile = false; }
@@ -1668,7 +1869,6 @@ async function saveProfileChanges(){
 async function loadNews(){
     const boxHome = $("news-list");
     const boxPage = $("news-page-list");
-
     const { data, error } = await supabaseClient
         .from("news").select("*").order("created_at", { ascending: false });
 
@@ -1933,104 +2133,3 @@ window.addEventListener("beforeunload", () => {
         try{ presenceChannel.untrack(); }catch(e){}
     }
 });
-
-/* ============================================================
-   SQL ДЛЯ SUPABASE (для справки, выполнить в SQL Editor):
-
--- Игры
-create table if not exists games (
-  id bigserial primary key,
-  name text not null,
-  description text,
-  url text not null,
-  icon_url text,
-  added_by uuid references auth.users(id),
-  created_at timestamp default now()
-);
-
--- Гильдии: расширение
-alter table guilds add column if not exists icon_url text;
-alter table guilds add column if not exists approval_required boolean default true;
-alter table guilds add column if not exists game_id bigint references games(id) on delete set null;
-alter table guild_members add column if not exists status text default 'approved';
-
--- Материалы
-create table if not exists guild_materials (
-  id bigserial primary key,
-  guild_id bigint references guilds(id) on delete cascade,
-  uploaded_by uuid references auth.users(id),
-  title text not null,
-  description text,
-  file_url text not null,
-  file_path text,
-  file_name text,
-  file_size bigint,
-  file_type text,
-  created_at timestamp default now()
-);
-
--- Функция проверки роли
-create or replace function is_guild_manager(gid bigint, uid uuid)
-returns boolean language sql security definer as $$
-  select exists (
-    select 1 from guild_members
-    where guild_id = gid and user_id = uid
-    and role in ('owner','deputy') and status = 'approved'
-  );
-$$;
-
-alter table guild_materials enable row level security;
-
-drop policy if exists "gmaterials read all" on guild_materials;
-create policy "gmaterials read all" on guild_materials for select using (true);
-
-drop policy if exists "gmaterials insert manager" on guild_materials;
-create policy "gmaterials insert manager" on guild_materials for insert
-  with check (auth.uid() = uploaded_by and is_guild_manager(guild_id, auth.uid()));
-
-drop policy if exists "gmaterials delete manager" on guild_materials;
-create policy "gmaterials delete manager" on guild_materials for delete
-  using (is_guild_manager(guild_id, auth.uid()) or auth.uid() = uploaded_by);
-
-drop policy if exists "gm update manager" on guild_members;
-create policy "gm update manager" on guild_members for update
-  using (is_guild_manager(guild_id, auth.uid()));
-
-drop policy if exists "gm delete manager" on guild_members;
-create policy "gm delete manager" on guild_members for delete
-  using (is_guild_manager(guild_id, auth.uid()) or auth.uid() = user_id);
-
-drop policy if exists "guilds update owner" on guilds;
-create policy "guilds update owner" on guilds for update
-  using (is_guild_manager(id, auth.uid()));
-
--- Storage
-insert into storage.buckets (id, name, public)
-values ('guild-icons', 'guild-icons', true) on conflict (id) do nothing;
-insert into storage.buckets (id, name, public)
-values ('guild-files', 'guild-files', true) on conflict (id) do nothing;
-
-drop policy if exists "guild-icons read" on storage.objects;
-create policy "guild-icons read" on storage.objects for select
-  using (bucket_id = 'guild-icons');
-
-drop policy if exists "guild-icons insert" on storage.objects;
-create policy "guild-icons insert" on storage.objects for insert
-  with check (bucket_id = 'guild-icons' and auth.role() = 'authenticated');
-
-drop policy if exists "guild-icons delete" on storage.objects;
-create policy "guild-icons delete" on storage.objects for delete
-  using (bucket_id = 'guild-icons' and auth.uid()::text = (storage.foldername(name))[1]);
-
-drop policy if exists "guild-files read" on storage.objects;
-create policy "guild-files read" on storage.objects for select
-  using (bucket_id = 'guild-files');
-
-drop policy if exists "guild-files insert" on storage.objects;
-create policy "guild-files insert" on storage.objects for insert
-  with check (bucket_id = 'guild-files' and auth.role() = 'authenticated');
-
-drop policy if exists "guild-files delete" on storage.objects;
-create policy "guild-files delete" on storage.objects for delete
-  using (bucket_id = 'guild-files' and auth.uid()::text = (storage.foldername(name))[1]);
-============================================================ */
