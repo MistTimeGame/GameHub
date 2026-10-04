@@ -21,7 +21,6 @@
      AUTH
 ========================= -->
 
-
 <section id="auth-screen" class="auth-screen">
 
 
@@ -29,9 +28,7 @@
 
 
 <div class="logo">
-
 GP
-
 </div>
 
 
@@ -40,21 +37,27 @@ GAME PLATFORM
 </h1>
 
 
-<p class="subtitle">
-Игровая социальная платформа
+<p>
+Игровое сообщество нового поколения
 </p>
 
 
 
-<div class="auth-switch">
+
+<div class="auth-tabs">
 
 
-<button id="show-login" class="active">
+<button 
+id="login-tab"
+class="active"
+>
 Вход
 </button>
 
 
-<button id="show-register">
+<button
+id="register-tab"
+>
 Регистрация
 </button>
 
@@ -65,6 +68,7 @@ GAME PLATFORM
 
 
 <div id="auth-message"></div>
+
 
 
 
@@ -89,6 +93,7 @@ required
 >
 
 
+
 <button class="main-button">
 
 Войти
@@ -97,6 +102,8 @@ required
 
 
 </form>
+
+
 
 
 
@@ -114,6 +121,7 @@ required
 >
 
 
+
 <input
 id="register-email"
 type="email"
@@ -122,12 +130,14 @@ required
 >
 
 
+
 <input
 id="register-password"
 type="password"
 placeholder="Пароль"
 required
 >
+
 
 
 <button class="main-button">
@@ -153,9 +163,8 @@ required
 
 
 
-
 <!-- =========================
-     APP
+     MAIN APP
 ========================= -->
 
 
@@ -166,16 +175,16 @@ required
 
 
 
+
 <header class="topbar">
+
 
 
 <div class="brand">
 
 
 <div class="brand-logo">
-
 GP
-
 </div>
 
 
@@ -184,7 +193,6 @@ GP
 <h2>
 GAME PLATFORM
 </h2>
-
 
 <span>
 COMMUNITY
@@ -200,8 +208,7 @@ COMMUNITY
 
 
 
-
-<div class="top-user">
+<div class="top-profile">
 
 
 <img
@@ -228,6 +235,7 @@ Online
 </div>
 
 
+
 </header>
 
 
@@ -244,22 +252,25 @@ Online
 
 
 
-<!-- LEFT -->
+
+<!-- =========================
+LEFT MENU
+========================= -->
+
 
 <aside class="sidebar">
 
 
-
 <div class="menu-title">
-
 PLATFORM
-
 </div>
 
 
 
-
-<button class="menu-button active" data-page="home">
+<button
+class="menu-button active"
+data-page="home"
+>
 
 🏠 Главная
 
@@ -267,7 +278,10 @@ PLATFORM
 
 
 
-<button class="menu-button" data-page="games">
+<button
+class="menu-button"
+data-page="games"
+>
 
 🎮 Игры
 
@@ -275,7 +289,10 @@ PLATFORM
 
 
 
-<button class="menu-button" data-page="guilds">
+<button
+class="menu-button"
+data-page="guilds"
+>
 
 ⚔ Гильдии
 
@@ -283,7 +300,10 @@ PLATFORM
 
 
 
-<button class="menu-button" data-page="news">
+<button
+class="menu-button"
+data-page="news"
+>
 
 📰 Новости
 
@@ -293,15 +313,16 @@ PLATFORM
 
 
 <div class="menu-title">
-
 COMMUNITY
-
 </div>
 
 
 
 
-<button class="menu-button" data-page="chat">
+<button
+class="menu-button"
+data-page="chat"
+>
 
 💬 Чат
 
@@ -309,7 +330,12 @@ COMMUNITY
 
 
 
-<button class="menu-button" data-page="conference">
+
+
+<button
+class="menu-button"
+data-page="conference"
+>
 
 🎙 Конференции
 
@@ -317,7 +343,12 @@ COMMUNITY
 
 
 
-<button class="menu-button" data-page="profile">
+
+
+<button
+class="menu-button"
+data-page="profile"
+>
 
 👤 Профиль
 
@@ -327,20 +358,15 @@ COMMUNITY
 
 
 
-<div class="sidebar-bottom">
-
 
 <button
 id="logout"
 class="menu-button logout"
 >
 
-Выйти
+Выход
 
 </button>
-
-
-</div>
 
 
 
@@ -354,15 +380,24 @@ class="menu-button logout"
 
 
 
-<!-- CENTER -->
+<!-- =========================
+CENTER
+========================= -->
 
 
 <main class="content">
 
 
 
-<section id="home" class="page active">
 
+
+<!-- HOME -->
+
+
+<section 
+id="home"
+class="page active"
+>
 
 
 <h1>
@@ -381,17 +416,12 @@ class="menu-button logout"
 
 <div id="news-list">
 
-
 Загрузка новостей...
 
-
 </div>
 
 
-
 </div>
-
-
 
 
 
@@ -405,7 +435,14 @@ class="menu-button logout"
 
 
 
-<section id="games" class="page">
+
+<!-- GAMES -->
+
+
+<section
+id="games"
+class="page"
+>
 
 
 <h1>
@@ -413,11 +450,10 @@ class="menu-button logout"
 </h1>
 
 
+
 <div class="empty-card">
 
-
-Добавление игр будет здесь
-
+Список игр
 
 </div>
 
@@ -431,7 +467,14 @@ class="menu-button logout"
 
 
 
-<section id="guilds" class="page">
+
+<!-- GUILDS -->
+
+
+<section
+id="guilds"
+class="page"
+>
 
 
 <h1>
@@ -439,11 +482,10 @@ class="menu-button logout"
 </h1>
 
 
+
 <div class="empty-card">
 
-
-Создание игровых сообществ
-
+Игровые сообщества
 
 </div>
 
@@ -458,7 +500,13 @@ class="menu-button logout"
 
 
 
-<section id="news" class="page">
+<!-- NEWS -->
+
+
+<section
+id="news"
+class="page"
+>
 
 
 <h1>
@@ -468,7 +516,6 @@ class="menu-button logout"
 
 <div id="news-page">
 
-
 </div>
 
 
@@ -482,11 +529,17 @@ class="menu-button logout"
 
 
 
-<section id="chat" class="page">
+<!-- CHAT -->
+
+
+<section
+id="chat"
+class="page"
+>
 
 
 <h1>
-Общий чат
+💬 Общий чат
 </h1>
 
 
@@ -495,22 +548,24 @@ class="menu-button logout"
 <div class="chat-box">
 
 
-
-<div id="messages">
-
+<div
+id="messages"
+class="messages"
+>
 
 </div>
 
 
 
 
-<div class="chat-input">
+<div class="chat-controls">
 
 
 <input
 id="message-text"
-placeholder="Введите сообщение..."
+placeholder="Сообщение..."
 >
+
 
 
 <button
@@ -526,33 +581,6 @@ class="main-button"
 </div>
 
 
-</div>
-
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<section id="conference" class="page">
-
-
-<h1>
-Конференции
-</h1>
-
-
-<div class="empty-card">
-
-
-Голосовые комнаты
-
 
 </div>
 
@@ -567,12 +595,135 @@ class="main-button"
 
 
 
-<section id="profile" class="page">
+<!-- CONFERENCE -->
+
+
+<section
+id="conference"
+class="page"
+>
 
 
 <h1>
-Профиль
+🎙 Видеоконференции
 </h1>
+
+
+
+
+<div class="conference-layout">
+
+
+
+
+
+<div class="rooms-panel">
+
+
+<h2>
+Комнаты
+</h2>
+
+
+
+<div id="rooms-list">
+
+
+Загрузка комнат...
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+<div class="video-panel">
+
+
+<h2
+id="current-room-title"
+>
+
+Комната не выбрана
+
+</h2>
+
+
+
+
+<div
+id="video-area"
+class="video-area"
+>
+
+
+<div class="video-placeholder">
+
+🎥
+
+Видео подключение
+
+</div>
+
+
+</div>
+
+
+
+
+
+<button
+id="leave-room"
+class="main-button"
+>
+
+Покинуть комнату
+
+</button>
+
+
+
+</div>
+
+
+
+
+
+
+</div>
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<!-- PROFILE -->
+
+
+<section
+id="profile"
+class="page"
+>
+
+
+<h1>
+👤 Профиль
+</h1>
+
+
 
 
 <div class="profile-card">
@@ -586,7 +737,9 @@ src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png"
 
 
 
-<h2 id="profile-name">
+<h2
+id="profile-name"
+>
 
 Player
 
@@ -595,7 +748,9 @@ Player
 
 
 
-<div id="vip">
+<div
+id="vip-level"
+>
 
 VIP 0
 
@@ -638,12 +793,12 @@ class="main-button"
 
 
 
+
 </div>
 
 
 
 </section>
-
 
 
 
@@ -659,7 +814,9 @@ class="main-button"
 
 
 
-<!-- RIGHT -->
+<!-- =========================
+RIGHT PANEL
+========================= -->
 
 
 <aside class="rightbar">
@@ -671,8 +828,8 @@ PROFILE
 
 
 
-
 <div class="side-profile">
+
 
 
 <img
@@ -681,17 +838,20 @@ src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png"
 >
 
 
-<h2 id="side-name">
 
+
+<h2
+id="side-name"
+>
 Player
-
 </h2>
 
 
-<div id="side-vip">
 
+<div
+id="side-vip"
+>
 VIP 0
-
 </div>
 
 
@@ -703,13 +863,13 @@ VIP 0
 
 
 
-<div class="online-card">
+<div class="online-box">
 
 
 <span class="online-dot"></span>
 
 
-Игроки онлайн:
+Онлайн:
 
 
 <strong id="online-count">
@@ -719,9 +879,8 @@ VIP 0
 </strong>
 
 
+
 </div>
-
-
 
 
 
@@ -731,13 +890,14 @@ VIP 0
 
 
 
-</div>
-
 
 </div>
 
 
 
+
+
+</div>
 
 
 
@@ -747,7 +907,9 @@ VIP 0
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+
 <script src="app.js"></script>
+
 
 
 </body>
