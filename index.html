@@ -1,47 +1,64 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
 
 <meta charset="UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Game Platform</title>
 
+
 <link rel="stylesheet" href="assets/css/main.css">
 
+
+<link rel="stylesheet" href="modules/auth/auth.css">
+
+
 </head>
+
 
 <body>
 
 
 <header class="header">
 
-    <div class="logo">
-        🎮 GAME PLATFORM
-    </div>
+
+<div class="logo">
+    GAME PLATFORM
+</div>
 
 
-    <nav>
 
-        <button id="loginBtn">
-            Войти
-        </button>
-
-        <button id="registerBtn">
-            Регистрация
-        </button>
+<div class="header-user">
 
 
-        <button id="profileBtn" hidden>
-            Профиль
-        </button>
+<span id="user-name"></span>
 
 
-        <button id="logoutBtn" hidden>
-            Выйти
-        </button>
+<button id="login-button">
+    Войти
+</button>
 
-    </nav>
+
+<button id="register-button">
+    Регистрация
+</button>
+
+
+<button id="profile-button" style="display:none">
+    Профиль
+</button>
+
+
+<button id="logout-button" style="display:none">
+    Выйти
+</button>
+
+
+</div>
+
 
 </header>
 
@@ -52,51 +69,51 @@
 
 <section class="hero">
 
+
 <h1>
 Игровая платформа
 </h1>
+
 
 <p>
 Игры • Гильдии • Сообщества • Конференции
 </p>
 
 
-<div class="actions">
-
-
-<button id="addGameBtn">
-➕ Добавить игру
-</button>
-
-
-<button id="searchGameBtn">
-🔎 Поиск игр
-</button>
-
-
-</div>
-
-
 </section>
 
 
 
-<section id="content">
-
-</section>
-
+<section id="auth-container"></section>
 
 
 </main>
 
 
 
+
+
+<!-- SUPABASE -->
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+
 <script src="supabase/config.js"></script>
+
+
+
+<!-- MAIN -->
 
 <script src="assets/js/main.js"></script>
 
 
+
+<!-- AUTH -->
+
+<script src="modules/auth/auth.js"></script>
+
+
+
 </body>
+
 </html>
