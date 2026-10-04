@@ -63,7 +63,6 @@
       <button class="menu-button" data-page="games" type="button">🎮 Игры</button>
       <button class="menu-button" data-page="guilds" type="button">⚔ Гильдии</button>
       <button class="menu-button" data-page="news" type="button">📰 Новости</button>
-      <button class="menu-button" data-page="templates" type="button">📄 Шаблоны</button>
 
       <div class="menu-title">COMMUNITY</div>
       <button class="menu-button" data-page="online" type="button">🟢 Онлайн</button>
@@ -202,68 +201,6 @@
         </div>
       </section>
 
-      <!-- ============================================================
-           ШАБЛОНЫ
-      ============================================================ -->
-      <section id="templates" class="page">
-        <div class="view-head">
-          <h1>📄 Шаблоны документов</h1>
-          <button id="toggle-add-template" class="main-button" type="button">+ Загрузить шаблон</button>
-        </div>
-
-        <div class="ai-hint">
-          <div class="ai-hint-icon">🤖</div>
-          <div class="ai-hint-body">
-            <div class="ai-hint-title">Как запросить шаблон у ИИ</div>
-            <div class="ai-hint-text">
-              Скопируйте промпт ниже, замените данные на свои и отправьте ИИ (ChatGPT, Claude и т.д.).
-              ИИ вернёт готовый HTML-код — вставьте его в поле «HTML-код» при загрузке.
-            </div>
-            <div class="ai-prompt" id="ai-prompt-box">Создай HTML-документ для World of Sea Battle: список друзей и врагов. Таблица с колонками: №, Никнейм, Гильдия, Фракция. Фракции выдели цветом и эмодзи-флагом. Заголовки: «🟢 Друзья» — синий, «🔴 Враги» — красный. Стиль — белая 3D-тема, скруглённые углы, тени.</div>
-            <button id="copy-ai-prompt" class="main-button small" type="button">📋 Скопировать промпт</button>
-          </div>
-        </div>
-
-        <div id="add-template-panel" class="add-game-panel hidden">
-          <h2>Новый шаблон</h2>
-          <form id="add-template-form" onsubmit="return false">
-            <label class="profile-field">
-              <span>Название</span>
-              <input id="tpl-title" placeholder="Например: WOSB — список врагов" maxlength="80" required>
-            </label>
-            <label class="profile-field">
-              <span>Краткое описание</span>
-              <textarea id="tpl-desc" rows="2" maxlength="200" placeholder="Что внутри и для чего"></textarea>
-            </label>
-            <label class="profile-field">
-              <span>Категория</span>
-              <select id="tpl-category">
-                <option value="wosb">World of Sea Battle</option>
-                <option value="general">Общее</option>
-                <option value="guild">Гильдии</option>
-                <option value="other">Другое</option>
-              </select>
-            </label>
-            <label class="profile-field">
-              <span>HTML-код шаблона</span>
-              <textarea id="tpl-content" rows="12" placeholder="&lt;!DOCTYPE html&gt;&#10;&lt;html&gt;...&lt;/html&gt;" required style="font-family:Consolas,Monaco,monospace;font-size:12.5px;"></textarea>
-              <small class="field-hint">
-                Вставьте полный HTML-код. Скрипты при просмотре не выполняются — только визуальное содержимое.
-              </small>
-            </label>
-            <div class="profile-actions">
-              <button id="save-template-btn" class="main-button" type="button">Загрузить шаблон</button>
-              <button id="cancel-template-btn" class="main-button secondary" type="button">Отмена</button>
-            </div>
-            <div id="tpl-status" class="profile-status"></div>
-          </form>
-        </div>
-
-        <div id="templates-list" class="templates-grid">
-          <div class="dash-recent-empty">Загрузка шаблонов…</div>
-        </div>
-      </section>
-
       <section id="online" class="page">
         <div class="view-head">
           <h1>🟢 Онлайн</h1>
@@ -381,7 +318,7 @@
 </div>
 
 <!-- ============================================================
-     ГИЛЬДИЯ — OVERLAY
+     ГИЛЬДИЯ — ПОЛНОЭКРАННЫЙ OVERLAY
 ============================================================ -->
 <div id="guild-overlay" class="guild-overlay hidden">
   <div class="guild-overlay-header">
@@ -407,7 +344,7 @@
 </div>
 
 <!-- ============================================================
-     ПРОСМОТР ШАБЛОНА
+     ПРОСМОТР ШАБЛОНА (HTML-страница)
 ============================================================ -->
 <div id="template-viewer" class="template-viewer hidden">
   <div class="template-viewer-header">
