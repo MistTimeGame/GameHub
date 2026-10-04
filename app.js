@@ -1,14 +1,14 @@
-```javascript
 // ===============================
-// SUPABASE CONFIG
+// GamePlatform APP.JS
+// Auth + Profile + Chat + Conference
 // ===============================
 
-const SUPABASE_URL = 
-"https://uvzaoobtysostmfwyfxm.supabase.co";
 
+// ---------- SUPABASE ----------
 
-const SUPABASE_KEY = 
-"sb_publishable_-7M1kuwWOeRq21SfrLiojg_0qngL_7s";
+const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
+
+const SUPABASE_KEY = "sb_publishable_-7M1kuwWOeRq21SfrLiojg_0qngL_7s";
 
 
 const supabaseClient = supabase.createClient(
@@ -18,83 +18,88 @@ const supabaseClient = supabase.createClient(
 
 
 
+// ---------- GLOBAL ----------
 
-// ===============================
-// НАВИГАЦИЯ
-// ===============================
-
-function showSection(id){
-
-
-    document
-    .querySelectorAll(".page")
-    .forEach(page=>{
-
-        page.classList.remove("active");
-
-    });
+let currentUser = null;
 
 
 
-    const section =
-    document.getElementById(id);
+// ---------- START ----------
 
+document.addEventListener(
+    "DOMContentLoaded",
+    async () => {
 
-    if(section){
+        await checkSession();
 
-        section.classList.add("active");
+        initButtons();
+
+        loadChat();
+
+        loadConference();
 
     }
+);
 
+
+
+
+// ===============================
+// AUTH
+// ===============================
+
+
+
+async function checkSession(){
+
+    const {
+        data
+    } = await supabaseClient
+        .auth
+        .getSession();
+
+
+    if(data.session){
+
+        currentUser =
+            data.session.user;
+
+
+        showProfile();
+
+    }
 
 }
 
 
 
 
-// ===============================
-// РЕГИСТРАЦИЯ
-// ===============================
-
 
 async function register(){
 
 
     const email =
-    document.getElementById("email").value;
+        document.getElementById("email").value;
 
 
     const password =
-    document.getElementById("password").value;
+        document.getElementById("password").value;
 
 
     const nickname =
-    document.getElementById("nickname").value;
+        document.getElementById("nickname").value;
 
 
 
-    const message =
-    document.getElementById("authMessage");
-
-
-
-    if(!email || !password || !nickname){
-
-        message.innerHTML =
-        "Заполните все поля";
-
-        return;
-
-    }
-
-
-
-
-    const {data,error} =
-    await supabaseClient.auth.signUp({
+    const {
+        data,
+        error
+    } =
+    await supabaseClient
+    .auth
+    .signUp({
 
         email,
-
         password
 
     });
@@ -103,55 +108,35 @@ async function register(){
 
     if(error){
 
-
-        message.innerHTML =
-        error.message;
-
+        alert(error.message);
 
         return;
 
     }
-
 
 
 
     const user =
-    data.user;
+        data.user;
 
 
 
-    if(!user){
+    if(user){
 
 
-        message.innerHTML =
-        "Пользователь не создан";
-
-
-        return;
-
-    }
-
-
-
-
-    // создание профиля
-
-    const {error:profileError}=
-
-    await supabaseClient
-
-    .from("profiles")
-
-    .insert([
-
-        {
+        const {
+            error:profileError
+        }
+        =
+        await supabaseClient
+        .from("profiles")
+        .insert({
 
             id:user.id,
 
             nickname:nickname,
 
-            avatar_url:
-            "https://i.imgur.com/6VBx3io.png",
+            avatar_url:"",
 
             city:"",
 
@@ -159,36 +144,29 @@ async function register(){
 
             vip_level:0
 
+        });
+
+
+
+        if(profileError){
+
+            console.log(profileError);
+
+            alert(
+              "Аккаунт создан, но профиль не создан"
+            );
+
+            return;
+
         }
 
-    ]);
 
-
-
-
-
-    if(profileError){
-
-
-        message.innerHTML =
-
-        "Аккаунт создан, но профиль: "
-
-        + profileError.message;
-
-
-        return;
+        alert(
+        "Регистрация успешна"
+        );
 
 
     }
-
-
-
-
-
-    message.innerHTML =
-
-    "Регистрация успешна";
 
 
 }
@@ -198,40 +176,27 @@ async function register(){
 
 
 
-
-
-// ===============================
-// ВХОД
-// ===============================
-
-
-
 async function login(){
 
 
     const email =
-
     document.getElementById("email").value;
 
 
 
     const password =
-
     document.getElementById("password").value;
 
 
 
-    const message =
-
-    document.getElementById("authMessage");
-
-
-
-
-
-    const {data,error}=
-
-    await supabaseClient.auth.signInWithPassword({
+    const {
+        data,
+        error
+    }
+    =
+    await supabaseClient
+    .auth
+    .signInWithPassword({
 
         email,
 
@@ -241,193 +206,83 @@ async function login(){
 
 
 
-
-
     if(error){
 
-
-        message.innerHTML =
-
-        error.message;
-
+        alert(error.message);
 
         return;
-
 
     }
 
 
 
-
-
-    message.innerHTML =
-
-    "Вход выполнен";
+    currentUser =
+    data.user;
 
 
 
-    updateMenu();
-
-
-    loadProfile();
-
-
-    showSection("profile");
-
+    showProfile();
 
 
 }
 
 
 
-
-
-
-
-
-// ===============================
-// ВЫХОД
-// ===============================
 
 
 
 async function logout(){
 
 
-    await supabaseClient.auth.signOut();
-
-
-    updateMenu();
-
-
-    showSection("home");
-
-
-}
-
-
-
-
-
-
-
-
-
-// ===============================
-// МЕНЮ ПОЛЬЗОВАТЕЛЯ
-// ===============================
-
-
-async function updateMenu(){
-
-
-    const {
-
-        data:{session}
-
-    } =
-
-    await supabaseClient.auth.getSession();
-
-
-
-
-    const loginBtn =
-
-    document.getElementById("loginBtn");
-
-
-    const logoutBtn =
-
-    document.getElementById("logoutBtn");
-
-
-
-
-
-    if(session){
-
-
-        loginBtn.classList.add("hidden");
-
-
-        logoutBtn.classList.remove("hidden");
-
-
-    }
-
-    else{
-
-
-        loginBtn.classList.remove("hidden");
-
-
-        logoutBtn.classList.add("hidden");
-
-
-    }
-
-
-}
-
-
-
-
-
-
-
-
-
-// ===============================
-// ЗАГРУЗКА ПРОФИЛЯ
-// ===============================
-
-
-
-async function loadProfile(){
-
-
-    const {
-
-        data:{user}
-
-    } =
-
-    await supabaseClient.auth.getUser();
-
-
-
-
-    if(!user){
-
-        return;
-
-    }
-
-
-
-
-    const {data,error}=
-
     await supabaseClient
+    .auth
+    .signOut();
 
+
+
+    location.reload();
+
+
+}
+
+
+
+
+
+
+// ===============================
+// PROFILE
+// ===============================
+
+
+
+async function showProfile(){
+
+
+    if(!currentUser)
+    return;
+
+
+
+    const {
+        data,
+        error
+    }
+    =
+    await supabaseClient
     .from("profiles")
-
     .select("*")
-
-    .eq("id",user.id)
-
+    .eq(
+        "id",
+        currentUser.id
+    )
     .single();
-
-
 
 
 
     if(error){
 
-
         console.log(error);
-
 
         return;
 
@@ -435,205 +290,474 @@ async function loadProfile(){
 
 
 
-
-    document.getElementById("avatar").src =
-
-    data.avatar_url ||
-
-    "https://i.imgur.com/6VBx3io.png";
+    let box =
+    document.getElementById(
+        "profileBox"
+    );
 
 
 
-
-    document.getElementById("avatarUrl").value =
-
-    data.avatar_url || "";
+    if(!box)
+    return;
 
 
 
+    box.innerHTML = `
 
-    document.getElementById("profileNickname").value =
+    <div class="profile">
 
-    data.nickname || "";
-
-
-
-
-    document.getElementById("city").value =
-
-    data.city || "";
+        <img class="avatar"
+        src="${
+        data.avatar_url ||
+        'https://i.imgur.com/8Km9tLL.png'
+        }">
 
 
+        <h2>
+        ${data.nickname}
+        </h2>
 
 
-    document.getElementById("age").value =
+        <p>
+        Город:
+        ${data.city || "-"}
+        </p>
 
-    data.age || "";
+
+        <p>
+        Возраст:
+        ${data.age || "-"}
+        </p>
 
 
+        <p>
+        VIP:
+        ${data.vip_level}
+        </p>
 
+
+        <button onclick="logout()">
+        Выйти
+        </button>
+
+
+    </div>
+
+    `;
 
 
 }
 
-
-
-
-
-
-
-
-
-// ===============================
-// СОХРАНЕНИЕ ПРОФИЛЯ
-// ===============================
 
 
 
 async function saveProfile(){
 
 
-    const {
-
-        data:{user}
-
-    } =
-
-    await supabaseClient.auth.getUser();
-
-
-
-
-    if(!user){
-
-        alert("Нет авторизации");
-
-        return;
-
-    }
-
-
-
-
-
-
     const avatar =
-
-    document.getElementById("avatarUrl").value;
-
-
-
-    const nickname =
-
-    document.getElementById("profileNickname").value;
-
+    document.getElementById(
+        "avatar"
+    ).value;
 
 
     const city =
-
-    document.getElementById("city").value;
-
+    document.getElementById(
+        "city"
+    ).value;
 
 
     const age =
-
-    document.getElementById("age").value;
-
-
-
+    document.getElementById(
+        "age"
+    ).value;
 
 
-
-    const {error}=
 
     await supabaseClient
-
     .from("profiles")
-
     .update({
 
         avatar_url:avatar,
 
-        nickname:nickname,
-
         city:city,
 
-        age:age ? Number(age):null
+        age:
+        age ? Number(age):null
 
     })
-
-    .eq("id",user.id);
-
-
-
-
-
-
-    if(error){
-
-
-        alert(error.message);
-
-
-        return;
-
-    }
+    .eq(
+        "id",
+        currentUser.id
+    );
 
 
 
-
-
-    document.getElementById("avatar").src = avatar;
-
-
-
-    alert("Профиль сохранён");
-
-
+    showProfile();
 
 }
 
 
 
 
-
-
-
-
 // ===============================
-// СТАРТ
+// CHAT
 // ===============================
 
 
-document.addEventListener(
 
-"DOMContentLoaded",
-
-async()=>{
+async function sendMessage(){
 
 
-    updateMenu();
+    if(!currentUser)
+    return alert(
+        "Сначала войдите"
+    );
+
+
+    const input =
+    document.getElementById(
+        "messageInput"
+    );
+
+
+    let text =
+    input.value.trim();
+
+
+
+    if(!text)
+    return;
+
 
 
     const {
-
-        data:{session}
-
-    } =
-
-    await supabaseClient.auth.getSession();
-
-
-
-
-    if(session){
-
-        loadProfile();
-
+        data:profile
     }
+    =
+    await supabaseClient
+    .from("profiles")
+    .select("*")
+    .eq(
+        "id",
+        currentUser.id
+    )
+    .single();
+
+
+
+    await supabaseClient
+    .from("messages")
+    .insert({
+
+        user_id:
+        currentUser.id,
+
+        nickname:
+        profile.nickname,
+
+        avatar_url:
+        profile.avatar_url,
+
+        message:text
+
+    });
+
+
+
+    input.value="";
+
+
+    loadChat();
 
 
 }
 
+
+
+
+async function loadChat(){
+
+
+    const {
+        data
+    }
+    =
+    await supabaseClient
+    .from("messages")
+    .select("*")
+    .order(
+        "created_at",
+        {
+            ascending:true
+        }
+    );
+
+
+
+    let box =
+    document.getElementById(
+        "chatMessages"
+    );
+
+
+    if(!box || !data)
+    return;
+
+
+
+    box.innerHTML="";
+
+
+
+    data.forEach(
+        m=>{
+
+
+        box.innerHTML += `
+
+        <div class="message">
+
+
+        <b>
+        ${m.nickname}
+        </b>
+
+        :
+
+        ${m.message}
+
+
+        </div>
+
+        `;
+
+
+        }
+    );
+
+
+
+}
+
+
+
+
+
+
+// ===============================
+// CONFERENCE
+// ===============================
+
+
+
+async function sendConference(){
+
+
+    if(!currentUser)
+    return;
+
+
+
+    let input =
+    document.getElementById(
+        "conferenceInput"
+    );
+
+
+    let text =
+    input.value.trim();
+
+
+
+    if(!text)
+    return;
+
+
+
+    const {
+        data:profile
+    }
+    =
+    await supabaseClient
+    .from("profiles")
+    .select("*")
+    .eq(
+        "id",
+        currentUser.id
+    )
+    .single();
+
+
+
+    await supabaseClient
+    .from("conference")
+    .insert({
+
+        user_id:
+        currentUser.id,
+
+
+        nickname:
+        profile.nickname,
+
+
+        avatar_url:
+        profile.avatar_url,
+
+
+        text:text
+
+    });
+
+
+
+    input.value="";
+
+
+    loadConference();
+
+
+}
+
+
+
+
+
+
+
+async function loadConference(){
+
+
+    const {
+        data
+    }
+    =
+    await supabaseClient
+    .from("conference")
+    .select("*")
+    .order(
+        "created_at",
+        {
+            ascending:true
+        }
+    );
+
+
+
+    const box =
+    document.getElementById(
+        "conferenceMessages"
+    );
+
+
+
+    if(!box || !data)
+    return;
+
+
+
+    box.innerHTML="";
+
+
+
+    data.forEach(
+        c=>{
+
+
+        box.innerHTML += `
+
+        <div class="conference-message">
+
+        <b>
+        ${c.nickname}
+        </b>
+
+        :
+
+        ${c.text}
+
+        </div>
+
+        `;
+
+
+        }
+    );
+
+
+}
+
+
+
+
+
+
+
+// ===============================
+// BUTTONS
+// ===============================
+
+
+function initButtons(){
+
+
+const reg =
+document.getElementById(
+"registerBtn"
 );
-```
+
+
+if(reg)
+reg.onclick =
+register;
+
+
+
+const log =
+document.getElementById(
+"loginBtn"
+);
+
+
+if(log)
+log.onclick =
+login;
+
+
+
+const save =
+document.getElementById(
+"saveProfileBtn"
+);
+
+
+if(save)
+save.onclick =
+saveProfile;
+
+
+
+const send =
+document.getElementById(
+"sendMessageBtn"
+);
+
+
+if(send)
+send.onclick =
+sendMessage;
+
+
+
+const conf =
+document.getElementById(
+"sendConferenceBtn"
+);
+
+
+if(conf)
+conf.onclick =
+sendConference;
+
+
+}
