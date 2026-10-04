@@ -1,6 +1,6 @@
 /* =====================================================
    GAME PLATFORM — app.js
-   Auth + Profile (schema-aware) + Chat + Conference
+   Auth + Profile (schema-aware, avatar fix) + Chat + Conf
 ===================================================== */
 
 const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -9,6 +9,7 @@ const SUPABASE_KEY = "sb_publishable_-7M1kuwWOeRq21SfrLiojg_0qngL_7s";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/4712/4712109.png";
 const MIROTALK_BASE = "https://p2p.mirotalk.com";
+const IMG_LOAD_TIMEOUT = 8000;
 
 /* =====================================================
    СОСТОЯНИЕ
@@ -16,12 +17,13 @@ const MIROTALK_BASE = "https://p2p.mirotalk.com";
 
 let currentUser = null;
 let currentProfile = null;
-let availableColumns = null;      // Set доступных колонок в profiles
+let availableColumns = null;
 let chatChannel = null;
 let currentRoom = null;
 let roomsPollTimer = null;
 let joiningRoom = false;
 let savingProfile = false;
+let avatarPreviewTimer = null;
 
 /* =====================================================
    ХЕЛПЕРЫ
@@ -66,12 +68,11 @@ function setProfileStatus(text, cls){
     el.className = "profile-status" + (cls ? " " + cls : "");
 }
 
-function setImage(id, url){
-    const el = $(id);
+function setAvatarHint(text, cls){
+    const el = $("pf-avatar-hint");
     if(!el) return;
-    const clean = (url || "").trim();
-    el.onerror = () => { el.onerror = null; el.src = DEFAULT_AVATAR; };
-    el.src = clean || DEFAULT_AVATAR;
+    el.textContent = text || "Прямая ссылка на картинку (jpg, png, webp, gif). Не ссылка на страницу!";
+    el.className = "field-hint" + (cls ? " " + cls : "");
 }
 
 async function ensureAuth(){
@@ -89,7 +90,7 @@ async function ensureAuth(){
 }
 
 /* =====================================================
-   ВАЛИДАЦИЯ
+   ВАЛИДАЦИЯ URL
 ===================================================== */
 
 function isValidHttpUrl(str){
@@ -106,57 +107,130 @@ function isValidNickname(str){
 }
 
 /* =====================================================
+   НОРМАЛИЗАЦИЯ URL КАРТИНОК
+   Приводим известные "страничные" ссылки к прямым.
+===================================================== */
+
+function normalizeImageUrl(url){
+    if(!url) return "";
+    let s = url.trim();
+    if(!s) return "";
+
+    // imgur.com/abc → i.imgur.com/abc.jpg
+    const imgurPage = s.match(/^https?:\/\/(?:www\.)?imgur\.com\/([a-zA-Z0-9]+)\/?$/);
+    if(imgurPage) return "https://i.imgur.com/" + imgurPage[1] + ".jpg";
+
+    // postimg.cc/abc → i.postimg.cc/abc/... (упрощённо, оставляем как есть)
+    // gyazo.com/abc → i.gyazo.com/abc.png
+    const gyazo = s.match(/^https?:\/\/(?:www\.)?gyazo\.com\/([a-f0-9]+)\/?$/i);
+    if(gyazo) return "https://i.gyazo.com/" + gyazo[1] + ".png";
+
+    return s;
+}
+
+/* =====================================================
+   ПРОВЕРКА ЗАГРУЗКИ КАРТИНКИ
+   Возвращает true, если URL реально отдаёт изображение.
+===================================================== */
+
+function testImageUrl(url){
+    return new Promise((resolve) => {
+        if(!url) return resolve(false);
+        if(!isValidHttpUrl(url)) return resolve(false);
+
+        const img = new Image();
+        img.referrerPolicy = "no-referrer"; // обход хотлинк-защиты
+        let settled = false;
+
+        const finish = (ok) => {
+            if(settled) return;
+            settled = true;
+            img.onload = null;
+            img.onerror = null;
+            resolve(ok);
+        };
+
+        const timer = setTimeout(() => finish(false), IMG_LOAD_TIMEOUT);
+
+        img.onload = () => {
+            clearTimeout(timer);
+            finish(img.naturalWidth > 0 && img.naturalHeight > 0);
+        };
+        img.onerror = () => {
+            clearTimeout(timer);
+            finish(false);
+        };
+
+        // cache-busting, чтобы обойти предыдущий failed-статус
+        const sep = url.includes("?") ? "&" : "?";
+        img.src = url + sep + "_gptest=" + Date.now();
+    });
+}
+
+/* =====================================================
+   УСТАНОВКА КАРТИНКИ С ЗАЩИТОЙ ОТ ХОТЛИНКА
+===================================================== */
+
+function setImage(id, url){
+    const el = $(id);
+    if(!el) return;
+
+    // КРИТИЧНО: обход хотлинк-защиты (imgur, discord, github и др.)
+    el.referrerPolicy = "no-referrer";
+    el.decoding = "async";
+
+    const clean = normalizeImageUrl(url || "");
+
+    if(!clean){
+        el.onerror = null;
+        el.src = DEFAULT_AVATAR;
+        return;
+    }
+
+    el.onerror = () => {
+        errLog("AVATAR LOAD FAIL:", id, "→", clean);
+        el.onerror = null;
+        el.src = DEFAULT_AVATAR;
+    };
+
+    el.src = clean;
+}
+
+/* =====================================================
    ОПРЕДЕЛЕНИЕ СХЕМЫ profiles
-   Пробуем выбрать строку с известными "опциональными" колонками.
-   Если Supabase вернёт ошибку про колонку — значит её нет.
 ===================================================== */
 
 async function detectProfileColumns(userId){
-    // Список колонок, которые мы хотим поддерживать (по приоритету)
     const wanted = ["id", "nickname", "avatar_url", "vip_level", "age", "city", "about"];
-    const available = new Set(["id"]); // id точно есть
+    const available = new Set(["id"]);
 
-    // Пробуем выбрать всё сразу
     const trySelect = async (cols) => {
         const { data, error } = await supabaseClient
-            .from("profiles")
-            .select(cols)
-            .eq("id", userId)
-            .maybeSingle();
+            .from("profiles").select(cols).eq("id", userId).maybeSingle();
         return { data, error };
     };
 
-    // Сначала — полный набор
     let result = await trySelect(wanted.join(","));
-
     if(!result.error){
         wanted.forEach(c => available.add(c));
         return { columns: available, row: result.data };
     }
 
-    errLog("SCHEMA: не все колонки доступны:", result.error.message);
-
-    // По одной пробуем найти отсутствующие
+    errLog("SCHEMA: не все колонки:", result.error.message);
     for(const col of wanted){
         if(col === "id") continue;
         const test = await trySelect("id," + col);
-        if(!test.error){
-            available.add(col);
-        } else {
-            log("SCHEMA: нет колонки →", col);
-        }
+        if(!test.error) available.add(col);
+        else log("SCHEMA: нет колонки →", col);
     }
 
-    // Финальный select — только доступные
     const finalCols = wanted.filter(c => available.has(c)).join(",");
     result = await trySelect(finalCols);
-
     return { columns: available, row: result.data };
 }
 
 function applySchemaVisibility(){
     if(!availableColumns) return;
-
     const has = (col) => availableColumns.has(col);
 
     if($("field-avatar")) $("field-avatar").classList.toggle("hidden", !has("avatar_url"));
@@ -164,26 +238,23 @@ function applySchemaVisibility(){
     if($("field-age"))    $("field-age").classList.toggle("hidden", !has("age"));
     if($("field-about"))  $("field-about").classList.toggle("hidden", !has("about"));
 
-    // Если обе колонки city/age скрыты — скрыть весь ряд
     const row = $("field-row-city-age");
     if(row){
         const anyVisible = has("city") || has("age");
         row.classList.toggle("hidden", !anyVisible);
     }
 
-    // Предупреждение пользователю, если часть колонок отсутствует
     const warn = $("schema-warning");
     if(warn){
         const missing = [];
-        if(!has("about"))  missing.push("about");
-        if(!has("city"))   missing.push("city");
-        if(!has("age"))    missing.push("age");
+        if(!has("about")) missing.push("about");
+        if(!has("city"))  missing.push("city");
+        if(!has("age"))   missing.push("age");
         if(missing.length){
             warn.classList.remove("hidden");
             warn.innerHTML =
                 "⚠️ В таблице <code>profiles</code> отсутствуют колонки: <b>" +
-                missing.join(", ") +
-                "</b>.<br>Соответствующие поля скрыты. Добавьте их в Supabase, чтобы включить редактирование.";
+                missing.join(", ") + "</b>.<br>Соответствующие поля скрыты.";
         } else {
             warn.classList.add("hidden");
         }
@@ -242,8 +313,7 @@ function initAuth(){
     const loginForm = $("login-form");
     if(loginForm){
         loginForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+            e.preventDefault(); e.stopPropagation();
             setAuthMessage("Вход…", true);
 
             const email = $("login-email").value.trim();
@@ -269,8 +339,7 @@ function initAuth(){
     const registerForm = $("register-form");
     if(registerForm){
         registerForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+            e.preventDefault(); e.stopPropagation();
             setAuthMessage("Регистрация…", true);
 
             const nickname = $("register-nickname").value.trim() || "Player";
@@ -294,11 +363,9 @@ function initAuth(){
                     return;
                 }
 
-                // Создаём профиль только с гарантированно существующими полями
                 try{
                     await supabaseClient.from("profiles").insert({
-                        id: user.id,
-                        nickname,
+                        id: user.id, nickname,
                         avatar_url: DEFAULT_AVATAR,
                         vip_level: 0
                     });
@@ -410,7 +477,6 @@ async function loadProfile(){
     const user = await ensureAuth();
     if(!user) return;
 
-    // Определяем доступные колонки (один раз)
     if(!availableColumns){
         const { columns, row } = await detectProfileColumns(user.id);
         availableColumns = columns;
@@ -425,21 +491,15 @@ async function loadProfile(){
         }
     }
 
-    // Обычная загрузка
     const cols = Array.from(availableColumns).join(",");
     let result = await supabaseClient
         .from("profiles").select(cols).eq("id", user.id).maybeSingle();
 
-    if(result.error){
-        errLog("PROFILE SELECT", result.error.message);
-        return;
-    }
+    if(result.error){ errLog("PROFILE SELECT", result.error.message); return; }
 
     if(!result.data){
-        // Создаём профиль только с гарантированными полями
         const fallbackNick = user.email ? user.email.split("@")[0] : "Player";
         const payload = { id: user.id, nickname: fallbackNick };
-
         if(availableColumns.has("avatar_url")) payload.avatar_url = DEFAULT_AVATAR;
         if(availableColumns.has("vip_level"))  payload.vip_level = 0;
 
@@ -489,17 +549,12 @@ function initProfileForm(){
     const form = $("profile-form");
     if(!form) return;
 
+    // Live-превью аватара с проверкой
     const avatarInput = $("pf-avatar");
     if(avatarInput){
         avatarInput.addEventListener("input", () => {
-            const url = avatarInput.value.trim();
-            const img = $("profile-avatar");
-            if(!img) return;
-            if(!url){ img.src = DEFAULT_AVATAR; return; }
-            if(isValidHttpUrl(url)){
-                img.onerror = () => { img.onerror = null; img.src = DEFAULT_AVATAR; };
-                img.src = url;
-            }
+            if(avatarPreviewTimer) clearTimeout(avatarPreviewTimer);
+            avatarPreviewTimer = setTimeout(previewAvatar, 500);
         });
     }
 
@@ -513,9 +568,50 @@ function initProfileForm(){
     if(resetBtn) resetBtn.onclick = () => {
         if(!currentProfile) return;
         fillProfileForm(currentProfile);
+        const img = $("profile-avatar");
+        if(img) setImage("profile-avatar", currentProfile.avatar_url);
+        setAvatarHint("");
         setProfileStatus("Изменения сброшены");
         setTimeout(() => setProfileStatus(""), 1500);
     };
+}
+
+async function previewAvatar(){
+    const input = $("pf-avatar");
+    const img = $("profile-avatar");
+    if(!input || !img) return;
+
+    const raw = input.value.trim();
+    const url = normalizeImageUrl(raw);
+
+    if(!raw){
+        setImage("profile-avatar", "");
+        setAvatarHint("");
+        return;
+    }
+
+    if(!isValidHttpUrl(url)){
+        setAvatarHint("Некорректная ссылка", "err");
+        setImage("profile-avatar", "");
+        return;
+    }
+
+    if(url !== raw){
+        // Показали пользователю, что мы нормализовали URL
+        input.value = url;
+        setAvatarHint("Ссылка нормализована: " + url, "loading");
+    }
+
+    setAvatarHint("Проверка ссылки…", "loading");
+    const ok = await testImageUrl(url);
+
+    if(ok){
+        setAvatarHint("✓ Картинка загружена", "ok");
+        setImage("profile-avatar", url);
+    } else {
+        setAvatarHint("✗ Не удалось загрузить. Проверьте, что это прямая ссылка на изображение (jpg/png/webp/gif).", "err");
+        setImage("profile-avatar", "");
+    }
 }
 
 async function saveProfileChanges(){
@@ -529,27 +625,27 @@ async function saveProfileChanges(){
         return;
     }
 
-    // ---- Валидация ----
     const nickname = ($("pf-nickname").value || "").trim();
-    const avatarUrl = availableColumns.has("avatar_url")
-        ? ($("pf-avatar").value || "").trim() : "";
-    const city = availableColumns.has("city")
-        ? ($("pf-city").value || "").trim() : "";
+    const avatarUrlRaw = availableColumns.has("avatar_url") ? ($("pf-avatar").value || "").trim() : "";
+    const avatarUrl = normalizeImageUrl(avatarUrlRaw);
+    const city = availableColumns.has("city") ? ($("pf-city").value || "").trim() : "";
     const ageRaw = availableColumns.has("age") ? $("pf-age").value : "";
-    const about = availableColumns.has("about")
-        ? ($("pf-about").value || "").trim() : "";
+    const about = availableColumns.has("about") ? ($("pf-about").value || "").trim() : "";
 
+    // Валидация никнейма
     if(!isValidNickname(nickname)){
         setProfileStatus("Никнейм: 2–30 символов", "err");
         $("pf-nickname").focus();
         return;
     }
 
+    // Валидация URL аватара
     if(avatarUrl && !isValidHttpUrl(avatarUrl)){
         setProfileStatus("Ссылка на аватар некорректна", "err");
         return;
     }
 
+    // Валидация возраста
     let age = null;
     if(ageRaw !== ""){
         const n = parseInt(ageRaw, 10);
@@ -563,30 +659,34 @@ async function saveProfileChanges(){
     if(city.length > 40){ setProfileStatus("Город: до 40 символов", "err"); return; }
     if(about.length > 300){ setProfileStatus("О себе: до 300 символов", "err"); return; }
 
-    // ---- Проверка уникальности никнейма ----
+    // Проверка уникальности никнейма
     if(!currentProfile || nickname !== currentProfile.nickname){
         savingProfile = true;
         setProfileStatus("Проверка никнейма…", "loading");
 
-        const { data: dup, error: dupErr } = await supabaseClient
-            .from("profiles")
-            .select("id, nickname")
-            .eq("nickname", nickname)
-            .neq("id", user.id)
-            .maybeSingle();
-
-        if(dupErr && dupErr.code !== "PGRST116"){
-            errLog("DUP CHECK", dupErr.message);
-        }
+        const { data: dup } = await supabaseClient
+            .from("profiles").select("id, nickname")
+            .eq("nickname", nickname).neq("id", user.id).maybeSingle();
 
         if(dup && dup.id){
             savingProfile = false;
             setProfileStatus("Никнейм уже занят", "err");
             return;
         }
+        savingProfile = false;
     }
 
-    // ---- Формируем payload ТОЛЬКО из доступных колонок ----
+    // ПРОВЕРКА АВАТАРА ПЕРЕД СОХРАНЕНИЕМ
+    if(avatarUrl){
+        setProfileStatus("Проверка ссылки на аватар…", "loading");
+        const ok = await testImageUrl(avatarUrl);
+        if(!ok){
+            setProfileStatus("Аватар не загрузился: ссылка не ведёт на изображение", "err");
+            return;
+        }
+    }
+
+    // Payload — только из доступных колонок
     const payload = { nickname };
     if(availableColumns.has("avatar_url")) payload.avatar_url = avatarUrl || null;
     if(availableColumns.has("city"))       payload.city = city || null;
@@ -598,38 +698,29 @@ async function saveProfileChanges(){
 
     try{
         const update = await supabaseClient
-            .from("profiles")
-            .update(payload)
-            .eq("id", user.id)
-            .select()
-            .single();
+            .from("profiles").update(payload).eq("id", user.id).select().single();
 
         if(update.error){
             errLog("PROFILE SAVE", update.error.message);
 
-            // Доп. страховка: если сервер ругается на колонку — выкидываем её и повторяем
-            const msg = update.error.message || "";
-            const m = msg.match(/Could not find the '([^']+)' column/);
+            // Автокоррекция схемы
+            const m = (update.error.message || "").match(/Could not find the '([^']+)' column/);
             if(m && m[1]){
                 const badCol = m[1];
-                log("SCHEMA RUNTIME FIX: удаляю колонку", badCol);
+                log("SCHEMA RUNTIME FIX:", badCol);
                 availableColumns.delete(badCol);
                 applySchemaVisibility();
                 delete payload[badCol];
 
                 const retry = await supabaseClient
-                    .from("profiles")
-                    .update(payload)
-                    .eq("id", user.id)
-                    .select()
-                    .single();
+                    .from("profiles").update(payload).eq("id", user.id).select().single();
 
                 if(retry.error){
                     setProfileStatus("Ошибка: " + retry.error.message, "err");
                     savingProfile = false;
                     return;
                 }
-                currentProfile = retry.data;
+                currentProfile = retry.data || Object.assign({}, currentProfile, payload);
                 applyProfileToUI(currentProfile);
                 setProfileStatus("Сохранено (схема скорректирована) ✓");
                 setTimeout(() => setProfileStatus(""), 2500);
@@ -642,7 +733,9 @@ async function saveProfileChanges(){
             return;
         }
 
-        currentProfile = update.data;
+        // update.data может быть null, если RLS не даёт SELECT — фолбэк
+        currentProfile = update.data || Object.assign({}, currentProfile, payload);
+
         applyProfileToUI(currentProfile);
         setProfileStatus("Сохранено ✓");
         setTimeout(() => setProfileStatus(""), 2200);
