@@ -1,11 +1,11 @@
 // =====================================
-// SUPABASE CONFIG
+// GAME PLATFORM APP
 // =====================================
 
 
-// ВСТАВЬ СЮДА СВОИ ДАННЫЕ
+// SUPABASE
 
-const SUPABASE_URL = 
+const SUPABASE_URL =
 "https://uvzaoobtysostmfwyfxm.supabase.co";
 
 
@@ -14,7 +14,8 @@ const SUPABASE_KEY =
 
 
 
-const supabaseClient = supabase.createClient(
+const client =
+supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY
 );
@@ -22,226 +23,344 @@ const supabaseClient = supabase.createClient(
 
 
 
-// =====================================
-// GLOBAL
-// =====================================
+
+let user = null;
 
 
-let currentUser = null;
 
 
 
 
 
 // =====================================
-// ПЕРЕКЛЮЧЕНИЕ СТРАНИЦ
+// DOM
 // =====================================
 
 
-function showPage(page){
+const authScreen =
+document.getElementById("auth-screen");
 
 
-    document
-    .querySelectorAll(".page")
-    .forEach(p=>{
-        p.classList.remove("active");
-    });
-
-
-
-    let element =
-    document.getElementById(page);
+const app =
+document.getElementById("app");
 
 
 
-    if(element){
 
-        element.classList.add("active");
 
-    }
 
+// =====================================
+// AUTH TABS
+// =====================================
+
+
+document
+.getElementById("show-login")
+.onclick=function(){
+
+
+document
+.getElementById("login-form")
+.classList.remove("hidden");
+
+
+document
+.getElementById("register-form")
+.classList.add("hidden");
+
+
+this.classList.add("active");
+
+
+document
+.getElementById("show-register")
+.classList.remove("active");
+
+
+};
+
+
+
+
+
+
+
+document
+.getElementById("show-register")
+.onclick=function(){
+
+
+document
+.getElementById("register-form")
+.classList.remove("hidden");
+
+
+document
+.getElementById("login-form")
+.classList.add("hidden");
+
+
+this.classList.add("active");
+
+
+document
+.getElementById("show-login")
+.classList.remove("active");
+
+
+};
+
+
+
+
+
+
+
+
+
+// =====================================
+// REGISTER
+// =====================================
+
+
+document
+.getElementById("register-form")
+.onsubmit=async(e)=>{
+
+
+e.preventDefault();
+
+
+
+let nickname =
+document
+.getElementById("register-nickname")
+.value;
+
+
+
+let email =
+document
+.getElementById("register-email")
+.value;
+
+
+
+let password =
+document
+.getElementById("register-password")
+.value;
+
+
+
+
+
+const {
+
+data,
+error
+
+}=
+
+await client.auth.signUp({
+
+email,
+password
+
+});
+
+
+
+
+
+if(error){
+
+alert(error.message);
+
+return;
 
 }
 
 
 
 
+const uid =
+data.user.id;
+
+
+
+
+
+const {
+
+error:profileError
+
+}=
+
+
+await client
+.from("profiles")
+.insert({
+
+id:uid,
+
+nickname:nickname,
+
+avatar_url:
+"https://cdn-icons-png.flaticon.com/512/4712/4712109.png",
+
+vip_level:0,
+
+city:"",
+
+age:null
+
+
+});
+
+
+
+
+
+
+if(profileError){
+
+alert(profileError.message);
+
+return;
+
+}
+
+
+
+
+alert(
+"Аккаунт создан"
+);
+
+
+
+};
+
+
+
+
+
+
+
+
+
 
 // =====================================
-// ПРОВЕРКА СЕССИИ
+// LOGIN
 // =====================================
+
+
+
+document
+.getElementById("login-form")
+.onsubmit=async(e)=>{
+
+
+e.preventDefault();
+
+
+
+let email =
+document
+.getElementById("login-email")
+.value;
+
+
+
+let password =
+document
+.getElementById("login-password")
+.value;
+
+
+
+
+
+const {
+
+data,
+error
+
+}=
+
+await client.auth
+.signInWithPassword({
+
+email,
+password
+
+});
+
+
+
+
+
+if(error){
+
+alert(error.message);
+
+return;
+
+}
+
+
+
+user =
+data.user;
+
+
+
+openApp();
+
+
+};
+
+
+
+
+
+
+
+
+
+
+// =====================================
+// SESSION
+// =====================================
+
 
 
 async function checkSession(){
 
 
-    const {
+const {
 
-        data
+data
 
-    } =
-    await supabaseClient.auth.getSession();
+}=
 
-
-
-    if(data.session){
-
-
-        currentUser =
-        data.session.user;
+await client.auth.getSession();
 
 
 
-        showPage("home");
+if(data.session){
 
 
-        loadProfile();
-
-    }
-    else{
+user =
+data.session.user;
 
 
-        showPage("auth");
-
-
-    }
+openApp();
 
 
 
 }
-
-
-
-
-
-
-
-// =====================================
-// РЕГИСТРАЦИЯ
-// =====================================
-
-
-async function register(){
-
-
-
-    const email =
-    document
-    .getElementById("regEmail")
-    .value;
-
-
-    const password =
-    document
-    .getElementById("regPassword")
-    .value;
-
-
-
-    const nickname =
-    document
-    .getElementById("regNickname")
-    .value;
-
-
-
-
-
-    const {
-
-        data,
-        error
-
-    } =
-
-    await supabaseClient
-    .auth
-    .signUp({
-
-        email,
-        password
-
-    });
-
-
-
-
-
-    if(error){
-
-
-        alert(error.message);
-
-        return;
-
-    }
-
-
-
-
-
-
-    const user =
-    data.user;
-
-
-
-
-
-    const {
-
-        error:profileError
-
-    } =
-
-
-    await supabaseClient
-    .from("profiles")
-    .insert({
-
-        id:user.id,
-
-        nickname:nickname,
-
-        avatar_url:
-        "https://cdn-icons-png.flaticon.com/512/4712/4712109.png",
-
-        city:"",
-
-        age:null,
-
-        vip_level:0
-
-
-    });
-
-
-
-
-
-
-    if(profileError){
-
-
-        alert(
-        "Аккаунт создан, но профиль ошибка: "
-        +
-        profileError.message
-        );
-
-
-        return;
-
-
-    }
-
-
-
-
-
-    alert(
-    "Регистрация успешна"
-    );
 
 
 
@@ -254,83 +373,38 @@ async function register(){
 
 
 
+
+
 // =====================================
-// ВХОД
+// OPEN APP
 // =====================================
 
 
-async function login(){
+function openApp(){
 
 
 
-    const email =
-    document
-    .getElementById("loginEmail")
-    .value;
+authScreen
+.classList.add("hidden");
 
 
 
-    const password =
-    document
-    .getElementById("loginPassword")
-    .value;
+app
+.classList.remove("hidden");
 
 
 
-
-    const {
-
-        data,
-        error
-
-    } =
+loadProfile();
 
 
-    await supabaseClient
-    .auth
-    .signInWithPassword({
-
-        email,
-
-        password
-
-    });
+loadNews();
 
 
+loadMessages();
 
 
+startRealtime();
 
-
-
-    if(error){
-
-
-        alert(error.message);
-
-        return;
-
-    }
-
-
-
-
-
-    currentUser =
-    data.user;
-
-
-
-
-    alert(
-    "Вход выполнен"
-    );
-
-
-
-    showPage("home");
-
-
-    loadProfile();
 
 
 }
@@ -343,442 +417,219 @@ async function login(){
 
 
 
-// =====================================
-// ВЫХОД
-// =====================================
-
-
-async function logout(){
-
-
-    await supabaseClient
-    .auth
-    .signOut();
-
-
-
-    currentUser=null;
-
-
-
-    showPage("auth");
-
-
-}
-
-
-
-
-
 
 
 
 // =====================================
-// ПРОФИЛЬ
+// LOGOUT
 // =====================================
 
+
+document
+.getElementById("logout")
+.onclick=async()=>{
+
+
+await client.auth.signOut();
+
+
+location.reload();
+
+
+};
+
+
+
+
+
+
+
+
+
+
+
+// =====================================
+// PAGE SWITCH
+// =====================================
+
+
+document
+.querySelectorAll(".menu-button")
+.forEach(btn=>{
+
+
+btn.onclick=()=>{
+
+
+document
+.querySelectorAll(".menu-button")
+.forEach(x=>
+x.classList.remove("active")
+);
+
+
+
+btn.classList.add("active");
+
+
+
+
+document
+.querySelectorAll(".page")
+.forEach(page=>{
+
+page.classList.remove("active");
+
+});
+
+
+
+document
+.getElementById(
+btn.dataset.page
+)
+.classList.add("active");
+
+
+
+};
+
+
+
+});
+
+
+
+
+
+
+
+
+
+// =====================================
+// PROFILE
+// =====================================
 
 
 async function loadProfile(){
 
 
 
-    if(!currentUser)
-    return;
+if(!user)
+return;
 
 
 
+const {
 
+data,
+error
 
-    const {
+}=
 
-        data,
-        error
-
-    } =
-
-
-    await supabaseClient
-
-    .from("profiles")
-
-    .select("*")
-
-    .eq(
-        "id",
-        currentUser.id
-    )
-
-    .single();
-
-
-
-
-
-
-    if(error){
-
-        console.log(error);
-
-        return;
-
-    }
-
-
-
-
-
-    document
-    .getElementById("avatar")
-    .src =
-    data.avatar_url;
-
-
-
-    document
-    .getElementById("avatarUrl")
-    .value =
-    data.avatar_url;
-
-
-
-    document
-    .getElementById("profileInfo")
-    .innerHTML =
-
-    `
-
-    <h3>
-    ${data.nickname}
-    </h3>
-
-    <p>
-    VIP уровень:
-    ${data.vip_level}
-    </p>
-
-    `;
-
-
-
-
-}
-
-
-
-
-
-
-
-async function saveProfile(){
-
-
-
-    if(!currentUser){
-
-        alert(
-        "Сначала войдите"
-        );
-
-        return;
-
-    }
-
-
-
-
-
-    const avatar =
-
-    document
-    .getElementById("avatarUrl")
-    .value;
-
-
-
-
-
-
-    const {
-
-        error
-
-    } =
-
-
-    await supabaseClient
-
-    .from("profiles")
-
-    .update({
-
-        avatar_url:avatar
-
-    })
-
-
-    .eq(
-        "id",
-        currentUser.id
-    );
-
-
-
-
-
-
-    if(error){
-
-
-        alert(error.message);
-
-
-        return;
-
-    }
-
-
-
-
-    document
-    .getElementById("avatar")
-    .src=avatar;
-
-
-
-}
-
-
-
-
-
-
-
-
-// =====================================
-// ЧАТ
-// =====================================
-
-
-
-async function loadMessages(){
-
-
-
-    const {
-
-        data
-
-    } =
-
-
-    await supabaseClient
-
-    .from("messages")
-
-    .select("*")
-
-    .order(
-        "created_at",
-        {
-            ascending:true
-        }
-    );
-
-
-
-
-
-    const box =
-    document
-    .getElementById("messages");
-
-
-
-    box.innerHTML="";
-
-
-
-
-
-    data.forEach(msg=>{
-
-
-        box.innerHTML +=
-
-
-        `
-
-        <div class="message">
-
-        <b>
-        ${msg.nickname || "User"}
-        </b>
-
-        :
-
-        ${msg.text}
-
-        </div>
-
-        `;
-
-
-    });
-
-
-
-}
-
-
-
-
-
-async function sendMessage(){
-
-
-
-    if(!currentUser){
-
-        alert(
-        "Войдите"
-        );
-
-        return;
-
-    }
-
-
-
-
-    const input =
-    document
-    .getElementById("messageInput");
-
-
-
-    let text =
-    input.value.trim();
-
-
-
-
-
-    if(!text)
-    return;
-
-
-
-
-
-
-
-    const {
-
-        data:userProfile
-
-    } =
-
-
-    await supabaseClient
-
-    .from("profiles")
-
-    .select("nickname")
-
-    .eq(
-        "id",
-        currentUser.id
-    )
-
-    .single();
-
-
-
-
-
-
-
-
-    await supabaseClient
-
-    .from("messages")
-
-    .insert({
-
-        user_id:
-        currentUser.id,
-
-        nickname:
-        userProfile.nickname,
-
-        text:text
-
-
-    });
-
-
-
-
-
-
-    input.value="";
-
-
-    loadMessages();
-
-
-
-}
-
-
-
-
-
-
-
-
-
-// =====================================
-// REALTIME CHAT
-// =====================================
-
-
-function startChat(){
-
-
-
-supabaseClient
-
-.channel("messages-room")
-
-
-.on(
-
-"postgres_changes",
-
-{
-
-event:"INSERT",
-
-schema:"public",
-
-table:"messages"
-
-},
-
-(payload)=>{
-
-
-loadMessages();
-
-
-}
-
+await client
+.from("profiles")
+.select("*")
+.eq(
+"id",
+user.id
 )
+.single();
 
 
-.subscribe();
+
+
+
+if(error){
+
+console.log(error);
+
+return;
+
+}
+
+
+
+
+
+let avatar =
+data.avatar_url ||
+"https://cdn-icons-png.flaticon.com/512/4712/4712109.png";
+
+
+
+
+
+document
+.getElementById("profile-avatar")
+.src=avatar;
+
+
+
+document
+.getElementById("side-avatar")
+.src=avatar;
+
+
+
+document
+.getElementById("top-avatar")
+.src=avatar;
+
+
+
+
+
+document
+.getElementById("profile-name")
+.innerHTML=data.nickname;
+
+
+
+document
+.getElementById("side-name")
+.innerHTML=data.nickname;
+
+
+
+document
+.getElementById("top-name")
+.innerHTML=data.nickname;
+
+
+
+document
+.getElementById("vip")
+.innerHTML=
+"VIP "+data.vip_level;
+
+
+
+document
+.getElementById("side-vip")
+.innerHTML=
+"VIP "+data.vip_level;
+
+
+
+document
+.getElementById("avatar-url")
+.value =
+avatar;
+
+
+
+document
+.getElementById("profile-city")
+.value =
+data.city || "";
+
+
+
+document
+.getElementById("profile-age")
+.value =
+data.age || "";
 
 
 
@@ -792,9 +643,73 @@ loadMessages();
 
 
 
+document
+.getElementById("save-profile")
+.onclick=async()=>{
+
+
+
+let avatar =
+document
+.getElementById("avatar-url")
+.value;
+
+
+
+let city =
+document
+.getElementById("profile-city")
+.value;
+
+
+
+let age =
+document
+.getElementById("profile-age")
+.value;
+
+
+
+
+
+await client
+.from("profiles")
+.update({
+
+avatar_url:avatar,
+
+city:city,
+
+age:age
+
+
+})
+
+.eq(
+"id",
+user.id
+);
+
+
+
+loadProfile();
+
+
+
+};
+
+
+
+
+
+
+
+
+
 // =====================================
-// НОВОСТИ
+// NEWS
 // =====================================
+
 
 
 async function loadNews(){
@@ -807,45 +722,22 @@ data
 
 }=
 
-
-await supabaseClient
-
+await client
 .from("news")
-
 .select("*")
-
 .order(
-
 "created_at",
-
 {
-
 ascending:false
-
 }
-
 );
 
 
 
 
-
-const box =
-document.getElementById("news");
-
-
-
-if(!data || data.length===0)
-
-{
-
-box.innerHTML=
-"Новостей пока нет";
-
-
-return;
-
-}
+let box =
+document
+.getElementById("news-list");
 
 
 
@@ -853,35 +745,44 @@ box.innerHTML="";
 
 
 
-data.forEach(item=>{
+
+if(!data.length){
 
 
-box.innerHTML +=
+box.innerHTML=
+"Новостей пока нет";
+
+
+return;
+
+
+}
+
+
+
+
+
+data.forEach(n=>{
+
+
+box.innerHTML+=
 
 
 `
 
-<div class="message">
+<div class="empty-card">
 
 <h3>
-
-${item.title}
-
+${n.title}
 </h3>
 
-
 <p>
-
-${item.text}
-
+${n.text}
 </p>
-
 
 </div>
 
-
 `;
-
 
 
 });
@@ -899,21 +800,190 @@ ${item.text}
 
 
 // =====================================
-// START
+// CHAT
 // =====================================
 
 
 
-window.onload=function(){
+async function loadMessages(){
 
 
-checkSession();
+const {
+
+data
+
+}=
 
 
-loadNews();
+await client
+.from("messages")
+.select("*")
+.order(
+"created_at",
+{
+ascending:true
+}
+);
 
 
-startChat();
+
+
+let box =
+document
+.getElementById("messages");
+
+
+
+box.innerHTML="";
+
+
+
+data.forEach(m=>{
+
+
+box.innerHTML+=
+
+
+`
+
+<div>
+
+<b>
+${m.nickname}
+</b>
+
+:
+
+${m.text}
+
+
+</div>
+
+
+`;
+
+
+});
+
+
+
+}
+
+
+
+
+
+
+
+document
+.getElementById("send-message")
+.onclick=async()=>{
+
+
+let input =
+document
+.getElementById("message-text");
+
+
+
+let text =
+input.value.trim();
+
+
+
+if(!text)
+return;
+
+
+
+
+let profile =
+await client
+.from("profiles")
+.select("nickname")
+.eq(
+"id",
+user.id
+)
+.single();
+
+
+
+
+
+await client
+.from("messages")
+.insert({
+
+user_id:user.id,
+
+nickname:
+profile.data.nickname,
+
+text:text
+
+
+});
+
+
+
+
+input.value="";
+
 
 
 };
+
+
+
+
+
+
+
+
+function startRealtime(){
+
+
+client
+
+.channel("messages")
+
+.on(
+
+"postgres_changes",
+
+{
+
+event:"INSERT",
+
+schema:"public",
+
+table:"messages"
+
+},
+
+()=>{
+
+
+loadMessages();
+
+
+}
+
+)
+
+.subscribe();
+
+
+}
+
+
+
+
+
+
+
+// START
+
+
+checkSession();
