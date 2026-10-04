@@ -150,6 +150,13 @@
 
           <div class="rooms-panel">
             <h2>Комнаты</h2>
+
+            <form id="create-room-form" class="create-room-form">
+              <input id="room-name-input" placeholder="Название комнаты" maxlength="60" required>
+              <input id="room-desc-input" placeholder="Описание (необязательно)" maxlength="120">
+              <button class="main-button" type="submit">Создать</button>
+            </form>
+
             <div id="rooms-list">Загрузка комнат…</div>
           </div>
 
@@ -185,11 +192,12 @@
           <h2 id="profile-name">Player</h2>
           <div id="vip-level">VIP 0</div>
 
-          <input id="avatar-url" placeholder="Ссылка на аватар">
+          <input id="avatar-url" placeholder="Ссылка на аватар (https://...)">
           <input id="profile-city" placeholder="Город">
           <input id="profile-age" type="number" placeholder="Возраст">
 
           <button id="save-profile" class="main-button" type="button">Сохранить</button>
+          <div id="profile-status" class="profile-status"></div>
         </div>
       </section>
 
@@ -218,7 +226,6 @@
 
   </div>
 
-  <!-- Скрытый контейнер для удалённого аудио -->
   <div id="remote-audio" style="display:none"></div>
 
 </div>
