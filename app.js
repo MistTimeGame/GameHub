@@ -1,8 +1,9 @@
-// =============================================
+// =================================================
 // GAME PLATFORM
-// APP.JS
-// AUTH + PROFILE + NEWS + CHAT + CONFERENCE
-// =============================================
+// app.js
+// PART 1 / 3
+// AUTH + START
+// =================================================
 
 
 
@@ -29,25 +30,39 @@ let currentRoom = null;
 
 
 
-// =============================================
+
+
+// =================================================
 // START
-// =============================================
+// =================================================
 
 
 document.addEventListener(
 "DOMContentLoaded",
-async()=>{
+()=>{
 
 
-setupAuth();
+console.log(
+"GAME PLATFORM START"
+);
 
-setupNavigation();
 
-setupChat();
 
-setupConference();
+initAuth();
 
-await checkSession();
+
+initNavigation();
+
+
+initChat();
+
+
+initConference();
+
+
+
+checkSession();
+
 
 
 });
@@ -58,9 +73,11 @@ await checkSession();
 
 
 
-// =============================================
+
+
+// =================================================
 // SESSION
-// =============================================
+// =================================================
 
 
 async function checkSession(){
@@ -69,35 +86,46 @@ async function checkSession(){
 try{
 
 
-const {
-
-data
-
-}=
-
-await supabaseClient.auth.getSession();
+const session =
+await supabaseClient
+.auth
+.getSession();
 
 
 
-if(data.session){
+if(
+session.data.session
+){
 
 
 currentUser =
-data.session.user;
+session.data.session.user;
+
+
+
+console.log(
+"USER LOGIN",
+currentUser
+);
 
 
 
 openApp();
 
 
+
 }
+
 
 
 }
 catch(error){
 
 
-console.log(error);
+console.error(
+"SESSION ERROR",
+error
+);
 
 
 }
@@ -112,24 +140,55 @@ console.log(error);
 
 
 
-// =============================================
-// OPEN APP
-// =============================================
+
+
+// =================================================
+// OPEN APPLICATION
+// =================================================
 
 
 async function openApp(){
 
 
 
-document
-.getElementById("auth-screen")
-.classList.add("hidden");
+const auth =
+document.getElementById(
+"auth-screen"
+);
+
+
+const app =
+document.getElementById(
+"app"
+);
 
 
 
-document
-.getElementById("app")
-.classList.remove("hidden");
+
+if(auth){
+
+auth.classList.add(
+"hidden"
+);
+
+}
+
+
+
+if(app){
+
+app.classList.remove(
+"hidden"
+);
+
+}
+
+
+
+
+console.log(
+"APPLICATION OPEN"
+);
 
 
 
@@ -142,12 +201,13 @@ await loadProfile();
 }
 catch(e){
 
-console.log(
-"PROFILE:",
+console.error(
+"PROFILE ERROR",
 e
 );
 
 }
+
 
 
 
@@ -158,8 +218,8 @@ await loadNews();
 }
 catch(e){
 
-console.log(
-"NEWS:",
+console.error(
+"NEWS ERROR",
 e
 );
 
@@ -171,17 +231,16 @@ try{
 
 await loadMessages();
 
-startChatRealtime();
-
 }
 catch(e){
 
-console.log(
-"CHAT:",
+console.error(
+"CHAT LOAD ERROR",
 e
 );
 
 }
+
 
 
 
@@ -189,13 +248,11 @@ try{
 
 await loadRooms();
 
-startConferenceRealtime();
-
 }
 catch(e){
 
-console.log(
-"CONFERENCE:",
+console.error(
+"ROOM LOAD ERROR",
 e
 );
 
@@ -213,12 +270,12 @@ e
 
 
 
-// =============================================
+// =================================================
 // AUTH
-// =============================================
+// =================================================
 
 
-function setupAuth(){
+function initAuth(){
 
 
 
@@ -226,6 +283,7 @@ const loginTab =
 document.getElementById(
 "login-tab"
 );
+
 
 
 const registerTab =
@@ -236,58 +294,99 @@ document.getElementById(
 
 
 
+if(loginTab){
+
 
 loginTab.onclick=()=>{
 
 
-loginTab.classList.add("active");
+loginTab.classList.add(
+"active"
+);
 
 
-registerTab.classList.remove("active");
+
+registerTab.classList.remove(
+"active"
+);
 
 
 
 document
-.getElementById("login-form")
-.classList.remove("hidden");
+.getElementById(
+"login-form"
+)
+.classList.remove(
+"hidden"
+);
 
 
 
 document
-.getElementById("register-form")
-.classList.add("hidden");
+.getElementById(
+"register-form"
+)
+.classList.add(
+"hidden"
+);
+
 
 
 };
 
 
 
+}
 
+
+
+
+
+
+if(registerTab){
 
 
 registerTab.onclick=()=>{
 
 
-registerTab.classList.add("active");
+registerTab.classList.add(
+"active"
+);
 
 
-loginTab.classList.remove("active");
+
+loginTab.classList.remove(
+"active"
+);
+
 
 
 
 document
-.getElementById("register-form")
-.classList.remove("hidden");
+.getElementById(
+"register-form"
+)
+.classList.remove(
+"hidden"
+);
 
 
 
 document
-.getElementById("login-form")
-.classList.add("hidden");
+.getElementById(
+"login-form"
+)
+.classList.add(
+"hidden"
+);
+
 
 
 };
 
+
+
+}
 
 
 
@@ -299,34 +398,49 @@ document
 
 // LOGIN
 
+const loginForm =
+document.getElementById(
+"login-form"
+);
 
-document
-.getElementById("login-form")
-.onsubmit=async(e)=>{
+
+
+if(loginForm){
+
+
+loginForm.onsubmit =
+async(e)=>{
 
 
 e.preventDefault();
 
 
 
-let email =
+
+const email =
 document
-.getElementById("login-email")
+.getElementById(
+"login-email"
+)
 .value;
 
 
 
-let password =
+const password =
 document
-.getElementById("login-password")
+.getElementById(
+"login-password"
+)
 .value;
 
 
 
 
 
-let result =
-await supabaseClient.auth
+
+const result =
+await supabaseClient
+.auth
 .signInWithPassword({
 
 email,
@@ -376,11 +490,16 @@ return;
 
 
 
+
 openApp();
 
 
 
 };
+
+
+
+}
 
 
 
@@ -393,9 +512,18 @@ openApp();
 // REGISTER
 
 
-document
-.getElementById("register-form")
-.onsubmit=async(e)=>{
+const registerForm =
+document.getElementById(
+"register-form"
+);
+
+
+
+if(registerForm){
+
+
+registerForm.onsubmit =
+async(e)=>{
 
 
 e.preventDefault();
@@ -403,31 +531,39 @@ e.preventDefault();
 
 
 
-let nickname =
+const nickname =
 document
-.getElementById("register-nickname")
+.getElementById(
+"register-nickname"
+)
 .value;
 
 
 
-let email =
+const email =
 document
-.getElementById("register-email")
+.getElementById(
+"register-email"
+)
 .value;
 
 
 
-let password =
+const password =
 document
-.getElementById("register-password")
+.getElementById(
+"register-password"
+)
 .value;
 
 
 
 
 
-let result =
-await supabaseClient.auth
+
+const result =
+await supabaseClient
+.auth
 .signUp({
 
 email,
@@ -435,6 +571,7 @@ email,
 password
 
 });
+
 
 
 
@@ -450,18 +587,22 @@ result.error.message
 
 return;
 
+
 }
 
 
 
 
 
-let user =
+const user =
 result.data.user;
 
 
 
+
+
 if(!user){
+
 
 alert(
 "Ошибка создания аккаунта"
@@ -477,7 +618,8 @@ return;
 
 
 
-let profile =
+
+const profile =
 await supabaseClient
 .from("profiles")
 .insert({
@@ -498,12 +640,14 @@ vip_level:0
 
 
 
+
 if(profile.error){
 
 
-console.log(
+console.error(
 profile.error
 );
+
 
 
 alert(
@@ -511,6 +655,7 @@ alert(
 );
 
 
+
 return;
 
 
@@ -521,7 +666,7 @@ return;
 
 
 alert(
-"Аккаунт создан"
+"Регистрация завершена"
 );
 
 
@@ -530,62 +675,84 @@ alert(
 
 
 
+}
 
 
 
 
 
 
+}
+// =================================================
+// PART 2 / 3
+// NAVIGATION + PROFILE + NEWS + CHAT
+// =================================================
 
 
-// =============================================
+
+
+
+
+// =================================================
 // NAVIGATION
-// =============================================
+// =================================================
 
 
-function setupNavigation(){
+function initNavigation(){
 
 
 
-document
-.querySelectorAll(".menu-button")
-.forEach(button=>{
+const buttons =
+document.querySelectorAll(
+".menu-button"
+);
+
+
+
+buttons.forEach(button=>{
 
 
 button.onclick=()=>{
 
 
-document
-.querySelectorAll(".menu-button")
-.forEach(b=>
-b.classList.remove("active")
+buttons.forEach(
+b=>b.classList.remove("active")
 );
 
 
 
-button.classList.add("active");
+button.classList.add(
+"active"
+);
 
 
 
 
 document
 .querySelectorAll(".page")
-.forEach(p=>
-p.classList.remove("active")
+.forEach(page=>{
+
+page.classList.remove(
+"active"
 );
 
+});
 
 
-let page =
+
+
+const target =
 document.getElementById(
 button.dataset.page
 );
 
 
 
-if(page){
+if(target){
 
-page.classList.add("active");
+target.classList.add(
+"active"
+);
 
 }
 
@@ -594,7 +761,9 @@ page.classList.add("active");
 };
 
 
+
 });
+
 
 
 }
@@ -607,17 +776,20 @@ page.classList.add("active");
 
 
 
-// =============================================
+// =================================================
 // PROFILE
-// =============================================
+// =================================================
 
 
 async function loadProfile(){
 
 
 
-if(!currentUser)
+if(!currentUser){
+
 return;
+
+}
 
 
 
@@ -638,7 +810,16 @@ currentUser.id
 
 
 
-if(!result.data){
+if(
+!result.data
+){
+
+
+
+console.log(
+"PROFILE CREATE"
+);
+
 
 
 
@@ -646,97 +827,31 @@ await supabaseClient
 .from("profiles")
 .insert({
 
-id:currentUser.id,
+id:
+currentUser.id,
+
 
 nickname:
 currentUser.email
 .split("@")[0],
 
+
 avatar_url:
 "https://cdn-icons-png.flaticon.com/512/4712/4712109.png",
 
+
 vip_level:0
 
+
 });
+
+
 
 
 
 return loadProfile();
 
 
-}
-
-
-
-
-
-let p=result.data;
-
-
-
-let avatar =
-p.avatar_url;
-
-
-
-
-
-
-document
-.getElementById("top-avatar")
-.src=avatar;
-
-
-
-document
-.getElementById("profile-avatar")
-.src=avatar;
-
-
-
-document
-.getElementById("side-avatar")
-.src=avatar;
-
-
-
-
-
-document
-.getElementById("top-name")
-.textContent=
-p.nickname;
-
-
-
-document
-.getElementById("profile-name")
-.textContent=
-p.nickname;
-
-
-
-document
-.getElementById("side-name")
-.textContent=
-p.nickname;
-
-
-
-
-document
-.getElementById("vip-level")
-.textContent=
-"VIP "+p.vip_level;
-
-
-
-document
-.getElementById("side-vip")
-.textContent=
-"VIP "+p.vip_level;
-
-
 
 }
 
@@ -744,13 +859,158 @@ document
 
 
 
+const profile =
+result.data;
 
 
 
 
-document
-.getElementById("save-profile")
-.onclick=async()=>{
+const avatar =
+profile.avatar_url ||
+"https://cdn-icons-png.flaticon.com/512/4712/4712109.png";
+
+
+
+
+
+const elements = [
+
+["top-avatar",avatar],
+
+["profile-avatar",avatar],
+
+["side-avatar",avatar]
+
+];
+
+
+
+
+elements.forEach(item=>{
+
+
+const el =
+document.getElementById(
+item[0]
+);
+
+
+
+if(el){
+
+el.src =
+item[1];
+
+}
+
+
+
+});
+
+
+
+
+
+
+const names = [
+
+"top-name",
+
+"profile-name",
+
+"side-name"
+
+];
+
+
+
+names.forEach(id=>{
+
+
+const el =
+document.getElementById(id);
+
+
+
+if(el){
+
+el.textContent =
+profile.nickname;
+
+}
+
+
+});
+
+
+
+
+
+
+const vip1 =
+document.getElementById(
+"vip-level"
+);
+
+
+
+if(vip1){
+
+vip1.textContent =
+"VIP " +
+(profile.vip_level || 0);
+
+}
+
+
+
+
+
+const vip2 =
+document.getElementById(
+"side-vip"
+);
+
+
+
+if(vip2){
+
+vip2.textContent =
+"VIP " +
+(profile.vip_level || 0);
+
+}
+
+
+
+}
+
+
+
+
+
+
+
+
+// =================================================
+// SAVE PROFILE
+// =================================================
+
+
+const saveProfile =
+document.getElementById(
+"save-profile"
+);
+
+
+
+if(saveProfile){
+
+
+
+saveProfile.onclick =
+async()=>{
+
 
 
 await supabaseClient
@@ -758,20 +1018,29 @@ await supabaseClient
 .update({
 
 avatar_url:
+
 document
-.getElementById("avatar-url")
+.getElementById(
+"avatar-url"
+)
 .value,
 
 
 city:
+
 document
-.getElementById("profile-city")
+.getElementById(
+"profile-city"
+)
 .value,
 
 
 age:
+
 document
-.getElementById("profile-age")
+.getElementById(
+"profile-age"
+)
 .value
 
 
@@ -783,29 +1052,51 @@ currentUser.id
 
 
 
+
 loadProfile();
+
 
 
 };
 
+}
+
+
+
+ 
 
 
 
 
 
 
-
-
-// =============================================
+// =================================================
 // NEWS
-// =============================================
+// =================================================
 
 
 async function loadNews(){
 
 
 
-let result =
+const box =
+document.getElementById(
+"news-list"
+);
+
+
+
+if(!box){
+
+return;
+
+}
+
+
+
+
+
+const result =
 await supabaseClient
 .from("news")
 .select("*")
@@ -820,27 +1111,21 @@ ascending:false
 
 
 
-let box =
-document
-.getElementById("news-list");
-
-
-
-
-if(!box)
-return;
-
-
 
 box.innerHTML="";
 
 
 
-if(!result.data ||
-result.data.length===0){
 
 
-box.innerHTML=
+
+if(
+!result.data ||
+result.data.length===0
+){
+
+
+box.innerHTML =
 "Новостей пока нет";
 
 
@@ -853,22 +1138,31 @@ return;
 
 
 
-result.data.forEach(item=>{
+result.data.forEach(news=>{
 
 
-box.innerHTML+=`
+box.innerHTML += `
+
 
 <div class="empty-card">
 
+
 <h3>
-${item.title}
+
+${news.title}
+
 </h3>
 
+
 <p>
-${item.text}
+
+${news.text}
+
 </p>
 
+
 </div>
+
 
 `;
 
@@ -877,6 +1171,7 @@ ${item.text}
 });
 
 
+
 }
 
 
@@ -887,67 +1182,54 @@ ${item.text}
 
 
 
-// =============================================
+// =================================================
 // CHAT
-// =============================================
-
-
-async function loadMessages(){
+// =================================================
 
 
 
-let result =
-await supabaseClient
-.from("messages")
-.select("*")
-.order(
-"created_at",
-{
-ascending:true
-}
+function initChat(){
+
+
+
+const button =
+document.getElementById(
+"send-message"
 );
 
 
 
+if(!button){
 
-let box =
-document
-.getElementById("messages");
-
-
-
-if(!box)
 return;
 
+}
 
 
-box.innerHTML="";
+
+
+button.onclick =
+async()=>{
 
 
 
-(result.data || [])
-.forEach(m=>{
+const input =
+document.getElementById(
+"message-text"
+);
 
 
-box.innerHTML+=`
 
-<div class="room-card">
-
-<b>
-${m.nickname}
-</b>
-
-<br>
-
-${m.text}
-
-</div>
-
-`;
+const text =
+input.value.trim();
 
 
-});
 
+
+
+if(!text){
+
+return;
 
 }
 
@@ -955,46 +1237,7 @@ ${m.text}
 
 
 
-
-
-function setupChat(){
-
-
-
-let button =
-document
-.getElementById("send-message");
-
-
-
-if(!button)
-return;
-
-
-
-button.onclick=async()=>{
-
-
-
-let input =
-document
-.getElementById("message-text");
-
-
-
-let text =
-input.value.trim();
-
-
-
-if(!text)
-return;
-
-
-
-
-
-let profile =
+const profile =
 await supabaseClient
 .from("profiles")
 .select("nickname")
@@ -1008,6 +1251,8 @@ currentUser.id
 
 
 
+
+
 await supabaseClient
 .from("messages")
 .insert({
@@ -1015,8 +1260,10 @@ await supabaseClient
 user_id:
 currentUser.id,
 
+
 nickname:
 profile.data.nickname,
+
 
 text:text
 
@@ -1025,7 +1272,10 @@ text:text
 
 
 
+
+
 input.value="";
+
 
 
 };
@@ -1041,12 +1291,105 @@ input.value="";
 
 
 
+
+
+async function loadMessages(){
+
+
+
+const box =
+document.getElementById(
+"messages"
+);
+
+
+
+if(!box){
+
+return;
+
+}
+
+
+
+
+
+const result =
+await supabaseClient
+.from("messages")
+.select("*")
+.order(
+"created_at",
+{
+ascending:true
+}
+);
+
+
+
+
+
+box.innerHTML="";
+
+
+
+
+
+(result.data || [])
+.forEach(message=>{
+
+
+
+box.innerHTML += `
+
+
+<div class="room-card">
+
+
+<b>
+
+${message.nickname}
+
+</b>
+
+
+<br>
+
+
+${message.text}
+
+
+</div>
+
+
+`;
+
+
+
+});
+
+
+
+}
+
+
+
+
+
+
+
+
+
 function startChatRealtime(){
+
 
 
 supabaseClient
 
-.channel("chat")
+.channel(
+"messages-channel"
+)
+
 
 .on(
 
@@ -1062,19 +1405,68 @@ table:"messages"
 
 },
 
+
 ()=>{
 
+
 loadMessages();
+
+
 
 }
 
 )
+
 
 .subscribe();
 
 
 
 }
+// =================================================
+// PART 3 / 3
+// CONFERENCE + ONLINE ROOMS + LOGOUT
+// =================================================
+
+
+
+
+
+
+// =================================================
+// CONFERENCE
+// =================================================
+
+
+function initConference(){
+
+
+const leaveButton =
+document.getElementById(
+"leave-room"
+);
+
+
+
+if(leaveButton){
+
+
+leaveButton.onclick =
+async()=>{
+
+
+await leaveRoom();
+
+
+};
+
+
+
+}
+
+
+
+}
 
 
 
@@ -1082,34 +1474,64 @@ loadMessages();
 
 
 
-
-
-// =============================================
-// CONFERENCE ROOMS
-// =============================================
 
 
 async function loadRooms(){
 
 
 
-let result =
+const box =
+document.getElementById(
+"rooms-list"
+);
+
+
+
+if(!box){
+
+return;
+
+}
+
+
+
+
+
+const result =
 await supabaseClient
 .from("conference_rooms")
-.select("*");
+.select("*")
+.order(
+"id",
+{
+ascending:true
+}
+);
 
 
 
 
 
-let box =
-document
-.getElementById("rooms-list");
+if(result.error){
+
+
+console.log(
+"ROOM ERROR",
+result.error
+);
 
 
 
-if(!box)
+box.innerHTML =
+"Комнаты недоступны";
+
+
 return;
+
+
+}
+
+
 
 
 
@@ -1118,26 +1540,15 @@ box.innerHTML="";
 
 
 
-if(result.error){
-
-box.innerHTML=
-"Комнаты пока недоступны";
 
 
-return;
-
-
-}
+for(
+const room of result.data
+){
 
 
 
-
-
-for(let room of result.data){
-
-
-
-let users =
+const users =
 await supabaseClient
 .from("conference_users")
 .select("*")
@@ -1150,26 +1561,58 @@ room.id
 
 
 
-box.innerHTML+=`
+let count = 0;
+
+
+
+if(users.data){
+
+count =
+users.data.length;
+
+}
+
+
+
+
+
+
+box.innerHTML += `
+
 
 <div class="room-card">
 
+
 <h3>
+
 ${room.name}
+
 </h3>
 
-<p>
-${room.description || ""}
-</p>
+
 
 <p>
-👥 ${(users.data || []).length}
+
+${room.description || ""}
+
 </p>
+
+
+
+<p>
+
+👥 ${count}
+
+</p>
+
 
 
 <button
+
 class="main-button"
-onclick="joinRoom(${room.id})"
+
+onclick="joinRoom(${room.id}, '${room.name}')"
+
 >
 
 Войти
@@ -1177,7 +1620,9 @@ onclick="joinRoom(${room.id})"
 </button>
 
 
+
 </div>
+
 
 `;
 
@@ -1187,6 +1632,7 @@ onclick="joinRoom(${room.id})"
 
 
 
+
 }
 
 
@@ -1195,14 +1641,69 @@ onclick="joinRoom(${room.id})"
 
 
 
-async function joinRoom(id){
 
 
-currentRoom=id;
+async function joinRoom(
+id,
+name
+){
 
 
 
-let profile =
+
+
+if(!currentUser){
+
+return;
+
+}
+
+
+
+
+
+
+if(currentRoom){
+
+await leaveRoom();
+
+}
+
+
+
+
+
+
+currentRoom =
+id;
+
+
+
+
+
+
+
+const title =
+document.getElementById(
+"current-room-title"
+);
+
+
+
+if(title){
+
+title.textContent =
+name;
+
+
+}
+
+
+
+
+
+
+const profile =
 await supabaseClient
 .from("profiles")
 .select("nickname")
@@ -1216,20 +1717,26 @@ currentUser.id
 
 
 
+
 await supabaseClient
 .from("conference_users")
 .insert({
 
 room_id:id,
 
+
 user_id:
 currentUser.id,
+
 
 nickname:
 profile.data.nickname
 
 
 });
+
+
+
 
 
 
@@ -1250,8 +1757,15 @@ async function leaveRoom(){
 
 
 
-if(!currentRoom)
+if(
+!currentRoom
+){
+
 return;
+
+}
+
+
 
 
 
@@ -1270,44 +1784,59 @@ currentRoom
 
 
 
-currentRoom=null;
+
+
+
+
+currentRoom =
+null;
+
+
+
+
+
+
+const title =
+document.getElementById(
+"current-room-title"
+);
+
+
+
+if(title){
+
+title.textContent =
+"Комната не выбрана";
+
+}
+
 
 
 
 loadRooms();
 
 
-}
-
-
-
-
-document
-.getElementById("leave-room")
-.onclick=
-leaveRoom;
-
-
-
-
-
-
-
-
-function setupConference(){
-
-
 
 }
+
+
+
+
+
+
 
 
 
 function startConferenceRealtime(){
 
 
+
 supabaseClient
 
-.channel("conference")
+.channel(
+"conference-channel"
+)
+
 
 .on(
 
@@ -1323,18 +1852,93 @@ table:"conference_users"
 
 },
 
+
 ()=>{
 
 
 loadRooms();
 
 
+
 }
 
 )
+
 
 .subscribe();
 
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
+// =================================================
+// LOGOUT
+// =================================================
+
+
+
+const logout =
+document.getElementById(
+"logout"
+);
+
+
+
+
+
+if(logout){
+
+
+logout.onclick =
+async()=>{
+
+
+if(currentRoom){
+
+
+await leaveRoom();
+
+
+}
+
+
+
+await supabaseClient
+.auth
+.signOut();
+
+
+
+
+
+location.reload();
+
+
+
+};
+
+
+
+}
+
+
+
+
+
+
+
+
+
+// =================================================
+// END APP.JS
+// =================================================
