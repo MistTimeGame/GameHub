@@ -1,183 +1,150 @@
-// ============================================================
-// GAMEHUB AUTH
-// ============================================================
+/*
+================================================
+GAME PLATFORM
+PROFILE MODULE
+================================================
+*/
 
 
-document.addEventListener(
-"DOMContentLoaded",
-async function(){
+(function(){
 
 
-
-const supabase =
-    window.GameHub.supabase;
-
-
-
-const loginForm =
-    document.getElementById(
-        "login-form"
-    );
-
-
-const registerForm =
-    document.getElementById(
-        "register-form"
-    );
+"use strict";
 
 
 
-const loginButton =
-    document.getElementById(
-        "show-login"
-    );
-
-
-const registerButton =
-    document.getElementById(
-        "show-register"
-    );
+let profileUser=null;
 
 
 
-const message =
-    document.getElementById(
-        "auth-message"
-    );
+const roman = [
+
+"",
+
+"I",
+
+"II",
+
+"III",
+
+"IV",
+
+"V",
+
+"VI",
+
+"VII",
+
+"VIII",
+
+"IX",
+
+"X",
+
+"XI",
+
+"XII"
+
+];
+
+
+
+async function loadProfileHTML(){
+
+
+const container =
+document.getElementById(
+"profile-container"
+);
+
+
+
+if(!container)
+return;
+
+
+
+const response =
+await fetch(
+"modules/profile/profile.html"
+);
+
+
+
+container.innerHTML =
+await response.text();
+
+
+
+bindProfile();
+
+
+}
 
 
 
 
-function showMessage(
-    text,
-    type="success"
-){
-
-    message.className =
-        type === "error"
-        ? "auth-message gh-error"
-        : "auth-message gh-success";
+function bindProfile(){
 
 
-    message.textContent =
-        text;
+const save =
+document.getElementById(
+"save-profile"
+);
+
+
+
+if(save){
+
+save.onclick =
+saveProfile;
+
+}
+
+
 }
 
 
 
 
 
-loginButton.onclick =
-function(){
-
-
-loginForm.classList.remove(
-    "gh-hidden"
-);
-
-
-registerForm.classList.add(
-    "gh-hidden"
-);
-
-
-loginButton.classList.remove(
-    "secondary"
-);
-
-
-registerButton.classList.add(
-    "secondary"
-);
-
-
-};
+async function loadProfile(){
 
 
 
-
-
-registerButton.onclick =
-function(){
-
-
-registerForm.classList.remove(
-    "gh-hidden"
-);
-
-
-loginForm.classList.add(
-    "gh-hidden"
-);
-
-
-registerButton.classList.remove(
-    "secondary"
-);
-
-
-loginButton.classList.add(
-    "secondary"
-);
-
-
-};
+profileUser =
+window.GameAuth
+.getUser();
 
 
 
-
-
-// ============================================================
-// LOGIN
-// ============================================================
-
-
-loginForm.addEventListener(
-"submit",
-async function(e){
-
-
-e.preventDefault();
-
-
-
-const email =
-document.getElementById(
-    "login-email"
-).value.trim();
-
-
-
-const password =
-document.getElementById(
-    "login-password"
-).value;
-
+if(!profileUser)
+return;
 
 
 
 const {
+
 data,
+
 error
-}
-=
-await supabase.auth.signInWithPassword({
 
-email,
+}=
 
-password
-
-});
-
+await window.supabaseClient
+.from("profiles")
+.select("*")
+.eq(
+"id",
+profileUser.id
+)
+.single();
 
 
 
 if(error){
 
-showMessage(
-    error.message,
-    "error"
-);
+console.error(error);
 
 return;
 
@@ -185,91 +152,135 @@ return;
 
 
 
+document.getElementById(
+"profile-nickname"
+).value =
+data.nickname || "";
 
-showMessage(
-    "Успешный вход"
+
+
+document.getElementById(
+"profile-city"
+).value =
+data.city || "";
+
+
+
+document.getElementById(
+"profile-age"
+).value =
+data.age || "";
+
+
+
+document.getElementById(
+"profile-avatar-url"
+).value =
+data.avatar_url || "";
+
+
+
+updateVIP(
+data.vip_level || 0
 );
 
 
 
-setTimeout(
-function(){
+if(data.avatar_url){
 
-window.location.href =
-"../profile/";
+document.getElementById(
+"profile-avatar"
+).src =
+data.avatar_url;
 
-},
-1000
+}
+
+
+
+}
+
+
+
+
+
+async function saveProfile(){
+
+
+if(!profileUser){
+
+alert(
+"Нет авторизации"
 );
 
+return;
 
+}
 
-});
-
-
-
-
-
-
-// ============================================================
-// REGISTER
-// ============================================================
-
-
-registerForm.addEventListener(
-"submit",
-async function(e){
-
-
-e.preventDefault();
-
-
-
-const email =
-document.getElementById(
-    "register-email"
-).value.trim();
-
-
-
-const password =
-document.getElementById(
-    "register-password"
-).value;
 
 
 
 const nickname =
 document.getElementById(
-    "register-nickname"
-).value.trim();
+"profile-nickname"
+).value;
 
+
+
+const city =
+document.getElementById(
+"profile-city"
+).value;
+
+
+
+const age =
+Number(
+document.getElementById(
+"profile-age"
+).value
+);
+
+
+
+const avatar =
+document.getElementById(
+"profile-avatar-url"
+).value;
 
 
 
 
 const {
-data,
+
 error
-}
-=
-await supabase.auth.signUp({
 
-email,
+}=
 
-password
+await window.supabaseClient
+.from("profiles")
+.update({
 
-});
+nickname,
 
+city,
+
+age,
+
+avatar_url:avatar
+
+})
+.eq(
+"id",
+profileUser.id
+);
 
 
 
 
 if(error){
 
-showMessage(
-error.message,
-"error"
+alert(
+error.message
 );
 
 return;
@@ -278,20 +289,22 @@ return;
 
 
 
+if(avatar){
 
-const user =
-data.user;
+document.getElementById(
+"profile-avatar"
+).src =
+avatar;
+
+}
 
 
 
-if(!user){
-
-showMessage(
-"Не удалось создать пользователя",
-"error"
+alert(
+"Профиль сохранён"
 );
 
-return;
+
 
 }
 
@@ -299,94 +312,50 @@ return;
 
 
 
-const {
-error:
-profileError
-}
-=
-await supabase
-.from("profiles")
-.insert({
+function updateVIP(level){
 
-id:user.id,
 
-nickname:nickname,
+if(level<1)
+level=1;
 
-vip_level:0
 
-});
+if(level>12)
+level=12;
 
 
 
-
-
-
-if(profileError){
-
-showMessage(
-profileError.message,
-"error"
+const el =
+document.getElementById(
+"vip-level"
 );
 
-return;
+
+
+if(el){
+
+el.textContent =
+roman[level];
+
+}
+
 
 }
 
 
 
 
+async function init(){
 
-showMessage(
-"Аккаунт создан"
-);
 
+await loadProfileHTML();
 
 
 setTimeout(
-function(){
 
-window.location.href =
-"../profile/";
+loadProfile,
 
-},
-1200
-);
+500
 
-
-
-});
-
-
-
-
-
-// ============================================================
-// CHECK EXISTING SESSION
-// ============================================================
-
-
-const session =
-await window.GameHub.session.init();
-
-
-
-if(session){
-
-
-showMessage(
-"Вы уже вошли. Переход..."
-);
-
-
-
-setTimeout(
-function(){
-
-window.location.href =
-"../profile/";
-
-},
-1000
 );
 
 
@@ -394,5 +363,20 @@ window.location.href =
 
 
 
+document.addEventListener(
+"DOMContentLoaded",
+init
+);
 
-});
+
+
+window.GameProfile={
+
+load:
+loadProfile
+
+};
+
+
+
+})();
