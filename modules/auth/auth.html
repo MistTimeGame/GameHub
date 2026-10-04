@@ -2,97 +2,41 @@
 
 
 <h2>
-🎮 GAME PLATFORM
+Авторизация
 </h2>
 
 
-<h3>
-Авторизация
-</h3>
 
-
-
-<div class="tabs">
-
-
-<button id="showLogin">
-Вход
-</button>
-
-
-
-<button id="showRegister">
-Регистрация
-</button>
-
-
-</div>
-
-
-
-
-<div id="loginForm">
-
-
-<input
-id="loginEmail"
-type="email"
-placeholder="Email"
->
+<input 
+id="auth-email"
+placeholder="Email">
 
 
 
 <input
-id="loginPassword"
+id="auth-password"
 type="password"
-placeholder="Пароль"
->
+placeholder="Пароль">
 
 
 
-<button id="loginSubmit">
+<input
+id="auth-nickname"
+placeholder="Никнейм">
+
+
+
+<div class="auth-buttons">
+
+
+<button id="do-login">
 Войти
 </button>
 
 
-</div>
 
-
-
-
-
-
-
-<div id="registerForm"
-style="display:none;">
-
-
-
-<input
-id="regNickname"
-placeholder="Никнейм"
->
-
-
-
-<input
-id="regEmail"
-type="email"
-placeholder="Email"
->
-
-
-
-<input
-id="regPassword"
-type="password"
-placeholder="Пароль"
->
-
-
-
-<button id="registerSubmit">
-Создать аккаунт
+<button id="do-register">
+Регистрация
 </button>
 
 
@@ -101,17 +45,4 @@ placeholder="Пароль"
 
 
 
-
-
-<div id="authMessage">
-
 </div>
-
-
-</div>
-
-
-
-<link
-rel="stylesheet"
-href="modules/auth/auth.css">
