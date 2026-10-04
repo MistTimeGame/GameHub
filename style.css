@@ -500,6 +500,18 @@ input:focus, textarea:focus{
     word-break:break-all;
 }
 
+.schema-warning{
+    padding:12px 14px;
+    background:#fff8e6;
+    border:1px solid #f4dca0;
+    border-radius:12px;
+    font-size:12.5px;
+    color:#8a6a10;
+    text-align:left;
+    margin-bottom:16px;
+    line-height:1.5;
+}
+
 .profile-form{
     display:flex;
     flex-direction:column;
@@ -550,10 +562,6 @@ input:focus, textarea:focus{
     border-color:#369cff;
     background:#fff;
     box-shadow:0 0 12px rgba(0,140,255,.25);
-}
-
-.profile-field input:invalid:not(:placeholder-shown){
-    border-color:#e5a2a2;
 }
 
 .field-hint{
