@@ -1,6 +1,7 @@
 /* =====================================================
-   GAME PLATFORM
-   app.js — Auth + Chat + Realtime + WebRTC (голос + экран)
+   GAME PLATFORM — app.js
+   Auth + Profile + Chat + Conference (WebRTC)
+   VERSION: conference polling + broadcast signaling
 ===================================================== */
 
 const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -8,13 +9,13 @@ const SUPABASE_KEY = "sb_publishable_-7M1kuwWOeRq21SfrLiojg_0qngL_7s";
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/4712/4712109.png";
+
 /* =====================================================
    СОСТОЯНИЕ
 ===================================================== */
 
 let currentUser = null;
-
-// чат
 let chatChannel = null;
 
 // конференция
@@ -22,19 +23,19 @@ let currentRoom = null;
 let localStream = null;
 let screenStream = null;
 let microphoneEnabled = false;
-let peers = {};              // userId -> RTCPeerConnection
-let videoSenders = {};       // userId -> RTCRtpSender
-let pendingCandidates = {};  // userId -> [candidate]
-let nicknames = {};          // userId -> nickname
+let peers = {};
+let videoSenders = {};
+let pendingCandidates = {};
+let nicknames = {};
 let signalChannel = null;
-let usersChannel = null;
+let usersPollTimer = null;
+let roomsPollTimer = null;
 
 /* =====================================================
    ХЕЛПЕРЫ
 ===================================================== */
 
 function $(id){ return document.getElementById(id); }
-
 function log(...a){ console.log("[GAME PLATFORM]", ...a); }
 function errLog(...a){ console.error("[GAME PLATFORM][ОШИБКА]", ...a); }
 
@@ -59,9 +60,22 @@ function setText(id, text){
     if(el) el.textContent = text;
 }
 
+/**
+ * Устанавливает картинку с fallback при ошибке загрузки.
+ * Если url пустой или не грузится — ставим DEFAULT_AVATAR.
+ */
 function setImage(id, url){
     const el = $(id);
-    if(el && url) el.src = url;
+    if(!el) return;
+
+    const clean = (url || "").trim();
+
+    el.onerror = () => {
+        el.onerror = null;
+        el.src = DEFAULT_AVATAR;
+    };
+
+    el.src = clean || DEFAULT_AVATAR;
 }
 
 /* =====================================================
@@ -75,6 +89,19 @@ document.addEventListener("DOMContentLoaded", () => {
     initChat();
     initConference();
     checkSession();
+
+    window.addEventListener("beforeunload", () => {
+        // Попытка удалить себя из комнаты при закрытии страницы
+        if(currentRoom && currentUser){
+            const url = SUPABASE_URL + "/rest/v1/conference_users" +
+                "?user_id=eq." + currentUser.id +
+                "&room_id=eq." + currentRoom.id;
+            try{
+                navigator.sendBeacon &&
+                navigator.sendBeacon(url);
+            }catch(e){}
+        }
+    });
 });
 
 /* =====================================================
@@ -106,7 +133,6 @@ function initAuth(){
         };
     }
 
-    /* --- ВХОД --- */
     const loginForm = $("login-form");
     if(loginForm){
         loginForm.onsubmit = async (e) => {
@@ -131,7 +157,6 @@ function initAuth(){
         };
     }
 
-    /* --- РЕГИСТРАЦИЯ --- */
     const registerForm = $("register-form");
     if(registerForm){
         registerForm.onsubmit = async (e) => {
@@ -160,16 +185,16 @@ function initAuth(){
                 return;
             }
 
-            // Профиль
             try{
-                await supabaseClient.from("profiles").insert({
+                const ins = await supabaseClient.from("profiles").insert({
                     id: user.id,
                     nickname,
-                    avatar_url: "https://cdn-icons-png.flaticon.com/512/4712/4712109.png",
+                    avatar_url: DEFAULT_AVATAR,
                     vip_level: 0
                 });
+                if(ins.error) errLog("PROFILE CREATE ERROR", ins.error.message);
             }catch(e){
-                errLog("PROFILE CREATE ERROR", e.message);
+                errLog("PROFILE CREATE EXCEPTION", e);
             }
 
             if(!result.data.session){
@@ -184,7 +209,6 @@ function initAuth(){
         };
     }
 
-    /* --- ВЫХОД --- */
     const logout = $("logout");
     if(logout){
         logout.onclick = async () => {
@@ -227,11 +251,15 @@ async function openApp(){
 
     await safeRun(loadProfile);
     await safeRun(loadNews);
-
     await safeRun(loadMessages);
     startChatRealtime();
-
     await safeRun(loadRooms);
+
+    // периодическое обновление списка комнат
+    if(roomsPollTimer) clearInterval(roomsPollTimer);
+    roomsPollTimer = setInterval(() => {
+        loadRooms().catch(e => errLog("ROOMS POLL", e));
+    }, 5000);
 }
 
 async function safeRun(fn){
@@ -255,10 +283,13 @@ function initNavigation(){
             if(page) page.classList.add("active");
 
             if(btn.dataset.page === "conference"){
-                loadRooms();
+                loadRooms().catch(e => errLog("loadRooms", e));
             }
             if(btn.dataset.page === "chat"){
-                loadMessages();
+                loadMessages().catch(e => errLog("loadMessages", e));
+            }
+            if(btn.dataset.page === "profile"){
+                loadProfile().catch(e => errLog("loadProfile", e));
             }
         };
     });
@@ -281,21 +312,22 @@ async function loadProfile(){
         .maybeSingle();
 
     if(result.error){
-        errLog("PROFILE SELECT ERROR", result.error);
+        errLog("PROFILE SELECT ERROR", result.error.message);
         return;
     }
 
     if(!result.data){
         log("PROFILE CREATE…");
+        const fallbackNick = currentUser.email ? currentUser.email.split("@")[0] : "Player";
         const create = await supabaseClient.from("profiles").insert({
             id: currentUser.id,
-            nickname: currentUser.email ? currentUser.email.split("@")[0] : "Player",
-            avatar_url: "https://cdn-icons-png.flaticon.com/512/4712/4712109.png",
+            nickname: fallbackNick,
+            avatar_url: DEFAULT_AVATAR,
             vip_level: 0
         });
 
         if(create.error){
-            errLog("PROFILE INSERT ERROR", create.error);
+            errLog("PROFILE INSERT ERROR", create.error.message);
             return;
         }
         return loadProfile();
@@ -310,11 +342,9 @@ async function loadProfile(){
     setText("vip-level", "VIP " + (profile.vip_level || 0));
     setText("side-vip", "VIP " + (profile.vip_level || 0));
 
-    if(profile.avatar_url){
-        setImage("top-avatar", profile.avatar_url);
-        setImage("profile-avatar", profile.avatar_url);
-        setImage("side-avatar", profile.avatar_url);
-    }
+    setImage("top-avatar", profile.avatar_url);
+    setImage("profile-avatar", profile.avatar_url);
+    setImage("side-avatar", profile.avatar_url);
 
     if($("avatar-url")) $("avatar-url").value = profile.avatar_url || "";
     if($("profile-city")) $("profile-city").value = profile.city || "";
@@ -326,23 +356,45 @@ if(saveProfile){
     saveProfile.onclick = async () => {
         if(!currentUser) return;
 
+        const status = $("profile-status");
+        if(status){
+            status.classList.remove("err");
+            status.textContent = "Сохранение…";
+        }
+
+        const payload = {
+            avatar_url: $("avatar-url").value.trim() || null,
+            city: $("profile-city").value.trim() || null,
+            age: $("profile-age").value ? parseInt($("profile-age").value, 10) : null
+        };
+
         const update = await supabaseClient
             .from("profiles")
-            .update({
-                avatar_url: $("avatar-url").value.trim() || null,
-                city: $("profile-city").value.trim() || null,
-                age: $("profile-age").value ? parseInt($("profile-age").value, 10) : null
-            })
-            .eq("id", currentUser.id);
+            .update(payload)
+            .eq("id", currentUser.id)
+            .select()
+            .single();
 
         if(update.error){
-            errLog("PROFILE SAVE ERROR", update.error);
-            alert("Ошибка сохранения профиля");
+            errLog("PROFILE SAVE ERROR", update.error.message);
+            if(status){
+                status.classList.add("err");
+                status.textContent = "Ошибка: " + update.error.message;
+            }
             return;
         }
 
-        await loadProfile();
-        alert("Профиль сохранён");
+        // Обновляем UI сразу из ответа
+        const p = update.data;
+        setText("top-name", p.nickname || "Player");
+        setText("profile-name", p.nickname || "Player");
+        setText("side-name", p.nickname || "Player");
+        setImage("top-avatar", p.avatar_url);
+        setImage("profile-avatar", p.avatar_url);
+        setImage("side-avatar", p.avatar_url);
+
+        if(status) status.textContent = "Сохранено";
+        setTimeout(() => { if(status) status.textContent = ""; }, 2000);
     };
 }
 
@@ -360,7 +412,6 @@ async function loadNews(){
         .order("created_at", { ascending: false });
 
     if(result.error){
-        // таблицы news может не быть — не критично
         errLog("NEWS ERROR", result.error.message);
         box.innerHTML = "<p style='color:#888'>Новостей пока нет</p>";
         return;
@@ -388,11 +439,7 @@ async function loadNews(){
 
 function initChat(){
     const button = $("send-message");
-    if(!button){
-        log("SEND BUTTON NOT FOUND");
-        return;
-    }
-    button.onclick = sendMessage;
+    if(button) button.onclick = sendMessage;
 
     const input = $("message-text");
     if(input){
@@ -417,7 +464,6 @@ async function sendMessage(){
     const text = input.value.trim();
     if(!text) return;
 
-    // получаем ник
     const profile = await supabaseClient
         .from("profiles")
         .select("nickname")
@@ -430,13 +476,13 @@ async function sendMessage(){
         .from("messages")
         .insert({
             user_id: currentUser.id,
-            nickname: nickname,
-            text: text
+            nickname,
+            text
         });
 
     if(result.error){
         errLog("MESSAGE INSERT ERROR", result.error.message);
-        alert("Ошибка отправки сообщения: " + result.error.message);
+        alert("Ошибка отправки: " + result.error.message);
         return;
     }
 
@@ -455,7 +501,7 @@ async function loadMessages(){
 
     if(result.error){
         errLog("MESSAGES LOAD ERROR", result.error.message);
-        box.innerHTML = "<div class='chat-message'>Ошибка загрузки: " + escapeHtml(result.error.message) + "</div>";
+        box.innerHTML = "<div class='chat-message'>Ошибка: " + escapeHtml(result.error.message) + "</div>";
         return;
     }
 
@@ -494,18 +540,13 @@ function startChatRealtime(){
         .on(
             "postgres_changes",
             { event: "INSERT", schema: "public", table: "messages" },
-            (payload) => {
-                log("NEW MESSAGE", payload.new);
-                appendMessage(payload.new);
-            }
+            (payload) => appendMessage(payload.new)
         )
-        .subscribe((status) => {
-            log("CHAT REALTIME:", status);
-        });
+        .subscribe((status) => log("CHAT REALTIME:", status));
 }
 
 /* =====================================================
-   КОНФЕРЕНЦИЯ — БАЗОВЫЕ ОБРАБОТЧИКИ
+   КОНФЕРЕНЦИЯ — ИНИЦИАЛИЗАЦИЯ
 ===================================================== */
 
 function initConference(){
@@ -517,11 +558,48 @@ function initConference(){
 
     const leave = $("leave-room");
     if(leave) leave.onclick = leaveRoom;
+
+    const createForm = $("create-room-form");
+    if(createForm) createForm.onsubmit = createRoom;
 }
 
 /* =====================================================
-   СПИСОК КОМНАТ
-   (показываем только те, где есть люди)
+   СОЗДАНИЕ КОМНАТЫ
+===================================================== */
+
+async function createRoom(e){
+    e.preventDefault();
+    if(!currentUser){
+        alert("Нет авторизации");
+        return;
+    }
+
+    const name = $("room-name-input").value.trim();
+    const description = $("room-desc-input").value.trim();
+
+    if(!name) return;
+
+    const result = await supabaseClient
+        .from("conference_rooms")
+        .insert({ name, description: description || null })
+        .select()
+        .single();
+
+    if(result.error){
+        errLog("CREATE ROOM ERROR", result.error.message);
+        alert("Ошибка создания комнаты: " + result.error.message);
+        return;
+    }
+
+    $("room-name-input").value = "";
+    $("room-desc-input").value = "";
+
+    await loadRooms();
+    await joinRoom(result.data);
+}
+
+/* =====================================================
+   СПИСОК КОМНАТ — только где есть люди
 ===================================================== */
 
 async function loadRooms(){
@@ -540,36 +618,37 @@ async function loadRooms(){
     }
 
     const rooms = roomsRes.data || [];
+
+    // Все пользователи во всех комнатах одним запросом
+    const usersRes = await supabaseClient
+        .from("conference_users")
+        .select("room_id");
+
+    const counts = {};
+    (usersRes.data || []).forEach(u => {
+        counts[u.room_id] = (counts[u.room_id] || 0) + 1;
+    });
+
+    const visibleRooms = rooms.filter(r => (counts[r.id] || 0) > 0);
+
+    if(visibleRooms.length === 0){
+        box.innerHTML = "<p style='color:#888'>Нет активных комнат. Создайте свою!</p>";
+        return;
+    }
+
     box.innerHTML = "";
-
-    let shown = 0;
-
-    for(const room of rooms){
-        const usersRes = await supabaseClient
-            .from("conference_users")
-            .select("user_id, nickname")
-            .eq("room_id", room.id);
-
-        const users = usersRes.data || [];
-        if(users.length === 0) continue; // только комнаты с людьми
-
-        shown++;
-
+    visibleRooms.forEach(room => {
         const card = document.createElement("div");
         card.className = "room-card";
         card.innerHTML =
             "<h3>🎙 " + escapeHtml(room.name || "Комната") + "</h3>" +
             "<p>" + escapeHtml(room.description || "") + "</p>" +
-            "<p>👥 " + users.length + " участников</p>" +
-            "<button class='main-button' data-room-id='" + escapeHtml(String(room.id)) + "'>Войти</button>";
+            "<p>👥 " + (counts[room.id] || 0) + " участников</p>" +
+            "<button class='main-button' type='button'>Войти</button>";
 
         card.querySelector("button").onclick = () => joinRoom(room);
         box.appendChild(card);
-    }
-
-    if(shown === 0){
-        box.innerHTML = "<p style='color:#888'>Нет активных комнат</p>";
-    }
+    });
 }
 
 /* =====================================================
@@ -594,14 +673,21 @@ async function joinRoom(room){
         .maybeSingle();
 
     const nickname = (profile.data && profile.data.nickname) || "Player";
+    nicknames[currentUser.id] = nickname;
 
-    // Регистрация в комнате
+    // Удаляем прежние записи (если где-то висели)
+    await supabaseClient
+        .from("conference_users")
+        .delete()
+        .eq("user_id", currentUser.id);
+
+    // Вставляем новую запись
     const insert = await supabaseClient
         .from("conference_users")
         .insert({
             room_id: room.id,
             user_id: currentUser.id,
-            nickname: nickname
+            nickname
         });
 
     if(insert.error){
@@ -616,21 +702,24 @@ async function joinRoom(room){
     // Микрофон
     await startLocalAudio();
 
-    // Realtime: пользователи в комнате
-    subscribeRoomUsers(room.id);
-
-    // Realtime: сигналинг
+    // Канал сигналинга (broadcast)
     subscribeSignaling(room.id);
 
-    // Синхронизация с уже присутствующими
-    await syncExistingPeers(room.id);
+    // Опроса пользователей комнаты
+    startUsersPolling(room.id);
+
+    // Первичная синхронизация
+    await pollRoomUsers(room.id);
 
     updateMicButton();
-    updateParticipants([]);
+    setScreenButton(false);
+    resetVideoPlaceholder();
+
+    log("JOINED ROOM", room.id);
 }
 
 /* =====================================================
-   ЛОКАЛЬНЫЙ МИКРОФОН
+   МИКРОФОН
 ===================================================== */
 
 async function startLocalAudio(){
@@ -643,7 +732,7 @@ async function startLocalAudio(){
         log("MIC START");
     }catch(e){
         errLog("MIC ERROR", e);
-        alert("Нет доступа к микрофону");
+        alert("Нет доступа к микрофону: " + e.message);
     }
 }
 
@@ -679,7 +768,6 @@ async function toggleScreenShare(){
         return;
     }
 
-    // Если уже идёт — остановить
     if(screenStream){
         stopScreenShare();
         return;
@@ -692,16 +780,13 @@ async function toggleScreenShare(){
         });
 
         const track = screenStream.getVideoTracks()[0];
-
-        // Показать локальное превью
         showLocalScreenPreview(track);
 
-        // Прикрепить к каждому peer connection
         Object.keys(videoSenders).forEach(peerId => {
-            videoSenders[peerId].replaceTrack(track).catch(e => errLog("replaceTrack", e));
+            videoSenders[peerId].replaceTrack(track)
+                .catch(e => errLog("replaceTrack screen", e));
         });
 
-        // Пользователь остановил через системный UI
         track.onended = () => stopScreenShare();
 
         setScreenButton(true);
@@ -717,12 +802,11 @@ function stopScreenShare(){
         screenStream = null;
     }
 
-    // Убрать видео у всех peer connection
     Object.keys(videoSenders).forEach(peerId => {
-        videoSenders[peerId].replaceTrack(null).catch(e => errLog("replaceTrack null", e));
+        videoSenders[peerId].replaceTrack(null)
+            .catch(e => errLog("replaceTrack null", e));
     });
 
-    // Удалить локальное превью
     const localPreview = $("vtile-local");
     if(localPreview) localPreview.remove();
     resetVideoPlaceholder();
@@ -771,26 +855,21 @@ function showLocalScreenPreview(track){
 }
 
 /* =====================================================
-   WEBSIGNALING (Broadcast)
+   СИГНАЛИНГ (Broadcast)
 ===================================================== */
 
 function subscribeSignaling(roomId){
-    if(signalChannel) {
+    if(signalChannel){
         try { supabaseClient.removeChannel(signalChannel); } catch(e){}
         signalChannel = null;
     }
 
-    signalChannel = supabaseClient.channel("room-signals-" + roomId, {
-        config: { broadcast: { self: false } }
-    });
+    signalChannel = supabaseClient.channel("room-signals-" + roomId);
 
     signalChannel.on("broadcast", { event: "signal" }, async ({ payload }) => {
         if(!payload || payload.to !== currentUser.id) return;
-        try{
-            await handleSignal(payload);
-        }catch(e){
-            errLog("SIGNAL HANDLE ERROR", e);
-        }
+        try { await handleSignal(payload); }
+        catch(e){ errLog("SIGNAL HANDLE ERROR", e); }
     });
 
     signalChannel.subscribe((status) => {
@@ -806,8 +885,8 @@ function sendSignal(toUserId, type, data){
         payload: {
             from: currentUser.id,
             to: toUserId,
-            type: type,
-            data: data
+            type,
+            data
         }
     }).catch(e => errLog("SEND SIGNAL ERROR", e));
 }
@@ -828,16 +907,15 @@ async function handleSignal(payload){
         sendSignal(fromId, "answer", { sdp: pc.localDescription });
     }
     else if(type === "answer"){
-        if(pc){
+        if(pc && pc.signalingState !== "stable"){
             await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
             await drainCandidates(fromId, pc);
         }
     }
     else if(type === "candidate"){
         if(pc && pc.remoteDescription && pc.remoteDescription.type){
-            try{
-                await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-            }catch(e){ errLog("ADD ICE", e); }
+            try{ await pc.addIceCandidate(new RTCIceCandidate(data.candidate)); }
+            catch(e){ errLog("ADD ICE", e); }
         }else{
             if(!pendingCandidates[fromId]) pendingCandidates[fromId] = [];
             pendingCandidates[fromId].push(data.candidate);
@@ -878,11 +956,10 @@ function createPeer(peerId, initiator){
         });
     }
 
-    // Видео-трансивер для демонстрации экрана
+    // Видео-трансивер под демонстрацию экрана
     const vt = pc.addTransceiver("video", { direction: "sendrecv" });
     videoSenders[peerId] = vt.sender;
 
-    // Если экран уже шарится — сразу подключаем
     if(screenStream){
         const st = screenStream.getVideoTracks()[0];
         if(st) vt.sender.replaceTrack(st).catch(e => errLog("replaceTrack initial", e));
@@ -942,12 +1019,10 @@ function closePeer(peerId){
 function resetVideoPlaceholder(){
     const area = $("video-area");
     const ph = $("video-placeholder");
-    if(!area) return;
+    if(!area || !ph) return;
 
     const hasTiles = area.querySelector(".video-tile");
-    if(ph){
-        ph.style.display = hasTiles ? "none" : "block";
-    }
+    ph.style.display = hasTiles ? "none" : "block";
 }
 
 /* =====================================================
@@ -961,6 +1036,7 @@ function handleRemoteTrack(peerId, track){
             audio = document.createElement("audio");
             audio.id = "audio-" + peerId;
             audio.autoplay = true;
+            audio.playsInline = true;
             $("remote-audio").appendChild(audio);
         }
         audio.srcObject = new MediaStream([track]);
@@ -995,108 +1071,71 @@ function handleRemoteTrack(peerId, track){
         video.srcObject = new MediaStream([track]);
         video.play().catch(() => {});
 
-        // Показать/скрыть в зависимости от активности
         const refresh = () => {
-            tile.style.display = (track.muted || track.readyState === "ended") ? "none" : "block";
+            const active = !track.muted && track.readyState === "live";
+            tile.style.display = active ? "block" : "none";
             resetVideoPlaceholder();
         };
+
         track.onunmute = refresh;
         track.onmute = refresh;
         track.onended = () => {
             tile.remove();
             resetVideoPlaceholder();
         };
+
         refresh();
     }
 }
 
 /* =====================================================
-   REALTIME ПОЛЬЗОВАТЕЛЕЙ В КОМНАТЕ
+   ОПРОС УЧАСТНИКОВ КОМНАТЫ (polling)
 ===================================================== */
 
-function subscribeRoomUsers(roomId){
-    if(usersChannel){
-        try{ supabaseClient.removeChannel(usersChannel); }catch(e){}
-        usersChannel = null;
-    }
-
-    usersChannel = supabaseClient
-        .channel("room-users-" + roomId)
-        .on(
-            "postgres_changes",
-            {
-                event: "*",
-                schema: "public",
-                table: "conference_users",
-                filter: "room_id=eq." + roomId
-            },
-            (payload) => {
-                log("ROOM USERS CHANGE", payload.eventType);
-                if(payload.eventType === "INSERT"){
-                    onUserJoined(payload.new);
-                }else if(payload.eventType === "DELETE"){
-                    onUserLeft(payload.old);
-                }
-                refreshParticipants(roomId);
-            }
-        )
-        .subscribe((status) => {
-            log("USERS CHANNEL:", status);
-        });
+function startUsersPolling(roomId){
+    if(usersPollTimer) clearInterval(usersPollTimer);
+    usersPollTimer = setInterval(() => {
+        pollRoomUsers(roomId).catch(e => errLog("POLL USERS", e));
+    }, 2000);
 }
 
-async function onUserJoined(userRow){
-    if(!currentUser || !userRow) return;
-    if(userRow.user_id === currentUser.id) return;
-
-    nicknames[userRow.user_id] = userRow.nickname;
-
-    // Детерминированный выбор инициатора — кто меньше по id, тот делает offer
-    if(currentUser.id < userRow.user_id){
-        if(!peers[userRow.user_id]){
-            createPeer(userRow.user_id, true);
-        }
-    }
-}
-
-function onUserLeft(userRow){
-    if(!userRow) return;
-    closePeer(userRow.user_id);
-    delete nicknames[userRow.user_id];
-}
-
-async function syncExistingPeers(roomId){
+async function pollRoomUsers(roomId){
     const { data, error } = await supabaseClient
         .from("conference_users")
         .select("user_id, nickname")
         .eq("room_id", roomId);
 
     if(error){
-        errLog("SYNC PEERS ERROR", error.message);
+        errLog("POLL USERS ERROR", error.message);
         return;
     }
 
     const users = data || [];
+    const userIds = new Set(users.map(u => u.user_id));
 
-    users.forEach(u => {
-        nicknames[u.user_id] = u.nickname;
-    });
+    users.forEach(u => { nicknames[u.user_id] = u.nickname; });
 
-    users.forEach(u => {
-        if(u.user_id === currentUser.id) return;
+    // Новые пользователи → создаём peer
+    for(const u of users){
+        if(u.user_id === currentUser.id) continue;
+        if(peers[u.user_id]) continue;
         if(currentUser.id < u.user_id){
-            if(!peers[u.user_id]){
-                createPeer(u.user_id, true);
-            }
+            log("INITIATING PEER", u.user_id);
+            createPeer(u.user_id, true);
         }
-    });
+        // иначе — ждём их offer
+    }
+
+    // Ушедшие — закрываем
+    for(const peerId of Object.keys(peers)){
+        if(!userIds.has(peerId)){
+            log("PEER LEFT", peerId);
+            closePeer(peerId);
+        }
+    }
 
     updateParticipants(users);
 }
-
-/* =====================================================
-   СПИСОК УЧАСТНИКОВ
-===================================================== */
 
 function updateParticipants(users){
     const box = $("participants-list");
@@ -1117,15 +1156,6 @@ function updateParticipants(users){
             (u.user_id === currentUser.id ? " (вы)" : "");
         box.appendChild(chip);
     });
-}
-
-async function refreshParticipants(roomId){
-    const { data } = await supabaseClient
-        .from("conference_users")
-        .select("user_id, nickname")
-        .eq("room_id", roomId);
-
-    updateParticipants(data || []);
 }
 
 /* =====================================================
@@ -1162,14 +1192,14 @@ async function leaveRoom(){
 
     microphoneEnabled = false;
 
-    // Отписки
     if(signalChannel){
         try{ supabaseClient.removeChannel(signalChannel); }catch(e){}
         signalChannel = null;
     }
-    if(usersChannel){
-        try{ supabaseClient.removeChannel(usersChannel); }catch(e){}
-        usersChannel = null;
+
+    if(usersPollTimer){
+        clearInterval(usersPollTimer);
+        usersPollTimer = null;
     }
 
     // Очистить UI
