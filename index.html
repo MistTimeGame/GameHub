@@ -7,25 +7,15 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<title>GamePlatform</title>
 
-<title>
-GAME PLATFORM
-</title>
-
-
-
-<!-- MAIN CSS -->
 
 <link rel="stylesheet" href="assets/css/main.css">
 
 
-
-<!-- MODULE CSS -->
-
 <link rel="stylesheet" href="modules/auth/auth.css">
 
 <link rel="stylesheet" href="modules/profile/profile.css">
-
 
 
 </head>
@@ -34,63 +24,43 @@ GAME PLATFORM
 <body>
 
 
-<header class="header">
+<header class="top-menu">
 
 
-<div class="logo">
-
-GAME PLATFORM
-
-</div>
+<h1>
+🎮 GamePlatform
+</h1>
 
 
-
-<div class="header-user">
-
-
-<span id="user-name"></span>
+<nav>
 
 
-
-<button id="login-button">
-
+<button onclick="openModule('auth')">
 Войти
-
 </button>
 
 
-
-<button id="register-button">
-
-Регистрация
-
-</button>
-
-
-
-<button 
-id="profile-button"
-style="display:none"
->
-
+<button onclick="openModule('profile')">
 Профиль
-
 </button>
 
 
-
-<button 
-id="logout-button"
-style="display:none"
->
-
-Выйти
-
+<button onclick="openModule('games')">
+Игры
 </button>
 
 
+<button onclick="openModule('guilds')">
+Гильдии
+</button>
 
-</div>
+
+<button onclick="openModule('conference')">
+Конференция
+</button>
+
+
+</nav>
 
 
 </header>
@@ -99,51 +69,22 @@ style="display:none"
 
 
 
-<main>
+<main id="app">
 
 
-
-<section class="hero">
-
-
-<h1>
-
-Игровая платформа
-
-</h1>
+<section id="auth-container"></section>
 
 
-<p>
-
-Игры • Гильдии • Сообщества • Конференции
-
-</p>
+<section id="profile-container"></section>
 
 
-</section>
+<section id="games-container"></section>
 
 
+<section id="guilds-container"></section>
 
 
-
-<!-- AUTH MODULE -->
-
-<section id="auth-container">
-
-</section>
-
-
-
-
-
-<!-- PROFILE MODULE -->
-
-<section id="profile-container">
-
-</section>
-
-
-
+<section id="conference-container"></section>
 
 
 </main>
@@ -152,36 +93,10 @@ style="display:none"
 
 
 
+<script type="module" src="supabase/config.js"></script>
 
 
-<!-- SUPABASE -->
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-
-
-<script src="supabase/config.js"></script>
-
-
-
-
-
-<!-- MAIN -->
-
-<script src="assets/js/main.js"></script>
-
-
-
-
-
-<!-- MODULES -->
-
-<script src="modules/auth/auth.js"></script>
-
-
-<script src="modules/profile/profile.js"></script>
-
-
+<script type="module" src="assets/js/main.js"></script>
 
 
 
