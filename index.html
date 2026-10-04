@@ -149,16 +149,59 @@
       <section id="profile" class="page">
         <h1>👤 Профиль</h1>
         <div class="profile-card">
-          <img id="profile-avatar" src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png" alt="">
+
+          <div class="profile-avatar-wrap">
+            <img id="profile-avatar" src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png" alt="">
+          </div>
+
           <h2 id="profile-name">Player</h2>
           <div id="vip-level">VIP 0</div>
 
-          <input id="avatar-url" placeholder="Ссылка на аватар (https://...)">
-          <input id="profile-city" placeholder="Город">
-          <input id="profile-age" type="number" placeholder="Возраст">
+          <div class="profile-id">
+            <span>ID профиля</span>
+            <code id="profile-id">—</code>
+          </div>
 
-          <button id="save-profile" class="main-button" type="button">Сохранить</button>
-          <div id="profile-status" class="profile-status"></div>
+          <form class="profile-form" id="profile-form" onsubmit="return false">
+
+            <label class="profile-field">
+              <span>Никнейм</span>
+              <input id="pf-nickname" placeholder="Player" maxlength="30" required>
+              <small class="field-hint">От 2 до 30 символов. Должен быть уникальным.</small>
+            </label>
+
+            <label class="profile-field">
+              <span>Ссылка на аватар</span>
+              <input id="pf-avatar" placeholder="https://example.com/avatar.png" type="url">
+              <small class="field-hint">Вставьте прямую ссылку на изображение (jpg, png, webp).</small>
+            </label>
+
+            <div class="profile-field-row">
+              <label class="profile-field">
+                <span>Город</span>
+                <input id="pf-city" placeholder="Москва" maxlength="40">
+              </label>
+
+              <label class="profile-field">
+                <span>Возраст</span>
+                <input id="pf-age" type="number" min="1" max="120" placeholder="18">
+              </label>
+            </div>
+
+            <label class="profile-field">
+              <span>О себе</span>
+              <textarea id="pf-about" rows="4" maxlength="300" placeholder="Расскажите о себе…"></textarea>
+              <small class="field-hint"><span id="pf-about-count">0</span> / 300</small>
+            </label>
+
+            <div class="profile-actions">
+              <button id="save-profile" class="main-button" type="button">Сохранить</button>
+              <button id="reset-profile" class="main-button secondary" type="button">Сбросить</button>
+            </div>
+
+            <div id="profile-status" class="profile-status"></div>
+
+          </form>
         </div>
       </section>
 
