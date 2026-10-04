@@ -1,6 +1,6 @@
 /* =====================================================
    GAME PLATFORM — app.js
-   Auth + Profile (полный CRUD) + Chat + Conference
+   Auth + Profile (schema-aware) + Chat + Conference
 ===================================================== */
 
 const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -16,6 +16,7 @@ const MIROTALK_BASE = "https://p2p.mirotalk.com";
 
 let currentUser = null;
 let currentProfile = null;
+let availableColumns = null;      // Set доступных колонок в profiles
 let chatChannel = null;
 let currentRoom = null;
 let roomsPollTimer = null;
@@ -92,7 +93,7 @@ async function ensureAuth(){
 ===================================================== */
 
 function isValidHttpUrl(str){
-    if(!str) return true; // пусто — валидно
+    if(!str) return true;
     try{
         const u = new URL(str);
         return u.protocol === "http:" || u.protocol === "https:";
@@ -102,6 +103,91 @@ function isValidHttpUrl(str){
 function isValidNickname(str){
     const s = (str || "").trim();
     return s.length >= 2 && s.length <= 30;
+}
+
+/* =====================================================
+   ОПРЕДЕЛЕНИЕ СХЕМЫ profiles
+   Пробуем выбрать строку с известными "опциональными" колонками.
+   Если Supabase вернёт ошибку про колонку — значит её нет.
+===================================================== */
+
+async function detectProfileColumns(userId){
+    // Список колонок, которые мы хотим поддерживать (по приоритету)
+    const wanted = ["id", "nickname", "avatar_url", "vip_level", "age", "city", "about"];
+    const available = new Set(["id"]); // id точно есть
+
+    // Пробуем выбрать всё сразу
+    const trySelect = async (cols) => {
+        const { data, error } = await supabaseClient
+            .from("profiles")
+            .select(cols)
+            .eq("id", userId)
+            .maybeSingle();
+        return { data, error };
+    };
+
+    // Сначала — полный набор
+    let result = await trySelect(wanted.join(","));
+
+    if(!result.error){
+        wanted.forEach(c => available.add(c));
+        return { columns: available, row: result.data };
+    }
+
+    errLog("SCHEMA: не все колонки доступны:", result.error.message);
+
+    // По одной пробуем найти отсутствующие
+    for(const col of wanted){
+        if(col === "id") continue;
+        const test = await trySelect("id," + col);
+        if(!test.error){
+            available.add(col);
+        } else {
+            log("SCHEMA: нет колонки →", col);
+        }
+    }
+
+    // Финальный select — только доступные
+    const finalCols = wanted.filter(c => available.has(c)).join(",");
+    result = await trySelect(finalCols);
+
+    return { columns: available, row: result.data };
+}
+
+function applySchemaVisibility(){
+    if(!availableColumns) return;
+
+    const has = (col) => availableColumns.has(col);
+
+    if($("field-avatar")) $("field-avatar").classList.toggle("hidden", !has("avatar_url"));
+    if($("field-city"))   $("field-city").classList.toggle("hidden", !has("city"));
+    if($("field-age"))    $("field-age").classList.toggle("hidden", !has("age"));
+    if($("field-about"))  $("field-about").classList.toggle("hidden", !has("about"));
+
+    // Если обе колонки city/age скрыты — скрыть весь ряд
+    const row = $("field-row-city-age");
+    if(row){
+        const anyVisible = has("city") || has("age");
+        row.classList.toggle("hidden", !anyVisible);
+    }
+
+    // Предупреждение пользователю, если часть колонок отсутствует
+    const warn = $("schema-warning");
+    if(warn){
+        const missing = [];
+        if(!has("about"))  missing.push("about");
+        if(!has("city"))   missing.push("city");
+        if(!has("age"))    missing.push("age");
+        if(missing.length){
+            warn.classList.remove("hidden");
+            warn.innerHTML =
+                "⚠️ В таблице <code>profiles</code> отсутствуют колонки: <b>" +
+                missing.join(", ") +
+                "</b>.<br>Соответствующие поля скрыты. Добавьте их в Supabase, чтобы включить редактирование.";
+        } else {
+            warn.classList.add("hidden");
+        }
+    }
 }
 
 /* =====================================================
@@ -208,9 +294,11 @@ function initAuth(){
                     return;
                 }
 
+                // Создаём профиль только с гарантированно существующими полями
                 try{
                     await supabaseClient.from("profiles").insert({
-                        id: user.id, nickname,
+                        id: user.id,
+                        nickname,
                         avatar_url: DEFAULT_AVATAR,
                         vip_level: 0
                     });
@@ -322,17 +410,40 @@ async function loadProfile(){
     const user = await ensureAuth();
     if(!user) return;
 
-    let result = await supabaseClient
-        .from("profiles").select("*").eq("id", user.id).maybeSingle();
+    // Определяем доступные колонки (один раз)
+    if(!availableColumns){
+        const { columns, row } = await detectProfileColumns(user.id);
+        availableColumns = columns;
+        log("SCHEMA DETECTED:", Array.from(columns));
+        applySchemaVisibility();
 
-    if(result.error){ errLog("PROFILE SELECT", result.error.message); return; }
+        if(row){
+            currentProfile = row;
+            applyProfileToUI(row);
+            fillProfileForm(row);
+            return;
+        }
+    }
+
+    // Обычная загрузка
+    const cols = Array.from(availableColumns).join(",");
+    let result = await supabaseClient
+        .from("profiles").select(cols).eq("id", user.id).maybeSingle();
+
+    if(result.error){
+        errLog("PROFILE SELECT", result.error.message);
+        return;
+    }
 
     if(!result.data){
+        // Создаём профиль только с гарантированными полями
         const fallbackNick = user.email ? user.email.split("@")[0] : "Player";
-        const create = await supabaseClient.from("profiles").insert({
-            id: user.id, nickname: fallbackNick,
-            avatar_url: DEFAULT_AVATAR, vip_level: 0
-        });
+        const payload = { id: user.id, nickname: fallbackNick };
+
+        if(availableColumns.has("avatar_url")) payload.avatar_url = DEFAULT_AVATAR;
+        if(availableColumns.has("vip_level"))  payload.vip_level = 0;
+
+        const create = await supabaseClient.from("profiles").insert(payload);
         if(create.error){ errLog("PROFILE INSERT", create.error.message); return; }
         return loadProfile();
     }
@@ -345,17 +456,14 @@ async function loadProfile(){
 function applyProfileToUI(p){
     if(!p) return;
 
-    // Топбар
     setText("top-name", p.nickname || "Player");
     setImage("top-avatar", p.avatar_url);
 
-    // Карточка профиля
     setText("profile-name", p.nickname || "Player");
     setText("vip-level", "VIP " + (p.vip_level || 0));
     setImage("profile-avatar", p.avatar_url);
     setText("profile-id", p.id || "—");
 
-    // Правая панель
     setText("side-name", p.nickname || "Player");
     setText("side-vip", "VIP " + (p.vip_level || 0));
     setImage("side-avatar", p.avatar_url);
@@ -364,10 +472,10 @@ function applyProfileToUI(p){
 function fillProfileForm(p){
     if(!p) return;
     if($("pf-nickname")) $("pf-nickname").value = p.nickname || "";
-    if($("pf-avatar")) $("pf-avatar").value = p.avatar_url || "";
-    if($("pf-city")) $("pf-city").value = p.city || "";
-    if($("pf-age")) $("pf-age").value = (p.age == null ? "" : p.age);
-    if($("pf-about")) $("pf-about").value = p.about || "";
+    if($("pf-avatar") && availableColumns.has("avatar_url")) $("pf-avatar").value = p.avatar_url || "";
+    if($("pf-city")   && availableColumns.has("city"))       $("pf-city").value = p.city || "";
+    if($("pf-age")    && availableColumns.has("age"))        $("pf-age").value = (p.age == null ? "" : p.age);
+    if($("pf-about")  && availableColumns.has("about"))      $("pf-about").value = p.about || "";
     updateAboutCounter();
 }
 
@@ -381,17 +489,13 @@ function initProfileForm(){
     const form = $("profile-form");
     if(!form) return;
 
-    // Live-превью аватара
     const avatarInput = $("pf-avatar");
     if(avatarInput){
         avatarInput.addEventListener("input", () => {
             const url = avatarInput.value.trim();
             const img = $("profile-avatar");
             if(!img) return;
-            if(!url){
-                img.src = DEFAULT_AVATAR;
-                return;
-            }
+            if(!url){ img.src = DEFAULT_AVATAR; return; }
             if(isValidHttpUrl(url)){
                 img.onerror = () => { img.onerror = null; img.src = DEFAULT_AVATAR; };
                 img.src = url;
@@ -399,20 +503,15 @@ function initProfileForm(){
         });
     }
 
-    // Счётчик символов "о себе"
     const aboutInput = $("pf-about");
-    if(aboutInput){
-        aboutInput.addEventListener("input", updateAboutCounter);
-    }
+    if(aboutInput) aboutInput.addEventListener("input", updateAboutCounter);
 
-    // Кнопка «Сохранить»
     const saveBtn = $("save-profile");
     if(saveBtn) saveBtn.onclick = saveProfileChanges;
 
-    // Кнопка «Сбросить»
     const resetBtn = $("reset-profile");
     if(resetBtn) resetBtn.onclick = () => {
-        if(!currentProfile){ return; }
+        if(!currentProfile) return;
         fillProfileForm(currentProfile);
         setProfileStatus("Изменения сброшены");
         setTimeout(() => setProfileStatus(""), 1500);
@@ -425,12 +524,20 @@ async function saveProfileChanges(){
     const user = await ensureAuth();
     if(!user){ setProfileStatus("Нет авторизации", "err"); return; }
 
+    if(!availableColumns){
+        setProfileStatus("Схема профиля не загружена, обновите страницу", "err");
+        return;
+    }
+
     // ---- Валидация ----
     const nickname = ($("pf-nickname").value || "").trim();
-    const avatarUrl = ($("pf-avatar").value || "").trim();
-    const city = ($("pf-city").value || "").trim();
-    const ageRaw = $("pf-age").value;
-    const about = ($("pf-about").value || "").trim();
+    const avatarUrl = availableColumns.has("avatar_url")
+        ? ($("pf-avatar").value || "").trim() : "";
+    const city = availableColumns.has("city")
+        ? ($("pf-city").value || "").trim() : "";
+    const ageRaw = availableColumns.has("age") ? $("pf-age").value : "";
+    const about = availableColumns.has("about")
+        ? ($("pf-about").value || "").trim() : "";
 
     if(!isValidNickname(nickname)){
         setProfileStatus("Никнейм: 2–30 символов", "err");
@@ -439,8 +546,7 @@ async function saveProfileChanges(){
     }
 
     if(avatarUrl && !isValidHttpUrl(avatarUrl)){
-        setProfileStatus("Ссылка на аватар некорректна (нужен http/https)", "err");
-        $("pf-avatar").focus();
+        setProfileStatus("Ссылка на аватар некорректна", "err");
         return;
     }
 
@@ -449,24 +555,15 @@ async function saveProfileChanges(){
         const n = parseInt(ageRaw, 10);
         if(isNaN(n) || n < 1 || n > 120){
             setProfileStatus("Возраст: от 1 до 120", "err");
-            $("pf-age").focus();
             return;
         }
         age = n;
     }
 
-    if(city.length > 40){
-        setProfileStatus("Город: до 40 символов", "err");
-        return;
-    }
-
-    if(about.length > 300){
-        setProfileStatus("О себе: до 300 символов", "err");
-        return;
-    }
+    if(city.length > 40){ setProfileStatus("Город: до 40 символов", "err"); return; }
+    if(about.length > 300){ setProfileStatus("О себе: до 300 символов", "err"); return; }
 
     // ---- Проверка уникальности никнейма ----
-    // (если поле nickname в БД не unique — защищаемся вручную)
     if(!currentProfile || nickname !== currentProfile.nickname){
         savingProfile = true;
         setProfileStatus("Проверка никнейма…", "loading");
@@ -485,22 +582,19 @@ async function saveProfileChanges(){
         if(dup && dup.id){
             savingProfile = false;
             setProfileStatus("Никнейм уже занят", "err");
-            $("pf-nickname").focus();
             return;
         }
     }
 
-    // ---- Сохранение ----
+    // ---- Формируем payload ТОЛЬКО из доступных колонок ----
+    const payload = { nickname };
+    if(availableColumns.has("avatar_url")) payload.avatar_url = avatarUrl || null;
+    if(availableColumns.has("city"))       payload.city = city || null;
+    if(availableColumns.has("age"))        payload.age = age;
+    if(availableColumns.has("about"))      payload.about = about || null;
+
     savingProfile = true;
     setProfileStatus("Сохранение…", "loading");
-
-    const payload = {
-        nickname,
-        avatar_url: avatarUrl || null,
-        city: city || null,
-        age: age,
-        about: about || null
-    };
 
     try{
         const update = await supabaseClient
@@ -512,6 +606,37 @@ async function saveProfileChanges(){
 
         if(update.error){
             errLog("PROFILE SAVE", update.error.message);
+
+            // Доп. страховка: если сервер ругается на колонку — выкидываем её и повторяем
+            const msg = update.error.message || "";
+            const m = msg.match(/Could not find the '([^']+)' column/);
+            if(m && m[1]){
+                const badCol = m[1];
+                log("SCHEMA RUNTIME FIX: удаляю колонку", badCol);
+                availableColumns.delete(badCol);
+                applySchemaVisibility();
+                delete payload[badCol];
+
+                const retry = await supabaseClient
+                    .from("profiles")
+                    .update(payload)
+                    .eq("id", user.id)
+                    .select()
+                    .single();
+
+                if(retry.error){
+                    setProfileStatus("Ошибка: " + retry.error.message, "err");
+                    savingProfile = false;
+                    return;
+                }
+                currentProfile = retry.data;
+                applyProfileToUI(currentProfile);
+                setProfileStatus("Сохранено (схема скорректирована) ✓");
+                setTimeout(() => setProfileStatus(""), 2500);
+                savingProfile = false;
+                return;
+            }
+
             setProfileStatus("Ошибка: " + update.error.message, "err");
             savingProfile = false;
             return;
