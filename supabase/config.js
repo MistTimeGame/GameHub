@@ -1,25 +1,13 @@
-/*
-====================================================
-GAME PLATFORM
-SUPABASE CONFIG
-
-File:
-supabase/config.js
-
-Creates:
-window.supabaseClient
-
-====================================================
-*/
-
-
 (function(){
+
 
 "use strict";
 
 
+
 const SUPABASE_URL =
 "https://uvzaoobtysostmfwyfxm.supabase.co";
+
 
 
 const SUPABASE_KEY =
@@ -29,29 +17,30 @@ const SUPABASE_KEY =
 
 if(!window.supabase){
 
-    console.error(
-        "Supabase SDK не загружен"
-    );
+console.error(
+"Supabase SDK отсутствует"
+);
 
-    return;
+return;
 
 }
 
 
 
 window.supabaseClient =
+
 window.supabase.createClient(
 
-    SUPABASE_URL,
+SUPABASE_URL,
 
-    SUPABASE_KEY
+SUPABASE_KEY
 
 );
 
 
 
 console.log(
-    "[GamePlatform] Supabase ready"
+"Supabase connected"
 );
 
 
