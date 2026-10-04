@@ -7,13 +7,25 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Game Platform</title>
 
+<title>
+GAME PLATFORM
+</title>
+
+
+
+<!-- MAIN CSS -->
 
 <link rel="stylesheet" href="assets/css/main.css">
 
 
+
+<!-- MODULE CSS -->
+
 <link rel="stylesheet" href="modules/auth/auth.css">
+
+<link rel="stylesheet" href="modules/profile/profile.css">
+
 
 
 </head>
@@ -26,7 +38,9 @@
 
 
 <div class="logo">
-    GAME PLATFORM
+
+GAME PLATFORM
+
 </div>
 
 
@@ -37,24 +51,43 @@
 <span id="user-name"></span>
 
 
+
 <button id="login-button">
-    Войти
+
+Войти
+
 </button>
+
 
 
 <button id="register-button">
-    Регистрация
+
+Регистрация
+
 </button>
 
 
-<button id="profile-button" style="display:none">
-    Профиль
+
+<button 
+id="profile-button"
+style="display:none"
+>
+
+Профиль
+
 </button>
 
 
-<button id="logout-button" style="display:none">
-    Выйти
+
+<button 
+id="logout-button"
+style="display:none"
+>
+
+Выйти
+
 </button>
+
 
 
 </div>
@@ -64,19 +97,26 @@
 
 
 
+
+
 <main>
+
 
 
 <section class="hero">
 
 
 <h1>
+
 Игровая платформа
+
 </h1>
 
 
 <p>
+
 Игры • Гильдии • Сообщества • Конференции
+
 </p>
 
 
@@ -84,10 +124,31 @@
 
 
 
-<section id="auth-container"></section>
+
+
+<!-- AUTH MODULE -->
+
+<section id="auth-container">
+
+</section>
+
+
+
+
+
+<!-- PROFILE MODULE -->
+
+<section id="profile-container">
+
+</section>
+
+
+
 
 
 </main>
+
+
 
 
 
@@ -98,7 +159,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 
+
 <script src="supabase/config.js"></script>
+
+
 
 
 
@@ -108,9 +172,16 @@
 
 
 
-<!-- AUTH -->
+
+
+<!-- MODULES -->
 
 <script src="modules/auth/auth.js"></script>
+
+
+<script src="modules/profile/profile.js"></script>
+
+
 
 
 
