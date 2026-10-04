@@ -1,17 +1,14 @@
 ```css
-* {
-    box-sizing: border-box;
+*{
+    box-sizing:border-box;
 }
 
 
-body {
+body{
 
     margin:0;
 
-    font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+    font-family:Arial, Helvetica, sans-serif;
 
     background:#ffffff;
 
@@ -21,7 +18,8 @@ body {
 
 
 
-.layout {
+
+.app{
 
     display:flex;
 
@@ -32,20 +30,14 @@ body {
 
 
 
-/* Левая панель */
 
-.sidebar {
 
-    width:260px;
+/* ЛЕВАЯ ПАНЕЛЬ */
 
-    background:
-    linear-gradient(
-        180deg,
-        #f5f5f5,
-        #dcdcdc
-    );
 
-    border-right:1px solid #bbb;
+.sidebar{
+
+    width:270px;
 
     padding:20px;
 
@@ -53,32 +45,57 @@ body {
 
     flex-direction:column;
 
-    gap:15px;
+    gap:14px;
+
+
+    background:
+
+    linear-gradient(
+        180deg,
+        #fafafa,
+        #d6d6d6
+    );
+
+
+    border-right:1px solid #aaa;
+
 
     box-shadow:
-    5px 0 20px rgba(0,0,0,0.15);
+
+    5px 0 20px rgba(0,0,0,.18);
 
 }
 
 
 
 
-.logo {
 
-    height:70px;
+
+.logo{
+
+
+    height:75px;
+
 
     display:flex;
 
+
     align-items:center;
+
 
     justify-content:center;
 
 
-    font-size:26px;
+
+    font-size:28px;
+
 
     font-weight:900;
 
+
+
     color:#222;
+
 
 
     background:
@@ -86,23 +103,27 @@ body {
     linear-gradient(
         145deg,
         #ffffff,
-        #bdbdbd
+        #b8b8b8
     );
 
 
-    border-radius:15px;
+
+    border-radius:18px;
+
 
 
     box-shadow:
 
-    inset 0 2px 5px white,
+    inset 0 3px 8px white,
 
-    0 5px 15px rgba(0,0,0,.3);
+    0 8px 18px rgba(0,0,0,.3);
+
 
 
     text-shadow:
 
-    0 0 8px #4da6ff;
+    0 0 12px #258cff;
+
 
 }
 
@@ -111,24 +132,27 @@ body {
 
 
 
-/* 3D кнопки */
 
-.menu-btn {
-
-
-    height:50px;
+/* КНОПКИ */
 
 
-    border:none;
+.nav-btn{
 
 
-    border-radius:14px;
+    height:52px;
+
+
+    border:0;
+
+
+    border-radius:15px;
 
 
     cursor:pointer;
 
 
     font-size:16px;
+
 
     font-weight:bold;
 
@@ -139,26 +163,26 @@ body {
 
     background:
 
+
     linear-gradient(
         145deg,
         #eeeeee,
-        #9d9d9d
+        #999999
     );
+
 
 
 
     box-shadow:
 
 
-    inset 0 2px 5px rgba(255,255,255,.9),
+    inset 0 3px 6px rgba(255,255,255,.9),
+
 
     inset 0 -5px 8px rgba(0,0,0,.25),
 
-    0 5px 12px rgba(0,0,0,.35);
 
-
-
-    transition:.2s;
+    0 6px 14px rgba(0,0,0,.3);
 
 
 
@@ -168,12 +192,15 @@ body {
     overflow:hidden;
 
 
+    transition:.2s;
+
 }
 
 
 
 
-.menu-btn::before {
+
+.nav-btn::after{
 
 
     content:"";
@@ -182,16 +209,16 @@ body {
     position:absolute;
 
 
-    top:0;
-
-
-    left:-100%;
-
-
-    width:80%;
+    width:80px;
 
 
     height:100%;
+
+
+    left:-120px;
+
+
+    top:0;
 
 
     background:
@@ -199,15 +226,18 @@ body {
 
     linear-gradient(
 
-    120deg,
+    90deg,
 
     transparent,
 
-    rgba(80,170,255,.8),
+    rgba(60,150,255,.8),
 
     transparent
 
     );
+
+
+    transform:skewX(-20deg);
 
 
     transition:.5s;
@@ -217,42 +247,31 @@ body {
 
 
 
-.menu-btn:hover::before {
+
+.nav-btn:hover::after{
 
 
-    left:120%;
+    left:140%;
 
 
 }
 
 
 
-.menu-btn:hover {
+
+.nav-btn:hover{
 
 
-    transform:
-
-    translateY(-3px);
+    transform:translateY(-3px);
 
 
     box-shadow:
 
 
-    inset 0 2px 5px white,
-
-    0 8px 20px rgba(0,120,255,.45);
+    inset 0 3px 6px white,
 
 
-}
-
-
-
-.menu-btn:active {
-
-
-    transform:
-
-    translateY(2px);
+    0 10px 22px rgba(0,120,255,.45);
 
 
 }
@@ -261,12 +280,30 @@ body {
 
 
 
-.sidebar-bottom {
+.nav-btn.active{
+
+
+    box-shadow:
+
+
+    inset 0 0 12px rgba(0,120,255,.5),
+
+
+    0 8px 18px rgba(0,120,255,.3);
+
+
+}
+
+
+
+
+
+
+.account-panel{
 
 
     margin-top:auto;
 
-
 }
 
 
@@ -274,10 +311,12 @@ body {
 
 
 
-/* Основная область */
 
 
-.content {
+/* ОСНОВА */
+
+
+.content{
 
 
     flex:1;
@@ -286,7 +325,7 @@ body {
     padding:40px;
 
 
-    background:#ffffff;
+    background:#fff;
 
 
 }
@@ -295,55 +334,20 @@ body {
 
 
 
-
-
-.page {
+.page{
 
 
     display:none;
 
-
-    animation:
-
-    fade .3s;
-
-
 }
 
 
 
-.page.active {
+.page.active{
 
 
     display:block;
 
-
-}
-
-
-
-
-@keyframes fade {
-
-
-    from {
-
-        opacity:0;
-
-        transform:translateY(10px);
-
-    }
-
-
-    to {
-
-        opacity:1;
-
-        transform:none;
-
-    }
-
-
 }
 
 
@@ -352,28 +356,30 @@ body {
 
 
 
-.card {
+
+.card{
 
 
-    max-width:600px;
+    background:#fff;
 
 
-    background:white;
+    max-width:700px;
 
 
     padding:30px;
 
 
-    border-radius:20px;
+    border-radius:22px;
 
 
     border:1px solid #ddd;
 
 
+
     box-shadow:
 
 
-    0 10px 30px rgba(0,0,0,.15);
+    0 12px 35px rgba(0,0,0,.15);
 
 
 }
@@ -383,22 +389,17 @@ body {
 
 
 
-h1 {
+h1{
 
-
-    font-size:36px;
-
+    font-size:38px;
 
 }
 
 
-
-h2 {
-
+h2{
 
     margin-top:0;
 
-
 }
 
 
@@ -406,7 +407,7 @@ h2 {
 
 
 
-input {
+input{
 
 
     width:100%;
@@ -415,14 +416,10 @@ input {
     height:45px;
 
 
-    margin:
-
-    8px 0;
+    margin:8px 0;
 
 
-    padding:
-
-    0 15px;
+    padding:0 15px;
 
 
     border-radius:12px;
@@ -434,22 +431,24 @@ input {
     font-size:16px;
 
 
-    outline:none;
-
-
 }
 
 
 
-input:focus {
 
 
-    border-color:#258cff;
+input:focus{
+
+
+    outline:none;
+
+
+    border-color:#1683ff;
 
 
     box-shadow:
 
-    0 0 10px rgba(37,140,255,.4);
+    0 0 10px rgba(0,120,255,.4);
 
 
 }
@@ -459,19 +458,20 @@ input:focus {
 
 
 
-.main-btn {
+
+.main-btn{
 
 
     width:100%;
 
 
-    height:50px;
+    height:48px;
 
 
     margin-top:12px;
 
 
-    border:none;
+    border:0;
 
 
     border-radius:14px;
@@ -480,60 +480,67 @@ input:focus {
     cursor:pointer;
 
 
+
     color:white;
 
 
-    font-size:17px;
+    font-size:16px;
 
 
     font-weight:bold;
+
 
 
     background:
 
 
     linear-gradient(
-
-    145deg,
-
-    #4b9cff,
-
-    #005bea
-
+        145deg,
+        #4da0ff,
+        #005bea
     );
+
 
 
     box-shadow:
 
 
-    inset 0 2px 5px rgba(255,255,255,.7),
+    inset 0 3px 6px rgba(255,255,255,.5),
 
 
-    0 6px 15px rgba(0,90,255,.4);
+    0 7px 15px rgba(0,80,255,.4);
 
 
 }
 
 
 
-.main-btn:hover {
+
+
+.main-btn:hover{
 
 
     filter:brightness(1.15);
 
-
 }
 
 
 
 
-.avatar {
 
 
-    width:150px;
 
 
-    height:150px;
+/* ПРОФИЛЬ */
+
+
+.avatar{
+
+
+    width:160px;
+
+
+    height:160px;
 
 
     border-radius:50%;
@@ -548,14 +555,12 @@ input:focus {
     margin-bottom:15px;
 
 
-    border:
-
-    4px solid #ddd;
+    border:4px solid #ddd;
 
 
     box-shadow:
 
-    0 5px 20px rgba(0,0,0,.25);
+    0 8px 20px rgba(0,0,0,.25);
 
 
 }
@@ -564,42 +569,151 @@ input:focus {
 
 
 
+.vip{
 
 
-.hidden {
-
-    display:none;
-
-}
+    margin:15px 0;
 
 
-
-
-
-
-
-#authMessage {
-
-
-    margin-top:15px;
+    font-size:20px;
 
 
     font-weight:bold;
 
+}
+
+
+
+
+
+
+
+/* ЧАТ */
+
+
+.chat-box{
+
+
+    max-width:900px;
 
 }
 
 
 
 
-#userInfo {
+#messages{
 
 
-    margin-top:20px;
+    height:400px;
 
 
-    font-size:18px;
+    overflow-y:auto;
 
+
+    padding:15px;
+
+
+    background:#f5f5f5;
+
+
+    border-radius:15px;
+
+
+    border:1px solid #ddd;
+
+
+}
+
+
+
+
+.message{
+
+
+    padding:10px;
+
+
+    margin-bottom:8px;
+
+
+    background:white;
+
+
+    border-radius:10px;
+
+
+    box-shadow:
+
+    0 2px 8px rgba(0,0,0,.1);
+
+
+}
+
+
+
+
+.chat-input{
+
+
+    display:flex;
+
+
+    gap:10px;
+
+
+}
+
+
+
+
+.chat-input input{
+
+
+    flex:1;
+
+}
+
+
+
+
+.chat-input .main-btn{
+
+
+    width:180px;
+
+}
+
+
+
+
+
+
+
+#onlineUsers{
+
+
+    padding:15px;
+
+
+    background:#f4f4f4;
+
+
+    border-radius:15px;
+
+
+    margin:15px 0;
+
+}
+
+
+
+
+
+
+.hidden{
+
+
+    display:none;
 
 }
 
@@ -610,14 +724,15 @@ input:focus {
 @media(max-width:800px){
 
 
-    .layout {
+    .app{
 
         flex-direction:column;
 
     }
 
 
-    .sidebar {
+
+    .sidebar{
 
         width:100%;
 
