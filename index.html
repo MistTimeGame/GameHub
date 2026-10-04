@@ -63,6 +63,7 @@
       <button class="menu-button" data-page="games" type="button">🎮 Игры</button>
       <button class="menu-button" data-page="guilds" type="button">⚔ Гильдии</button>
       <button class="menu-button" data-page="news" type="button">📰 Новости</button>
+      <button class="menu-button" data-page="templates" type="button">📄 Шаблоны</button>
 
       <div class="menu-title">COMMUNITY</div>
       <button class="menu-button" data-page="online" type="button">🟢 Онлайн</button>
@@ -94,9 +95,9 @@
             <div class="dash-stat-label">Сообщений в чате</div>
           </div>
           <div class="dash-stat">
-            <div class="dash-stat-icon">⚔</div>
-            <div class="dash-stat-value" id="dash-guilds">—</div>
-            <div class="dash-stat-label">Гильдий</div>
+            <div class="dash-stat-icon">📄</div>
+            <div class="dash-stat-value" id="dash-templates">—</div>
+            <div class="dash-stat-label">Шаблонов</div>
           </div>
         </div>
         <div class="dash-grid">
@@ -189,7 +190,6 @@
         </div>
 
         <div class="guilds-game-filter" id="guilds-game-filter"></div>
-
         <div id="guilds-list" class="guilds-grid">
           <div class="dash-recent-empty">Загрузка…</div>
         </div>
@@ -199,6 +199,68 @@
         <h1>📰 Новости</h1>
         <div class="news-panel">
           <div id="news-page-list">Загрузка…</div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           ШАБЛОНЫ
+      ============================================================ -->
+      <section id="templates" class="page">
+        <div class="view-head">
+          <h1>📄 Шаблоны документов</h1>
+          <button id="toggle-add-template" class="main-button" type="button">+ Загрузить шаблон</button>
+        </div>
+
+        <div class="ai-hint">
+          <div class="ai-hint-icon">🤖</div>
+          <div class="ai-hint-body">
+            <div class="ai-hint-title">Как запросить шаблон у ИИ</div>
+            <div class="ai-hint-text">
+              Скопируйте промпт ниже, замените данные на свои и отправьте ИИ (ChatGPT, Claude и т.д.).
+              ИИ вернёт готовый HTML-код — вставьте его в поле «HTML-код» при загрузке.
+            </div>
+            <div class="ai-prompt" id="ai-prompt-box">Создай HTML-документ для World of Sea Battle: список друзей и врагов. Таблица с колонками: №, Никнейм, Гильдия, Фракция. Фракции выдели цветом и эмодзи-флагом. Заголовки: «🟢 Друзья» — синий, «🔴 Враги» — красный. Стиль — белая 3D-тема, скруглённые углы, тени.</div>
+            <button id="copy-ai-prompt" class="main-button small" type="button">📋 Скопировать промпт</button>
+          </div>
+        </div>
+
+        <div id="add-template-panel" class="add-game-panel hidden">
+          <h2>Новый шаблон</h2>
+          <form id="add-template-form" onsubmit="return false">
+            <label class="profile-field">
+              <span>Название</span>
+              <input id="tpl-title" placeholder="Например: WOSB — список врагов" maxlength="80" required>
+            </label>
+            <label class="profile-field">
+              <span>Краткое описание</span>
+              <textarea id="tpl-desc" rows="2" maxlength="200" placeholder="Что внутри и для чего"></textarea>
+            </label>
+            <label class="profile-field">
+              <span>Категория</span>
+              <select id="tpl-category">
+                <option value="wosb">World of Sea Battle</option>
+                <option value="general">Общее</option>
+                <option value="guild">Гильдии</option>
+                <option value="other">Другое</option>
+              </select>
+            </label>
+            <label class="profile-field">
+              <span>HTML-код шаблона</span>
+              <textarea id="tpl-content" rows="12" placeholder="&lt;!DOCTYPE html&gt;&#10;&lt;html&gt;...&lt;/html&gt;" required style="font-family:Consolas,Monaco,monospace;font-size:12.5px;"></textarea>
+              <small class="field-hint">
+                Вставьте полный HTML-код. Скрипты при просмотре не выполняются — только визуальное содержимое.
+              </small>
+            </label>
+            <div class="profile-actions">
+              <button id="save-template-btn" class="main-button" type="button">Загрузить шаблон</button>
+              <button id="cancel-template-btn" class="main-button secondary" type="button">Отмена</button>
+            </div>
+            <div id="tpl-status" class="profile-status"></div>
+          </form>
+        </div>
+
+        <div id="templates-list" class="templates-grid">
+          <div class="dash-recent-empty">Загрузка шаблонов…</div>
         </div>
       </section>
 
@@ -319,7 +381,7 @@
 </div>
 
 <!-- ============================================================
-     ГИЛЬДИЯ — ПОЛНОЭКРАННЫЙ OVERLAY
+     ГИЛЬДИЯ — OVERLAY
 ============================================================ -->
 <div id="guild-overlay" class="guild-overlay hidden">
   <div class="guild-overlay-header">
@@ -331,7 +393,7 @@
 </div>
 
 <!-- ============================================================
-     ПРОСМОТР ФАЙЛА (вложенный overlay)
+     ПРОСМОТР ФАЙЛА
 ============================================================ -->
 <div id="file-viewer" class="file-viewer hidden">
   <div class="file-viewer-header">
@@ -342,6 +404,28 @@
     </div>
   </div>
   <div class="file-viewer-body" id="file-viewer-body"></div>
+</div>
+
+<!-- ============================================================
+     ПРОСМОТР ШАБЛОНА
+============================================================ -->
+<div id="template-viewer" class="template-viewer hidden">
+  <div class="template-viewer-header">
+    <div class="template-viewer-title">
+      <div class="template-viewer-title-main" id="tpl-viewer-title">Шаблон</div>
+      <div class="template-viewer-title-sub" id="tpl-viewer-sub">—</div>
+    </div>
+    <div class="template-viewer-actions">
+      <span class="tpl-nodl">🔒 Скачивание отключено</span>
+      <button id="tpl-viewer-close" class="main-button danger" type="button">Закрыть</button>
+    </div>
+  </div>
+  <div class="template-viewer-body">
+    <iframe id="tpl-viewer-frame"
+            sandbox=""
+            referrerpolicy="no-referrer"
+            title="Просмотр шаблона"></iframe>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
