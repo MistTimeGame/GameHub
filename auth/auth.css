@@ -1,0 +1,115 @@
+/* ============================================================
+   GAMEHUB AUTH
+   ============================================================ */
+
+
+.auth-page {
+
+    min-height: 100vh;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 20px;
+
+}
+
+
+
+.auth-box {
+
+    width: 100%;
+
+    max-width: 420px;
+
+    padding: 30px;
+
+}
+
+
+
+.auth-title {
+
+    text-align: center;
+
+    margin-bottom: 25px;
+
+}
+
+
+.auth-title h1 {
+
+    margin: 0;
+
+    font-size: 32px;
+
+}
+
+
+
+.auth-title p {
+
+    color:
+        var(--gh-text-secondary);
+
+    margin-top: 8px;
+
+}
+
+
+
+.auth-tabs {
+
+    display: flex;
+
+    gap: 10px;
+
+    margin-bottom: 20px;
+
+}
+
+
+
+.auth-tabs button {
+
+    flex: 1;
+
+}
+
+
+
+.auth-form {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 14px;
+
+}
+
+
+
+.auth-message {
+
+    margin-top: 15px;
+
+}
+
+
+
+.auth-footer {
+
+    margin-top: 20px;
+
+    text-align: center;
+
+    color:
+        var(--gh-text-secondary);
+
+    font-size: 13px;
+
+}
