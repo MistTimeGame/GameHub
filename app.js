@@ -1,6 +1,6 @@
 /* =====================================================
    GAME PLATFORM — app.js
-   Auth + Profile + Chat + Conference (MiroTalk P2P)
+   Auth + Profile (полный CRUD) + Chat + Conference
 ===================================================== */
 
 const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -20,6 +20,7 @@ let chatChannel = null;
 let currentRoom = null;
 let roomsPollTimer = null;
 let joiningRoom = false;
+let savingProfile = false;
 
 /* =====================================================
    ХЕЛПЕРЫ
@@ -57,6 +58,13 @@ function setRoomStatus(text, cls){
     el.className = "room-status" + (cls ? " " + cls : "");
 }
 
+function setProfileStatus(text, cls){
+    const el = $("profile-status");
+    if(!el) return;
+    el.textContent = text || "";
+    el.className = "profile-status" + (cls ? " " + cls : "");
+}
+
 function setImage(id, url){
     const el = $(id);
     if(!el) return;
@@ -80,6 +88,23 @@ async function ensureAuth(){
 }
 
 /* =====================================================
+   ВАЛИДАЦИЯ
+===================================================== */
+
+function isValidHttpUrl(str){
+    if(!str) return true; // пусто — валидно
+    try{
+        const u = new URL(str);
+        return u.protocol === "http:" || u.protocol === "https:";
+    }catch(e){ return false; }
+}
+
+function isValidNickname(str){
+    const s = (str || "").trim();
+    return s.length >= 2 && s.length <= 30;
+}
+
+/* =====================================================
    СТАРТ
 ===================================================== */
 
@@ -89,6 +114,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initNavigation();
     initChat();
     initConference();
+    initProfileForm();
 
     supabaseClient.auth.onAuthStateChange((event, session) => {
         log("AUTH EVENT:", event);
@@ -183,10 +209,11 @@ function initAuth(){
                 }
 
                 try{
-                    const ins = await supabaseClient.from("profiles").insert({
-                        id: user.id, nickname, avatar_url: DEFAULT_AVATAR, vip_level: 0
+                    await supabaseClient.from("profiles").insert({
+                        id: user.id, nickname,
+                        avatar_url: DEFAULT_AVATAR,
+                        vip_level: 0
                     });
-                    if(ins.error) errLog("PROFILE CREATE", ins.error.message);
                 }catch(err){ errLog("PROFILE CREATE EXC", err); }
 
                 if(!result.data.session){
@@ -311,58 +338,196 @@ async function loadProfile(){
     }
 
     currentProfile = result.data;
-    const p = currentProfile;
-
-    setText("top-name", p.nickname || "Player");
-    setText("profile-name", p.nickname || "Player");
-    setText("side-name", p.nickname || "Player");
-    setText("vip-level", "VIP " + (p.vip_level || 0));
-    setText("side-vip", "VIP " + (p.vip_level || 0));
-    setImage("top-avatar", p.avatar_url);
-    setImage("profile-avatar", p.avatar_url);
-    setImage("side-avatar", p.avatar_url);
-
-    if($("avatar-url")) $("avatar-url").value = p.avatar_url || "";
-    if($("profile-city")) $("profile-city").value = p.city || "";
-    if($("profile-age")) $("profile-age").value = p.age || "";
+    applyProfileToUI(currentProfile);
+    fillProfileForm(currentProfile);
 }
 
-const saveProfile = $("save-profile");
-if(saveProfile){
-    saveProfile.onclick = async () => {
-        const user = await ensureAuth();
-        if(!user){ alert("Нет авторизации"); return; }
+function applyProfileToUI(p){
+    if(!p) return;
 
-        const status = $("profile-status");
-        if(status){ status.classList.remove("err"); status.textContent = "Сохранение…"; }
+    // Топбар
+    setText("top-name", p.nickname || "Player");
+    setImage("top-avatar", p.avatar_url);
 
-        const payload = {
-            avatar_url: $("avatar-url").value.trim() || null,
-            city: $("profile-city").value.trim() || null,
-            age: $("profile-age").value ? parseInt($("profile-age").value, 10) : null
-        };
+    // Карточка профиля
+    setText("profile-name", p.nickname || "Player");
+    setText("vip-level", "VIP " + (p.vip_level || 0));
+    setImage("profile-avatar", p.avatar_url);
+    setText("profile-id", p.id || "—");
 
+    // Правая панель
+    setText("side-name", p.nickname || "Player");
+    setText("side-vip", "VIP " + (p.vip_level || 0));
+    setImage("side-avatar", p.avatar_url);
+}
+
+function fillProfileForm(p){
+    if(!p) return;
+    if($("pf-nickname")) $("pf-nickname").value = p.nickname || "";
+    if($("pf-avatar")) $("pf-avatar").value = p.avatar_url || "";
+    if($("pf-city")) $("pf-city").value = p.city || "";
+    if($("pf-age")) $("pf-age").value = (p.age == null ? "" : p.age);
+    if($("pf-about")) $("pf-about").value = p.about || "";
+    updateAboutCounter();
+}
+
+function updateAboutCounter(){
+    const ta = $("pf-about");
+    const counter = $("pf-about-count");
+    if(ta && counter) counter.textContent = ta.value.length;
+}
+
+function initProfileForm(){
+    const form = $("profile-form");
+    if(!form) return;
+
+    // Live-превью аватара
+    const avatarInput = $("pf-avatar");
+    if(avatarInput){
+        avatarInput.addEventListener("input", () => {
+            const url = avatarInput.value.trim();
+            const img = $("profile-avatar");
+            if(!img) return;
+            if(!url){
+                img.src = DEFAULT_AVATAR;
+                return;
+            }
+            if(isValidHttpUrl(url)){
+                img.onerror = () => { img.onerror = null; img.src = DEFAULT_AVATAR; };
+                img.src = url;
+            }
+        });
+    }
+
+    // Счётчик символов "о себе"
+    const aboutInput = $("pf-about");
+    if(aboutInput){
+        aboutInput.addEventListener("input", updateAboutCounter);
+    }
+
+    // Кнопка «Сохранить»
+    const saveBtn = $("save-profile");
+    if(saveBtn) saveBtn.onclick = saveProfileChanges;
+
+    // Кнопка «Сбросить»
+    const resetBtn = $("reset-profile");
+    if(resetBtn) resetBtn.onclick = () => {
+        if(!currentProfile){ return; }
+        fillProfileForm(currentProfile);
+        setProfileStatus("Изменения сброшены");
+        setTimeout(() => setProfileStatus(""), 1500);
+    };
+}
+
+async function saveProfileChanges(){
+    if(savingProfile) return;
+
+    const user = await ensureAuth();
+    if(!user){ setProfileStatus("Нет авторизации", "err"); return; }
+
+    // ---- Валидация ----
+    const nickname = ($("pf-nickname").value || "").trim();
+    const avatarUrl = ($("pf-avatar").value || "").trim();
+    const city = ($("pf-city").value || "").trim();
+    const ageRaw = $("pf-age").value;
+    const about = ($("pf-about").value || "").trim();
+
+    if(!isValidNickname(nickname)){
+        setProfileStatus("Никнейм: 2–30 символов", "err");
+        $("pf-nickname").focus();
+        return;
+    }
+
+    if(avatarUrl && !isValidHttpUrl(avatarUrl)){
+        setProfileStatus("Ссылка на аватар некорректна (нужен http/https)", "err");
+        $("pf-avatar").focus();
+        return;
+    }
+
+    let age = null;
+    if(ageRaw !== ""){
+        const n = parseInt(ageRaw, 10);
+        if(isNaN(n) || n < 1 || n > 120){
+            setProfileStatus("Возраст: от 1 до 120", "err");
+            $("pf-age").focus();
+            return;
+        }
+        age = n;
+    }
+
+    if(city.length > 40){
+        setProfileStatus("Город: до 40 символов", "err");
+        return;
+    }
+
+    if(about.length > 300){
+        setProfileStatus("О себе: до 300 символов", "err");
+        return;
+    }
+
+    // ---- Проверка уникальности никнейма ----
+    // (если поле nickname в БД не unique — защищаемся вручную)
+    if(!currentProfile || nickname !== currentProfile.nickname){
+        savingProfile = true;
+        setProfileStatus("Проверка никнейма…", "loading");
+
+        const { data: dup, error: dupErr } = await supabaseClient
+            .from("profiles")
+            .select("id, nickname")
+            .eq("nickname", nickname)
+            .neq("id", user.id)
+            .maybeSingle();
+
+        if(dupErr && dupErr.code !== "PGRST116"){
+            errLog("DUP CHECK", dupErr.message);
+        }
+
+        if(dup && dup.id){
+            savingProfile = false;
+            setProfileStatus("Никнейм уже занят", "err");
+            $("pf-nickname").focus();
+            return;
+        }
+    }
+
+    // ---- Сохранение ----
+    savingProfile = true;
+    setProfileStatus("Сохранение…", "loading");
+
+    const payload = {
+        nickname,
+        avatar_url: avatarUrl || null,
+        city: city || null,
+        age: age,
+        about: about || null
+    };
+
+    try{
         const update = await supabaseClient
-            .from("profiles").update(payload).eq("id", user.id).select().single();
+            .from("profiles")
+            .update(payload)
+            .eq("id", user.id)
+            .select()
+            .single();
 
         if(update.error){
             errLog("PROFILE SAVE", update.error.message);
-            if(status){ status.classList.add("err"); status.textContent = "Ошибка: " + update.error.message; }
+            setProfileStatus("Ошибка: " + update.error.message, "err");
+            savingProfile = false;
             return;
         }
 
-        const p = update.data;
-        currentProfile = p;
-        setText("top-name", p.nickname || "Player");
-        setText("profile-name", p.nickname || "Player");
-        setText("side-name", p.nickname || "Player");
-        setImage("top-avatar", p.avatar_url);
-        setImage("profile-avatar", p.avatar_url);
-        setImage("side-avatar", p.avatar_url);
+        currentProfile = update.data;
+        applyProfileToUI(currentProfile);
+        setProfileStatus("Сохранено ✓");
+        setTimeout(() => setProfileStatus(""), 2200);
 
-        if(status) status.textContent = "Сохранено";
-        setTimeout(() => { if(status) status.textContent = ""; }, 2000);
-    };
+    }catch(err){
+        errLog("PROFILE SAVE EXC", err);
+        setProfileStatus("Ошибка: " + err.message, "err");
+    }finally{
+        savingProfile = false;
+    }
 }
 
 /* =====================================================
@@ -546,9 +711,7 @@ async function loadRooms(){
         return;
     }
 
-    const sorted = rooms.slice().sort((a, b) => {
-        return (counts[b.id] || 0) - (counts[a.id] || 0);
-    });
+    const sorted = rooms.slice().sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0));
 
     box.innerHTML = "";
     sorted.forEach(room => {
@@ -564,11 +727,7 @@ async function loadRooms(){
         btn.className = "main-button";
         btn.type = "button";
         btn.textContent = "Войти";
-        btn.onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            joinRoom(room);
-        };
+        btn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); joinRoom(room); };
         card.appendChild(btn);
         box.appendChild(card);
     });
@@ -580,13 +739,8 @@ async function joinRoom(room){
 
     try{
         const user = await ensureAuth();
-        if(!user){
-            setRoomStatus("Требуется вход в аккаунт", "err");
-            joiningRoom = false;
-            return;
-        }
+        if(!user){ setRoomStatus("Требуется вход в аккаунт", "err"); return; }
 
-        // Регистрируемся в комнате (для счётчика участников)
         await supabaseClient.from("conference_users").delete().eq("user_id", user.id);
 
         const nickname = (currentProfile && currentProfile.nickname) || "Player";
@@ -597,24 +751,14 @@ async function joinRoom(room){
 
         currentRoom = room;
 
-        // Формируем URL MiroTalk P2P
-        // Используем /join/?room=... для прямого входа в комнату с параметрами
         const miroRoomId = "gp-" + room.id;
         const miroUrl = MIROTALK_BASE + "/join/?" +
             "room=" + encodeURIComponent(miroRoomId) +
             "&name=" + encodeURIComponent(nickname) +
-            "&audio=1" +
-            "&video=1" +
-            "&screen=1" +
-            "&chat=1" +
-            "&notify=1";
+            "&audio=1&video=1&screen=1&chat=1&notify=1";
 
         const container = $("mirotalk-container");
-        if(!container){
-            errLog("MIROTALK CONTAINER NOT FOUND");
-            joiningRoom = false;
-            return;
-        }
+        if(!container){ errLog("MIROTALK CONTAINER NOT FOUND"); return; }
 
         container.innerHTML =
             '<iframe ' +
