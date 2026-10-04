@@ -1,530 +1,104 @@
-// =====================================
+////////////////////////////////////////////////////
 // SUPABASE CONFIG
-// =====================================
+////////////////////////////////////////////////////
 
 
-const SUPABASE_URL =
-
+const SUPABASE_URL = 
 "https://uvzaoobtysostmfwyfxm.supabase.co";
 
 
-
-const SUPABASE_KEY =
-
+const SUPABASE_KEY = 
 "sb_publishable_-7M1kuwWOeRq21SfrLiojg_0qngL_7s";
 
 
-
-const supabaseClient =
-
-supabase.createClient(
-
-SUPABASE_URL,
-
-SUPABASE_KEY
-
+const supabaseClient = supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
 );
 
 
 
 
-// =====================================
-// DEFAULT AVATAR
-// =====================================
 
+////////////////////////////////////////////////////
+// ELEMENTS
+////////////////////////////////////////////////////
 
-const DEFAULT_AVATAR =
 
-"https://cdn-icons-png.flaticon.com/512/4712/4712109.png";
+const pages = document.querySelectorAll(".page");
 
+const menuButtons = document.querySelectorAll(".menu-btn");
 
 
+const openLogin = document.getElementById("open-login");
 
+const logoutBtn = document.getElementById("logout");
 
-// =====================================
-// NAVIGATION
-// =====================================
 
 
+const emailInput =
+document.getElementById("email");
 
-function showAuth(){
 
+const passwordInput =
+document.getElementById("password");
 
-document.getElementById("app").innerHTML = `
 
+const nicknameInput =
+document.getElementById("nickname");
 
-<div class="card">
 
 
-<h2>
-🔐 Вход / Регистрация
-</h2>
+const authMessage =
+document.getElementById("auth-message");
 
 
 
-<label>
-Email
-</label>
 
 
-<input 
-id="email"
-type="email"
-placeholder="Введите email">
+////////////////////////////////////////////////////
+// PAGE SWITCH
+////////////////////////////////////////////////////
 
 
+menuButtons.forEach(btn => {
 
-<label>
-Пароль
-</label>
 
+    btn.addEventListener(
+        "click",
+        ()=>{
 
-<input
-id="password"
-type="password"
-placeholder="Введите пароль">
 
+            pages.forEach(page=>{
+                page.classList.remove("active");
+            });
 
 
-<button onclick="register()">
+            menuButtons.forEach(b=>{
+                b.classList.remove("active");
+            });
 
-Создать аккаунт
 
-</button>
 
+            const page =
+            document.getElementById(
+                btn.dataset.page
+            );
 
 
-<br><br>
+            if(page){
 
+                page.classList.add("active");
 
+            }
 
-<button onclick="login()">
 
-Войти
+            btn.classList.add("active");
 
-</button>
 
 
-
-</div>
-
-`;
-
-}
-
-
-
-
-
-function showProfile(){
-
-
-document.getElementById("app").innerHTML = `
-
-
-<div class="card">
-
-
-<h2>
-👤 Профиль игрока
-</h2>
-
-
-
-<div class="profile-top">
-
-
-<img 
-id="avatar-preview"
-class="avatar"
-src="${DEFAULT_AVATAR}">
-
-
-
-<div>
-
-
-<h2 id="profile-name">
-
-Игрок
-
-</h2>
-
-
-<div id="vip-view" class="vip">
-
-VIP I
-
-</div>
-
-
-</div>
-
-
-
-</div>
-
-
-
-
-
-<label>
-Ссылка на аватар
-</label>
-
-
-<input
-id="avatar-url"
-placeholder="https://site/avatar.jpg">
-
-
-
-
-
-<label>
-Никнейм
-</label>
-
-
-<input
-id="nickname"
-placeholder="Введите ник">
-
-
-
-
-
-<label>
-Возраст
-</label>
-
-
-<input
-id="age"
-type="number"
-placeholder="Возраст">
-
-
-
-
-
-<label>
-Город
-</label>
-
-
-<input
-id="city"
-placeholder="Город">
-
-
-
-
-
-<label>
-VIP уровень
-</label>
-
-
-
-<select id="vip-level">
-
-
-<option value="1">
-I
-</option>
-
-
-<option value="2">
-II
-</option>
-
-
-<option value="3">
-III
-</option>
-
-
-<option value="4">
-IV
-</option>
-
-
-<option value="5">
-V
-</option>
-
-
-<option value="6">
-VI
-</option>
-
-
-<option value="7">
-VII
-</option>
-
-
-<option value="8">
-VIII
-</option>
-
-
-<option value="9">
-IX
-</option>
-
-
-<option value="10">
-X
-</option>
-
-
-<option value="11">
-XI
-</option>
-
-
-<option value="12">
-XII
-</option>
-
-
-
-</select>
-
-
-
-
-
-<button onclick="saveProfile()">
-
-💾 Сохранить профиль
-
-</button>
-
-
-
-</div>
-
-
-`;
-
-
-
-loadProfile();
-
-
-}
-
-
-
-
-
-
-function showGames(){
-
-
-document.getElementById("app").innerHTML = `
-
-
-<div class="card">
-
-
-<h2>
-🎮 Игры
-</h2>
-
-
-
-<p>
-
-Здесь будет каталог игр.
-
-</p>
-
-
-
-<button>
-
-Добавить игру
-
-</button>
-
-
-</div>
-
-
-`;
-
-}
-
-
-
-
-
-function showGuilds(){
-
-
-document.getElementById("app").innerHTML = `
-
-
-<div class="card">
-
-
-<h2>
-⚔ Гильдии
-</h2>
-
-
-<p>
-
-Создание игровых сообществ.
-
-</p>
-
-
-<button>
-
-Создать гильдию
-
-</button>
-
-
-
-</div>
-
-
-`;
-
-}
-
-
-
-
-
-function showConference(){
-
-
-document.getElementById("app").innerHTML = `
-
-
-<div class="card">
-
-
-<h2>
-💬 Конференция
-</h2>
-
-
-
-<p>
-
-Общий игровой чат будет отдельным модулем.
-
-</p>
-
-
-
-</div>
-
-
-`;
-
-}
-
-
-
-
-
-
-// =====================================
-// REGISTRATION
-// =====================================
-
-
-
-async function register(){
-
-
-
-const email =
-
-document.getElementById("email").value;
-
-
-
-const password =
-
-document.getElementById("password").value;
-
-
-
-
-
-const {
-
-data,
-
-error
-
-}=await supabaseClient.auth.signUp({
-
-email,
-
-password
-
-});
-
-
-
-
-
-if(error){
-
-
-alert(error.message);
-
-
-return;
-
-
-}
-
-
-
-
-
-if(data.user){
-
-
-
-const {
-
-error:profileError
-
-}=await supabaseClient
-
-.from("profiles")
-
-.insert({
-
-id:data.user.id,
-
-
-nickname:"Игрок",
-
-
-avatar_url:DEFAULT_AVATAR,
-
-
-age:null,
-
-
-city:"",
-
-
-vip_level:1
+        }
+    );
 
 
 });
@@ -533,414 +107,109 @@ vip_level:1
 
 
 
-if(profileError){
 
+////////////////////////////////////////////////////
+// OPEN LOGIN
+////////////////////////////////////////////////////
 
-console.log(profileError);
 
+openLogin.onclick = ()=>{
 
-}
 
+    pages.forEach(page=>{
+        page.classList.remove("active");
+    });
 
 
-}
 
+    document
+    .getElementById("auth")
+    .classList.add("active");
 
+};
 
 
-alert(
 
-"Аккаунт создан"
 
-);
 
 
+////////////////////////////////////////////////////
+// REGISTER
+////////////////////////////////////////////////////
 
-}
 
+document
+.getElementById("register")
+.onclick = async ()=>{
 
 
+    const email =
+    emailInput.value.trim();
 
 
+    const password =
+    passwordInput.value.trim();
 
 
+    const nickname =
+    nicknameInput.value.trim();
 
-// =====================================
-// LOGIN
-// =====================================
 
 
+    if(!email || !password){
 
-async function login(){
+        authMessage.innerHTML =
+        "Заполните email и пароль";
 
+        return;
 
+    }
 
-const email =
 
-document.getElementById("email").value;
 
 
+    const {data,error} =
+    await supabaseClient.auth.signUp({
 
-const password =
+        email,
+        password,
 
-document.getElementById("password").value;
 
+        options:{
 
+            data:{
 
+                nickname:nickname || "Player"
 
+            }
 
-const {
+        }
 
-error
 
-}=await supabaseClient.auth.signInWithPassword({
+    });
 
-email,
 
-password
 
-});
 
 
+    if(error){
 
 
+        authMessage.innerHTML =
+        error.message;
 
-if(error){
 
+        return;
 
-alert(error.message);
+    }
 
 
-return;
 
 
-}
 
+    authMessage.innerHTML =
+    "Аккаунт создан. Проверьте почту.";
 
-
-
-
-alert(
-
-"Вход выполнен"
-
-);
-
-
-
-showProfile();
-
-
-
-}
-
-
-
-
-
-
-
-// =====================================
-// LOAD PROFILE
-// =====================================
-
-
-
-async function loadProfile(){
-
-
-
-const {
-
-data:
-
-{
-
-user
-
-}
-
-}=await supabaseClient.auth.getUser();
-
-
-
-
-
-if(!user){
-
-
-return;
-
-
-}
-
-
-
-
-
-
-
-const {
-
-data,
-
-error
-
-}=await supabaseClient
-
-.from("profiles")
-
-.select("*")
-
-.eq("id",user.id)
-
-.single();
-
-
-
-
-
-
-
-if(error){
-
-
-console.log(error);
-
-
-return;
-
-
-}
-
-
-
-
-
-document.getElementById("nickname").value =
-
-data.nickname || "";
-
-
-
-
-document.getElementById("age").value =
-
-data.age || "";
-
-
-
-
-document.getElementById("city").value =
-
-data.city || "";
-
-
-
-
-document.getElementById("avatar-url").value =
-
-data.avatar_url || "";
-
-
-
-
-document.getElementById("vip-level").value =
-
-data.vip_level || 1;
-
-
-
-
-
-updateProfileView(data);
-
-
-
-}
-
-
-
-
-
-
-
-// =====================================
-// PROFILE VIEW
-// =====================================
-
-
-
-function updateProfileView(data){
-
-
-
-document.getElementById("profile-name")
-
-.innerText =
-
-data.nickname || "Игрок";
-
-
-
-
-
-document.getElementById("avatar-preview")
-
-.src =
-
-data.avatar_url || DEFAULT_AVATAR;
-
-
-
-
-
-
-const roman = [
-
-"",
-
-"I",
-
-"II",
-
-"III",
-
-"IV",
-
-"V",
-
-"VI",
-
-"VII",
-
-"VIII",
-
-"IX",
-
-"X",
-
-"XI",
-
-"XII"
-
-];
-
-
-
-
-
-document.getElementById("vip-view")
-
-.innerText =
-
-"VIP " +
-
-roman[data.vip_level || 1];
-
-
-
-}
-
-
-
-
-
-
-
-// =====================================
-// SAVE PROFILE
-// =====================================
-
-
-
-async function saveProfile(){
-
-
-
-const {
-
-data:
-
-{
-
-user
-
-}
-
-}=await supabaseClient.auth.getUser();
-
-
-
-
-
-if(!user){
-
-
-alert(
-
-"Сначала войдите"
-
-);
-
-
-return;
-
-
-}
-
-
-
-
-
-
-const profile = {
-
-
-
-id:user.id,
-
-
-
-nickname:
-
-document.getElementById("nickname").value,
-
-
-
-age:
-
-Number(
-
-document.getElementById("age").value
-
-),
-
-
-
-city:
-
-document.getElementById("city").value,
-
-
-
-avatar_url:
-
-document.getElementById("avatar-url").value
-
-||
-
-DEFAULT_AVATAR,
-
-
-
-vip_level:
-
-Number(
-
-document.getElementById("vip-level").value
-
-)
 
 
 
@@ -952,30 +221,137 @@ document.getElementById("vip-level").value
 
 
 
-const {
-
-error
-
-}=await supabaseClient
-
-.from("profiles")
-
-.upsert(profile);
 
 
+////////////////////////////////////////////////////
+// LOGIN
+////////////////////////////////////////////////////
 
 
+document
+.getElementById("login")
+.onclick = async ()=>{
 
 
-
-if(error){
+    const email =
+    emailInput.value.trim();
 
 
 
-alert(error.message);
+    const password =
+    passwordInput.value.trim();
 
 
-return;
+
+
+
+    const {data,error} =
+    await supabaseClient.auth.signInWithPassword({
+
+        email,
+
+        password
+
+    });
+
+
+
+
+
+    if(error){
+
+
+        authMessage.innerHTML =
+        error.message;
+
+
+        return;
+
+    }
+
+
+
+    authMessage.innerHTML =
+    "Вход выполнен";
+
+
+
+    await loadProfile();
+
+
+
+};
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////
+// LOGOUT
+////////////////////////////////////////////////////
+
+
+logoutBtn.onclick = async ()=>{
+
+
+    await supabaseClient.auth.signOut();
+
+
+
+    location.reload();
+
+
+};
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////
+// LOAD SESSION
+////////////////////////////////////////////////////
+
+
+async function checkUser(){
+
+
+
+    const {
+
+        data:{
+            session
+
+        }
+
+    } =
+    await supabaseClient.auth.getSession();
+
+
+
+
+
+    if(session){
+
+
+        openLogin.classList.add("hidden");
+
+
+        logoutBtn.classList.remove("hidden");
+
+
+        await loadProfile();
+
+
+    }
+
 
 
 }
@@ -985,18 +361,289 @@ return;
 
 
 
-alert(
-
-"Профиль сохранён"
-
-);
 
 
 
+////////////////////////////////////////////////////
+// LOAD PROFILE
+////////////////////////////////////////////////////
 
 
-updateProfileView(profile);
+async function loadProfile(){
+
+
+
+    const {
+
+        data:{
+            user
+
+        }
+
+    } =
+    await supabaseClient.auth.getUser();
+
+
+
+
+    if(!user)
+        return;
+
+
+
+
+
+
+    const {
+
+        data,
+        error
+
+    } = await supabaseClient
+
+    .from("profiles")
+
+    .select("*")
+
+    .eq(
+        "id",
+        user.id
+    )
+
+    .single();
+
+
+
+
+
+
+    if(error){
+
+
+        console.log(error);
+
+
+        return;
+
+    }
+
+
+
+
+
+
+    document
+    .getElementById("mini-name")
+    .innerHTML =
+    data.nickname;
+
+
+
+    document
+    .getElementById("mini-status")
+    .innerHTML =
+    "Онлайн";
+
+
+
+
+    document
+    .getElementById("mini-avatar")
+    .src =
+    data.avatar_url;
+
+
+
+
+    document
+    .getElementById("profile-avatar")
+    .src =
+    data.avatar_url;
+
+
+
+    document
+    .getElementById("profile-nickname")
+    .value =
+    data.nickname;
+
+
+
+    document
+    .getElementById("profile-city")
+    .value =
+    data.city || "";
+
+
+
+    document
+    .getElementById("profile-age")
+    .value =
+    data.age || 0;
+
+
+
+    document
+    .getElementById("vip-level")
+    .innerHTML =
+    data.vip_level;
+
 
 
 
 }
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////
+// SAVE PROFILE
+////////////////////////////////////////////////////
+
+
+document
+.getElementById("save-profile")
+.onclick = async ()=>{
+
+
+
+    const {
+
+        data:{
+            user
+
+        }
+
+    } =
+    await supabaseClient.auth.getUser();
+
+
+
+
+
+    if(!user){
+
+        alert(
+        "Сначала войдите"
+        );
+
+        return;
+
+    }
+
+
+
+
+
+    const avatar =
+    document
+    .getElementById("avatar-url")
+    .value;
+
+
+
+
+
+    const nickname =
+    document
+    .getElementById("profile-nickname")
+    .value;
+
+
+
+
+
+    const city =
+    document
+    .getElementById("profile-city")
+    .value;
+
+
+
+
+
+    const age =
+    Number(
+    document
+    .getElementById("profile-age")
+    .value
+    );
+
+
+
+
+
+
+
+    const {error} =
+    await supabaseClient
+
+    .from("profiles")
+
+    .update({
+
+        avatar_url:avatar,
+
+        nickname,
+
+        city,
+
+        age
+
+
+    })
+
+    .eq(
+        "id",
+        user.id
+    );
+
+
+
+
+
+    if(error){
+
+        alert(error.message);
+
+        return;
+
+    }
+
+
+
+
+
+    loadProfile();
+
+
+
+    alert(
+    "Профиль сохранён"
+    );
+
+
+
+};
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////
+// START
+////////////////////////////////////////////////////
+
+
+checkUser();
