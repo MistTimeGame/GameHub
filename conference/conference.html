@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+```
+<title>GameHub — Конференция</title>
+
+<link rel="stylesheet" href="conference.css">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+```
+
+</head>
+
+<body>
+
+<div class="conference-app">
+
+```
+<!-- =========================
+     SIDEBAR
+========================== -->
+<aside class="conference-sidebar">
+
+    <div class="brand">
+        <div class="brand-logo">GH</div>
+
+        <div class="brand-text">
+            <strong>GameHub</strong>
+            <span>Конференция</span>
+        </div>
+    </div>
+
+    <button class="back-button" id="backButton">
+        <span>←</span>
+        <span>Вернуться в GameHub</span>
+    </button>
+
+    <div class="sidebar-title">
+        КОНФЕРЕНЦИИ
+    </div>
+
+    <div class="rooms-list" id="roomsList">
+        <div class="rooms-loading">
+            Загрузка...
+        </div>
+    </div>
+
+    <button class="create-room-button" id="createRoomButton">
+        <span>＋</span>
+        Создать конференцию
+    </button>
+
+    <div class="sidebar-user" id="sidebarUser">
+
+        <div class="user-avatar-wrapper">
+            <img
+                id="sidebarAvatar"
+                class="user-avatar"
+                src=""
+                alt="Аватар"
+            >
+            <span class="online-dot"></span>
+        </div>
+
+        <div class="sidebar-user-info">
+            <strong id="sidebarUsername">Загрузка...</strong>
+            <span id="sidebarVip">Пользователь</span>
+        </div>
+
+        <button
+            class="logout-button"
+            id="logoutButton"
+            title="Выйти"
+        >
+            ⎋
+        </button>
+
+    </div>
+
+</aside>
+
+
+<!-- =========================
+     MAIN
+========================== -->
+<main class="conference-main">
+
+    <!-- HEADER -->
+
+    <header class="conference-header">
+
+        <div class="header-room-info">
+
+            <div
+                class="room-icon"
+                id="headerRoomIcon"
+            >
+                #
+            </div>
+
+            <div>
+
+                <h1 id="headerRoomName">
+                    Выберите конференцию
+                </h1>
+
+                <p id="headerRoomDescription">
+                    Выберите комнату слева
+                </p>
+
+            </div>
+
+        </div>
+
+        <div class="header-actions">
+
+            <button
+                class="header-button"
+                id="membersButton"
+                title="Участники"
+            >
+                👥
+                <span id="membersCount">0</span>
+            </button>
+
+            <button
+                class="header-button"
+                id="refreshButton"
+                title="Обновить"
+            >
+                ↻
+            </button>
+
+        </div>
+
+    </header>
+
+
+    <!-- CONTENT -->
+
+    <section class="conference-content">
+
+        <!-- EMPTY STATE -->
+
+        <div
+            class="empty-state"
+            id="emptyState"
+        >
+
+            <div class="empty-icon">
+                💬
+            </div>
+
+            <h2>
+                Добро пожаловать в конференцию
+            </h2>
+
+            <p>
+                Выберите конференцию слева,
+                чтобы начать общение.
+            </p>
+
+        </div>
+
+
+        <!-- CHAT -->
+
+        <div
+            class="chat-container hidden"
+            id="chatContainer"
+        >
+
+            <div
+                class="messages"
+                id="messages"
+            >
+                <!-- Сообщения добавляются через JS -->
+            </div>
+
+
+            <div
+                class="typing-indicator hidden"
+                id="typingIndicator"
+            >
+                Кто-то печатает...
+            </div>
+
+
+            <form
+                class="message-form"
+                id="messageForm"
+            >
+
+                <button
+                    type="button"
+                    class="attach-button"
+                    id="attachButton"
+                    title="Вложения"
+                >
+                    ＋
+                </button>
+
+                <input
+                    type="text"
+                    id="messageInput"
+                    placeholder="Напишите сообщение..."
+                    autocomplete="off"
+                    maxlength="2000"
+                >
+
+                <button
+                    type="submit"
+                    class="send-button"
+                    id="sendButton"
+                >
+                    ➤
+                </button>
+
+            </form>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<!-- =========================
+     MEMBERS PANEL
+========================== -->
+
+<aside
+    class="members-panel hidden"
+    id="membersPanel"
+>
+
+    <div class="members-header">
+
+        <div>
+            <strong>Участники</strong>
+            <span id="membersPanelCount">0</span>
+        </div>
+
+        <button id="closeMembersButton">
+            ×
+        </button>
+
+    </div>
+
+    <div
+        class="members-list"
+        id="membersList"
+    >
+    </div>
+
+</aside>
+
+
+<!-- =========================
+     CREATE ROOM MODAL
+========================== -->
+
+<div
+    class="modal-overlay hidden"
+    id="createRoomModal"
+>
+
+    <div class="modal">
+
+        <div class="modal-header">
+
+            <div>
+                <h2>Новая конференция</h2>
+                <p>Создайте комнату для общения</p>
+            </div>
+
+            <button
+                class="modal-close"
+                id="closeCreateRoom"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <form id="createRoomForm">
+
+            <label>
+                Название
+
+                <input
+                    type="text"
+                    id="roomNameInput"
+                    maxlength="100"
+                    required
+                    placeholder="Например: World of Sea Battle"
+                >
+            </label>
+
+
+            <label>
+                Описание
+
+                <textarea
+                    id="roomDescriptionInput"
+                    maxlength="500"
+                    placeholder="Описание конференции"
+                ></textarea>
+
+            </label>
+
+
+            <label>
+                Игра
+
+                <select id="roomGameInput">
+
+                    <option value="">
+                        Без привязки к игре
+                    </option>
+
+                </select>
+
+            </label>
+
+
+            <div
+                class="form-error hidden"
+                id="createRoomError"
+            ></div>
+
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    class="secondary-button"
+                    id="cancelCreateRoom"
+                >
+                    Отмена
+                </button>
+
+                <button
+                    type="submit"
+                    class="primary-button"
+                >
+                    Создать
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- =========================
+     NOTIFICATION
+========================== -->
+
+<div
+    class="notification hidden"
+    id="notification"
+>
+    <span id="notificationText"></span>
+</div>
+```
+
+</div>
+
+<script src="conference.js"></script>
+
+</body>
+</html>
