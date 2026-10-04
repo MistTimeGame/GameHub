@@ -10,13 +10,7 @@
 <title>GamePlatform</title>
 
 
-<link rel="stylesheet" href="assets/css/main.css">
-
-
-<link rel="stylesheet" href="modules/auth/auth.css">
-
-<link rel="stylesheet" href="modules/profile/profile.css">
-
+<link rel="stylesheet" href="style.css">
 
 </head>
 
@@ -24,43 +18,36 @@
 <body>
 
 
-<header class="top-menu">
-
+<header>
 
 <h1>
 🎮 GamePlatform
 </h1>
 
 
-<nav>
+<div class="menu">
 
-
-<button onclick="openModule('auth')">
+<button onclick="showAuth()">
 Войти
 </button>
 
 
-<button onclick="openModule('profile')">
+<button onclick="showProfile()">
 Профиль
 </button>
 
 
-<button onclick="openModule('games')">
+<button onclick="showGames()">
 Игры
 </button>
 
 
-<button onclick="openModule('guilds')">
+<button onclick="showGuilds()">
 Гильдии
 </button>
 
 
-<button onclick="openModule('conference')">
-Конференция
-</button>
-
-
-</nav>
+</div>
 
 
 </header>
@@ -68,23 +55,23 @@
 
 
 
-
 <main id="app">
 
 
-<section id="auth-container"></section>
+<div class="welcome">
 
 
-<section id="profile-container"></section>
+<h2>
+Игровая платформа
+</h2>
 
 
-<section id="games-container"></section>
+<p>
+Создавай профиль, добавляй игры и вступай в гильдии.
+</p>
 
 
-<section id="guilds-container"></section>
-
-
-<section id="conference-container"></section>
+</div>
 
 
 </main>
@@ -92,12 +79,10 @@
 
 
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script type="module" src="supabase/config.js"></script>
 
-
-<script type="module" src="assets/js/main.js"></script>
-
+<script src="app.js"></script>
 
 
 </body>
