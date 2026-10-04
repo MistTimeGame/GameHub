@@ -1,9 +1,9 @@
-// =================================================
+// =====================================================
 // GAME PLATFORM
 // app.js
+// VERSION CHAT FIX
 // PART 1 / 3
-// AUTH + START
-// =================================================
+// =====================================================
 
 
 
@@ -18,23 +18,22 @@ const SUPABASE_KEY =
 
 const supabaseClient =
 supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
+SUPABASE_URL,
+SUPABASE_KEY
 );
 
 
 
 let currentUser = null;
 
-let currentRoom = null;
 
 
 
 
 
-// =================================================
+// =====================================================
 // START
-// =================================================
+// =====================================================
 
 
 document.addEventListener(
@@ -50,16 +49,11 @@ console.log(
 
 initAuth();
 
-
 initNavigation();
-
 
 initChat();
 
-
 initConference();
-
-
 
 checkSession();
 
@@ -75,9 +69,9 @@ checkSession();
 
 
 
-// =================================================
+// =====================================================
 // SESSION
-// =================================================
+// =====================================================
 
 
 async function checkSession(){
@@ -86,26 +80,33 @@ async function checkSession(){
 try{
 
 
-const session =
+const {
+
+data
+
+}=
+
 await supabaseClient
 .auth
 .getSession();
 
 
 
+
+
 if(
-session.data.session
+data.session
 ){
 
 
 currentUser =
-session.data.session.user;
+data.session.user;
 
 
 
 console.log(
-"USER LOGIN",
-currentUser
+"SESSION USER",
+currentUser.id
 );
 
 
@@ -142,9 +143,9 @@ error
 
 
 
-// =================================================
-// OPEN APPLICATION
-// =================================================
+// =====================================================
+// OPEN APP
+// =====================================================
 
 
 async function openApp(){
@@ -155,6 +156,7 @@ const auth =
 document.getElementById(
 "auth-screen"
 );
+
 
 
 const app =
@@ -187,77 +189,76 @@ app.classList.remove(
 
 
 console.log(
-"APPLICATION OPEN"
+"APP OPEN"
 );
 
 
 
+
+
+await safeRun(
+loadProfile
+);
+
+
+
+await safeRun(
+loadNews
+);
+
+
+
+await safeRun(
+loadMessages
+);
+
+
+
+startChatRealtime();
+
+
+
+await safeRun(
+loadRooms
+);
+
+
+
+startConferenceRealtime();
+
+
+
+}
+
+
+
+
+
+
+
+
+
+async function safeRun(fn){
 
 
 try{
 
-await loadProfile();
+
+await fn();
+
 
 }
-catch(e){
+
+catch(error){
+
 
 console.error(
-"PROFILE ERROR",
-e
+fn.name,
+error
 );
 
-}
-
-
-
-
-try{
-
-await loadNews();
 
 }
-catch(e){
-
-console.error(
-"NEWS ERROR",
-e
-);
-
-}
-
-
-
-try{
-
-await loadMessages();
-
-}
-catch(e){
-
-console.error(
-"CHAT LOAD ERROR",
-e
-);
-
-}
-
-
-
-
-try{
-
-await loadRooms();
-
-}
-catch(e){
-
-console.error(
-"ROOM LOAD ERROR",
-e
-);
-
-}
-
 
 
 }
@@ -270,9 +271,9 @@ e
 
 
 
-// =================================================
+// =====================================================
 // AUTH
-// =================================================
+// =====================================================
 
 
 function initAuth(){
@@ -294,7 +295,10 @@ document.getElementById(
 
 
 
+
+
 if(loginTab){
+
 
 
 loginTab.onclick=()=>{
@@ -306,9 +310,14 @@ loginTab.classList.add(
 
 
 
+if(registerTab){
+
 registerTab.classList.remove(
 "active"
 );
+
+}
+
 
 
 
@@ -319,6 +328,7 @@ document
 .classList.remove(
 "hidden"
 );
+
 
 
 
@@ -335,7 +345,6 @@ document
 };
 
 
-
 }
 
 
@@ -343,7 +352,11 @@ document
 
 
 
+
+
+
 if(registerTab){
+
 
 
 registerTab.onclick=()=>{
@@ -355,9 +368,14 @@ registerTab.classList.add(
 
 
 
+if(loginTab){
+
 loginTab.classList.remove(
 "active"
 );
+
+}
+
 
 
 
@@ -369,6 +387,8 @@ document
 .classList.remove(
 "hidden"
 );
+
+
 
 
 
@@ -396,7 +416,10 @@ document
 
 
 
+// -------------------------
 // LOGIN
+// -------------------------
+
 
 const loginForm =
 document.getElementById(
@@ -408,11 +431,13 @@ document.getElementById(
 if(loginForm){
 
 
+
 loginForm.onsubmit =
 async(e)=>{
 
 
 e.preventDefault();
+
 
 
 
@@ -479,7 +504,7 @@ if(!currentUser){
 
 
 alert(
-"Пользователь не найден"
+"Нет пользователя"
 );
 
 
@@ -487,6 +512,7 @@ return;
 
 
 }
+
 
 
 
@@ -509,7 +535,9 @@ openApp();
 
 
 
+// -------------------------
 // REGISTER
+// -------------------------
 
 
 const registerForm =
@@ -522,11 +550,14 @@ document.getElementById(
 if(registerForm){
 
 
+
 registerForm.onsubmit =
 async(e)=>{
 
 
 e.preventDefault();
+
+
 
 
 
@@ -555,6 +586,7 @@ document
 "register-password"
 )
 .value;
+
 
 
 
@@ -594,6 +626,7 @@ return;
 
 
 
+
 const user =
 result.data.user;
 
@@ -603,14 +636,7 @@ result.data.user;
 
 if(!user){
 
-
-alert(
-"Ошибка создания аккаунта"
-);
-
-
 return;
-
 
 }
 
@@ -644,14 +670,14 @@ vip_level:0
 if(profile.error){
 
 
-console.error(
+console.log(
 profile.error
 );
 
 
 
 alert(
-"Аккаунт создан, но профиль не создан"
+"Пользователь создан, профиль ошибка"
 );
 
 
@@ -664,9 +690,8 @@ return;
 
 
 
-
 alert(
-"Регистрация завершена"
+"Регистрация успешна"
 );
 
 
@@ -676,26 +701,19 @@ alert(
 
 
 }
-
-
-
-
-
-
-}
-// =================================================
+// =====================================================
 // PART 2 / 3
-// NAVIGATION + PROFILE + NEWS + CHAT
-// =================================================
+// PROFILE + NEWS + CHAT
+// =====================================================
 
 
 
 
 
 
-// =================================================
+// =====================================================
 // NAVIGATION
-// =================================================
+// =====================================================
 
 
 function initNavigation(){
@@ -712,12 +730,17 @@ document.querySelectorAll(
 buttons.forEach(button=>{
 
 
+
 button.onclick=()=>{
 
 
-buttons.forEach(
-b=>b.classList.remove("active")
+buttons.forEach(b=>{
+
+b.classList.remove(
+"active"
 );
+
+});
 
 
 
@@ -727,30 +750,32 @@ button.classList.add(
 
 
 
-
 document
 .querySelectorAll(".page")
 .forEach(page=>{
 
+
 page.classList.remove(
 "active"
 );
+
 
 });
 
 
 
 
-const target =
+
+const page =
 document.getElementById(
 button.dataset.page
 );
 
 
 
-if(target){
+if(page){
 
-target.classList.add(
+page.classList.add(
 "active"
 );
 
@@ -776,9 +801,9 @@ target.classList.add(
 
 
 
-// =================================================
+// =====================================================
 // PROFILE
-// =================================================
+// =====================================================
 
 
 async function loadProfile(){
@@ -786,6 +811,10 @@ async function loadProfile(){
 
 
 if(!currentUser){
+
+console.log(
+"NO USER PROFILE"
+);
 
 return;
 
@@ -810,9 +839,28 @@ currentUser.id
 
 
 
-if(
-!result.data
-){
+
+if(result.error){
+
+
+console.error(
+"PROFILE SELECT ERROR",
+result.error
+);
+
+
+return;
+
+
+}
+
+
+
+
+
+
+
+if(!result.data){
 
 
 
@@ -823,6 +871,8 @@ console.log(
 
 
 
+
+const create =
 await supabaseClient
 .from("profiles")
 .insert({
@@ -849,11 +899,31 @@ vip_level:0
 
 
 
-return loadProfile();
+if(create.error){
 
+
+console.error(
+"PROFILE INSERT ERROR",
+create.error
+);
+
+
+return;
 
 
 }
+
+
+
+
+
+return loadProfile();
+
+
+}
+
+
+
 
 
 
@@ -865,66 +935,79 @@ result.data;
 
 
 
-const avatar =
-profile.avatar_url ||
-"https://cdn-icons-png.flaticon.com/512/4712/4712109.png";
+
+setText(
+"top-name",
+profile.nickname
+);
 
 
-
-
-
-const elements = [
-
-["top-avatar",avatar],
-
-["profile-avatar",avatar],
-
-["side-avatar",avatar]
-
-];
-
-
-
-
-elements.forEach(item=>{
-
-
-const el =
-document.getElementById(
-item[0]
+setText(
+"profile-name",
+profile.nickname
 );
 
 
 
-if(el){
+setText(
+"side-name",
+profile.nickname
+);
 
-el.src =
-item[1];
+
+
+
+
+setText(
+"vip-level",
+"VIP " +
+(profile.vip_level || 0)
+);
+
+
+
+
+setText(
+"side-vip",
+"VIP " +
+(profile.vip_level || 0)
+);
+
+
+
+
+
+
+
+setImage(
+"top-avatar",
+profile.avatar_url
+);
+
+
+setImage(
+"profile-avatar",
+profile.avatar_url
+);
+
+
+setImage(
+"side-avatar",
+profile.avatar_url
+);
+
+
 
 }
 
 
 
-});
 
 
 
 
 
-
-const names = [
-
-"top-name",
-
-"profile-name",
-
-"side-name"
-
-];
-
-
-
-names.forEach(id=>{
+function setText(id,text){
 
 
 const el =
@@ -934,31 +1017,10 @@ document.getElementById(id);
 
 if(el){
 
-el.textContent =
-profile.nickname;
+el.textContent=text;
 
 }
 
-
-});
-
-
-
-
-
-
-const vip1 =
-document.getElementById(
-"vip-level"
-);
-
-
-
-if(vip1){
-
-vip1.textContent =
-"VIP " +
-(profile.vip_level || 0);
 
 }
 
@@ -966,21 +1028,19 @@ vip1.textContent =
 
 
 
-const vip2 =
-document.getElementById(
-"side-vip"
-);
+function setImage(id,url){
+
+
+const el =
+document.getElementById(id);
 
 
 
-if(vip2){
+if(el){
 
-vip2.textContent =
-"VIP " +
-(profile.vip_level || 0);
+el.src=url;
 
 }
-
 
 
 }
@@ -992,9 +1052,10 @@ vip2.textContent =
 
 
 
-// =================================================
+
+// =====================================================
 // SAVE PROFILE
-// =================================================
+// =====================================================
 
 
 const saveProfile =
@@ -1013,6 +1074,7 @@ async()=>{
 
 
 
+const update =
 await supabaseClient
 .from("profiles")
 .update({
@@ -1053,26 +1115,42 @@ currentUser.id
 
 
 
+
+if(update.error){
+
+
+console.error(
+update.error
+);
+
+
+return;
+
+
+}
+
+
+
 loadProfile();
 
 
 
 };
 
+
 }
 
 
 
- 
 
 
 
 
 
 
-// =================================================
+// =====================================================
 // NEWS
-// =================================================
+// =====================================================
 
 
 async function loadNews(){
@@ -1112,6 +1190,24 @@ ascending:false
 
 
 
+if(result.error){
+
+
+console.log(
+"NEWS ERROR",
+result.error
+);
+
+
+return;
+
+
+}
+
+
+
+
+
 box.innerHTML="";
 
 
@@ -1138,31 +1234,26 @@ return;
 
 
 
-result.data.forEach(news=>{
+
+
+result.data.forEach(item=>{
 
 
 box.innerHTML += `
 
-
-<div class="empty-card">
-
+<div class="news-item">
 
 <h3>
-
-${news.title}
-
+${item.title}
 </h3>
 
 
 <p>
-
-${news.text}
-
+${item.text}
 </p>
 
 
 </div>
-
 
 `;
 
@@ -1182,10 +1273,9 @@ ${news.text}
 
 
 
-// =================================================
+// =====================================================
 // CHAT
-// =================================================
-
+// =====================================================
 
 
 function initChat(){
@@ -1201,15 +1291,55 @@ document.getElementById(
 
 if(!button){
 
+
+console.log(
+"SEND BUTTON NOT FOUND"
+);
+
+
 return;
+
 
 }
 
 
 
 
+
 button.onclick =
-async()=>{
+sendMessage;
+
+
+
+}
+
+
+
+
+
+
+
+
+
+async function sendMessage(){
+
+
+
+if(!currentUser){
+
+
+alert(
+"Нет авторизации"
+);
+
+
+return;
+
+
+}
+
+
+
 
 
 
@@ -1217,6 +1347,16 @@ const input =
 document.getElementById(
 "message-text"
 );
+
+
+
+if(!input){
+
+return;
+
+}
+
+
 
 
 
@@ -1237,6 +1377,7 @@ return;
 
 
 
+
 const profile =
 await supabaseClient
 .from("profiles")
@@ -1251,8 +1392,27 @@ currentUser.id
 
 
 
+if(profile.error){
 
 
+console.error(
+"profile chat error",
+profile.error
+);
+
+
+return;
+
+
+}
+
+
+
+
+
+
+
+const result =
 await supabaseClient
 .from("messages")
 .insert({
@@ -1274,16 +1434,40 @@ text:text
 
 
 
-input.value="";
 
 
 
-};
+if(result.error){
 
+
+console.error(
+"MESSAGE INSERT ERROR",
+result.error
+);
+
+
+
+alert(
+"Ошибка отправки сообщения"
+);
+
+
+
+return;
 
 
 }
 
+
+
+
+
+
+input.value="";
+
+
+
+}
 
 
 
@@ -1329,44 +1513,66 @@ ascending:true
 
 
 
+
+if(result.error){
+
+
+console.error(
+"MESSAGES LOAD ERROR",
+result.error
+);
+
+
+return;
+
+
+}
+
+
+
+
+
+
 box.innerHTML="";
 
 
 
 
 
-(result.data || [])
-.forEach(message=>{
+result.data.forEach(message=>{
 
 
 
 box.innerHTML += `
 
-
-<div class="room-card">
-
+<div class="chat-message">
 
 <b>
-
 ${message.nickname}
-
 </b>
-
 
 <br>
 
-
 ${message.text}
+
+<small>
+${new Date(message.created_at)
+.toLocaleTimeString()}
+</small>
 
 
 </div>
-
 
 `;
 
 
 
 });
+
+
+
+box.scrollTop =
+box.scrollHeight;
 
 
 
@@ -1387,7 +1593,7 @@ function startChatRealtime(){
 supabaseClient
 
 .channel(
-"messages-channel"
+"public-messages"
 )
 
 
@@ -1406,7 +1612,14 @@ table:"messages"
 },
 
 
-()=>{
+(payload)=>{
+
+
+console.log(
+"NEW MESSAGE",
+payload
+);
+
 
 
 loadMessages();
@@ -1414,6 +1627,7 @@ loadMessages();
 
 
 }
+
 
 )
 
@@ -1423,43 +1637,89 @@ loadMessages();
 
 
 }
-// =================================================
+     // =====================================================
 // PART 3 / 3
-// CONFERENCE + ONLINE ROOMS + LOGOUT
-// =================================================
+// CONFERENCE + WEBRTC + LOGOUT
+// =====================================================
+
+
+
+let localStream = null;
+
+let screenStream = null;
+
+let peers = {};
+
+let microphoneEnabled = false;
 
 
 
 
 
 
-// =================================================
-// CONFERENCE
-// =================================================
+
+
+// =====================================================
+// CONFERENCE INIT
+// =====================================================
 
 
 function initConference(){
 
 
-const leaveButton =
+
+const mic =
+document.getElementById(
+"mic-button"
+);
+
+
+
+if(mic){
+
+
+mic.onclick =
+toggleMicrophone;
+
+
+}
+
+
+
+
+
+const screen =
+document.getElementById(
+"screen-button"
+);
+
+
+
+if(screen){
+
+
+screen.onclick =
+shareScreen;
+
+
+}
+
+
+
+
+
+const leave =
 document.getElementById(
 "leave-room"
 );
 
 
 
-if(leaveButton){
+if(leave){
 
 
-leaveButton.onclick =
-async()=>{
-
-
-await leaveRoom();
-
-
-};
-
+leave.onclick =
+leaveRoom;
 
 
 }
@@ -1474,6 +1734,11 @@ await leaveRoom();
 
 
 
+
+
+// =====================================================
+// LOAD ROOMS
+// =====================================================
 
 
 async function loadRooms(){
@@ -1502,11 +1767,9 @@ await supabaseClient
 .from("conference_rooms")
 .select("*")
 .order(
-"id",
-{
-ascending:true
-}
+"id"
 );
+
 
 
 
@@ -1523,7 +1786,7 @@ result.error
 
 
 box.innerHTML =
-"Комнаты недоступны";
+"Нет комнат";
 
 
 return;
@@ -1541,10 +1804,11 @@ box.innerHTML="";
 
 
 
-
 for(
 const room of result.data
 ){
+
+
 
 
 
@@ -1561,7 +1825,8 @@ room.id
 
 
 
-let count = 0;
+let count =
+0;
 
 
 
@@ -1577,6 +1842,7 @@ users.data.length;
 
 
 
+
 box.innerHTML += `
 
 
@@ -1584,41 +1850,28 @@ box.innerHTML += `
 
 
 <h3>
-
 ${room.name}
-
 </h3>
 
 
-
 <p>
-
 ${room.description || ""}
-
 </p>
-
 
 
 <p>
-
 👥 ${count}
-
 </p>
 
 
-
-<button
-
+<button 
 class="main-button"
-
-onclick="joinRoom(${room.id}, '${room.name}')"
-
+onclick="joinRoom('${room.id}')"
 >
 
 Войти
 
 </button>
-
 
 
 </div>
@@ -1632,7 +1885,6 @@ onclick="joinRoom(${room.id}, '${room.name}')"
 
 
 
-
 }
 
 
@@ -1643,12 +1895,12 @@ onclick="joinRoom(${room.id}, '${room.name}')"
 
 
 
-async function joinRoom(
-id,
-name
-){
+// =====================================================
+// JOIN ROOM
+// =====================================================
 
 
+async function joinRoom(id){
 
 
 
@@ -1660,43 +1912,8 @@ return;
 
 
 
+currentRoom=id;
 
-
-
-if(currentRoom){
-
-await leaveRoom();
-
-}
-
-
-
-
-
-
-currentRoom =
-id;
-
-
-
-
-
-
-
-const title =
-document.getElementById(
-"current-room-title"
-);
-
-
-
-if(title){
-
-title.textContent =
-name;
-
-
-}
 
 
 
@@ -1739,6 +1956,9 @@ profile.data.nickname
 
 
 
+await startMedia();
+
+
 
 loadRooms();
 
@@ -1753,13 +1973,274 @@ loadRooms();
 
 
 
+
+// =====================================================
+// MEDIA
+// =====================================================
+
+
+async function startMedia(){
+
+
+
+try{
+
+
+
+localStream =
+await navigator
+.mediaDevices
+.getUserMedia({
+
+audio:true,
+
+video:false
+
+});
+
+
+
+
+
+microphoneEnabled=true;
+
+
+
+updateMicButton();
+
+
+
+console.log(
+"MIC START"
+);
+
+
+
+}
+
+catch(error){
+
+
+console.error(
+"MIC ERROR",
+error
+);
+
+
+
+alert(
+"Нет доступа к микрофону"
+);
+
+
+
+}
+
+
+
+}
+
+
+
+
+
+
+
+
+
+// =====================================================
+// MICROPHONE
+// =====================================================
+
+
+function toggleMicrophone(){
+
+
+
+if(!localStream){
+
+return;
+
+}
+
+
+
+
+
+const audio =
+localStream
+.getAudioTracks()[0];
+
+
+
+
+
+if(audio){
+
+
+
+audio.enabled =
+!audio.enabled;
+
+
+
+microphoneEnabled =
+audio.enabled;
+
+
+
+updateMicButton();
+
+
+
+}
+
+
+
+}
+
+
+
+
+
+
+
+
+
+function updateMicButton(){
+
+
+
+const button =
+document.getElementById(
+"mic-button"
+);
+
+
+
+if(!button){
+
+return;
+
+}
+
+
+
+
+
+if(microphoneEnabled){
+
+
+button.textContent =
+"🎤 Микрофон выключить";
+
+
+}
+
+else{
+
+
+button.textContent =
+"🔇 Микрофон включить";
+
+
+}
+
+
+
+}
+
+
+
+
+
+
+
+
+
+// =====================================================
+// SCREEN SHARE
+// =====================================================
+
+
+async function shareScreen(){
+
+
+
+try{
+
+
+
+screenStream =
+await navigator
+.mediaDevices
+.getDisplayMedia({
+
+video:true
+
+});
+
+
+
+
+
+console.log(
+"SCREEN START"
+);
+
+
+
+
+
+screenStream
+.getTracks()[0]
+.onended=()=>{
+
+
+screenStream=null;
+
+
+};
+
+
+
+
+
+}
+
+catch(error){
+
+
+console.log(
+"SCREEN CANCEL",
+error
+);
+
+
+}
+
+
+
+}
+
+
+
+
+
+
+
+
+
+// =====================================================
+// LEAVE ROOM
+// =====================================================
+
+
 async function leaveRoom(){
 
 
 
-if(
-!currentRoom
-){
+if(!currentRoom){
 
 return;
 
@@ -1787,29 +2268,44 @@ currentRoom
 
 
 
-
-currentRoom =
-null;
+if(localStream){
 
 
-
-
-
-
-const title =
-document.getElementById(
-"current-room-title"
+localStream
+.getTracks()
+.forEach(
+track=>track.stop()
 );
 
 
+}
 
-if(title){
 
-title.textContent =
-"Комната не выбрана";
+
+if(screenStream){
+
+
+screenStream
+.getTracks()
+.forEach(
+track=>track.stop()
+);
+
 
 }
 
+
+
+
+
+
+localStream=null;
+
+screenStream=null;
+
+
+
+currentRoom=null;
 
 
 
@@ -1827,6 +2323,11 @@ loadRooms();
 
 
 
+// =====================================================
+// CONFERENCE REALTIME
+// =====================================================
+
+
 function startConferenceRealtime(){
 
 
@@ -1834,7 +2335,7 @@ function startConferenceRealtime(){
 supabaseClient
 
 .channel(
-"conference-channel"
+"conference-users"
 )
 
 
@@ -1859,8 +2360,8 @@ table:"conference_users"
 loadRooms();
 
 
-
 }
+
 
 )
 
@@ -1879,20 +2380,15 @@ loadRooms();
 
 
 
-
-
-// =================================================
+// =====================================================
 // LOGOUT
-// =================================================
-
+// =====================================================
 
 
 const logout =
 document.getElementById(
 "logout"
 );
-
-
 
 
 
@@ -1903,21 +2399,14 @@ logout.onclick =
 async()=>{
 
 
-if(currentRoom){
-
 
 await leaveRoom();
-
-
-}
 
 
 
 await supabaseClient
 .auth
 .signOut();
-
-
 
 
 
@@ -1928,7 +2417,6 @@ location.reload();
 };
 
 
-
 }
 
 
@@ -1936,9 +2424,6 @@ location.reload();
 
 
 
-
-
-
-// =================================================
+// =====================================================
 // END APP.JS
-// =================================================
+// =====================================================
