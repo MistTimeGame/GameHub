@@ -1,125 +1,68 @@
-*{
-box-sizing:border-box;
-}
-
-
 body{
 
 margin:0;
 
-font-family:
-Arial,
-sans-serif;
+font-family:Arial, sans-serif;
 
-background:#f2f5f9;
-
-color:#20252d;
+background:#f0f2f5;
 
 }
 
 
 
-.header{
+.top-menu{
 
-height:70px;
+background:#ffffff;
 
-background:white;
+padding:15px;
 
 display:flex;
-
-align-items:center;
 
 justify-content:space-between;
 
-padding:0 30px;
-
-box-shadow:
-0 5px 20px rgba(0,0,0,.08);
-
-}
-
-
-
-.logo{
-
-font-weight:900;
-
-font-size:20px;
-
-}
-
-
-
-.header-user{
-
-display:flex;
-
 align-items:center;
 
-gap:10px;
+box-shadow:0 2px 10px #ccc;
 
 }
 
 
 
-button{
+nav button{
+
+
+background:#ffd400;
 
 border:none;
 
-padding:10px 18px;
+padding:10px 20px;
 
-border-radius:14px;
-
-background:#2563eb;
-
-color:white;
+border-radius:15px;
 
 cursor:pointer;
 
-font-weight:700;
+margin:5px;
 
 }
 
 
 
-button:hover{
+#app{
 
-opacity:.85;
-
-}
-
-
-
-#logout-button{
-
-background:#dc2626;
+padding:20px;
 
 }
 
 
 
-.hero{
+.error{
 
-text-align:center;
+background:white;
 
-padding:80px 20px;
+padding:20px;
 
-}
+border-radius:15px;
 
-
-
-.hero h1{
-
-font-size:42px;
-
-margin-bottom:10px;
-
-}
-
-
-
-.hero p{
-
-color:#667085;
+color:red;
 
 }
