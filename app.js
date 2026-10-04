@@ -1,7 +1,7 @@
 /* =====================================================
    GAME PLATFORM — app.js
    Auth + Profile + Chat + Conference + Online + Games + Guilds
-   Guilds привязаны к играм; игры добавляются пользователями.
+   Guilds: иконка, заявки, роли, материалы (файлы)
 ===================================================== */
 
 const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -12,35 +12,39 @@ const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/4712/4712109.png"
 const MIROTALK_BASE = "https://p2p.mirotalk.com";
 const IMG_LOAD_TIMEOUT = 8000;
 
-/* ===== СОСТОЯНИЕ ===== */
+/* ============================================================
+   СОСТОЯНИЕ
+============================================================ */
 let currentUser = null;
 let currentProfile = null;
 let availableColumns = null;
 let chatChannel = null;
+
 let currentRoom = null;
 let roomsPollTimer = null;
 let joiningRoom = false;
+
 let savingProfile = false;
 let avatarPreviewTimer = null;
 
-// online
 let presenceChannel = null;
 let onlineUsers = {};
 
-// guilds
 let guildsCache = [];
 let guildMembersCache = {};
 let currentGuildId = null;
 let guildsAvailable = true;
 let guildsGameIdAvailable = true;
-let currentGameFilter = 0; // 0 = все
+let currentGameFilter = 0;
+let currentGuildTab = "members";
 
-// games
 let gamesCache = [];
 let gamesAvailable = true;
 let gameIconTimer = null;
 
-/* ===== ХЕЛПЕРЫ ===== */
+/* ============================================================
+   ХЕЛПЕРЫ
+============================================================ */
 function $(id){ return document.getElementById(id); }
 function log(...a){ console.log("[GP]", ...a); }
 function errLog(...a){ console.error("[GP][ОШИБКА]", ...a); }
@@ -87,7 +91,9 @@ async function ensureAuth(){
     return null;
 }
 
-/* ===== URL / IMG ===== */
+/* ============================================================
+   URL / IMG утилиты
+============================================================ */
 function isValidHttpUrl(str){
     if(!str) return true;
     try{ const u = new URL(str); return u.protocol === "http:" || u.protocol === "https:"; }
@@ -135,8 +141,46 @@ function setImage(id, url){
     el.onerror = () => { errLog("AVATAR FAIL:", id, clean); el.onerror = null; el.src = DEFAULT_AVATAR; };
     el.src = clean;
 }
+function humanFileSize(bytes){
+    if(bytes == null) return "";
+    const n = Number(bytes);
+    if(!isFinite(n) || n <= 0) return "";
+    if(n < 1024) return n + " Б";
+    if(n < 1024*1024) return (n/1024).toFixed(1) + " КБ";
+    if(n < 1024*1024*1024) return (n/1024/1024).toFixed(1) + " МБ";
+    return (n/1024/1024/1024).toFixed(2) + " ГБ";
+}
+function fileIconByName(name, type){
+    const n = (name || "").toLowerCase();
+    const t = (type || "").toLowerCase();
+    if(t.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/.test(n)) return "🖼";
+    if(t.startsWith("video/") || /\.(mp4|webm|mov|avi|mkv)$/.test(n)) return "🎬";
+    if(t.startsWith("audio/") || /\.(mp3|wav|ogg|flac|m4a)$/.test(n)) return "🎵";
+    if(/\.(zip|rar|7z|tar|gz)$/.test(n)) return "🗜";
+    if(/\.(pdf)$/.test(n)) return "📕";
+    if(/\.(doc|docx)$/.test(n)) return "📄";
+    if(/\.(xls|xlsx|csv)$/.test(n)) return "📊";
+    if(/\.(txt|md|log)$/.test(n)) return "📝";
+    if(/\.(json|xml|yml|yaml|ini|cfg)$/.test(n)) return "⚙";
+    return "📎";
+}
+function fileExt(name){
+    const n = String(name || "");
+    const m = n.match(/\.([a-z0-9]+)$/i);
+    return m ? m[1].toLowerCase() : "bin";
+}
+function switchPage(pageName){
+    document.querySelectorAll(".menu-button").forEach(b => {
+        b.classList.toggle("active", b.dataset.page === pageName);
+    });
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    const page = $(pageName);
+    if(page) page.classList.add("active");
+}
 
-/* ===== СХЕМА profiles ===== */
+/* ============================================================
+   СХЕМА profiles (автоопределение колонок)
+============================================================ */
 async function detectProfileColumns(userId){
     const wanted = ["id","nickname","avatar_url","vip_level","age","city","about"];
     const available = new Set(["id"]);
@@ -150,7 +194,6 @@ async function detectProfileColumns(userId){
         wanted.forEach(c => available.add(c));
         return { columns: available, row: result.data };
     }
-    errLog("SCHEMA:", result.error.message);
     for(const col of wanted){
         if(col === "id") continue;
         const t = await trySel("id," + col);
@@ -184,7 +227,9 @@ function applySchemaVisibility(){
     }
 }
 
-/* ===== СТАРТ ===== */
+/* ============================================================
+   СТАРТ
+============================================================ */
 document.addEventListener("DOMContentLoaded", () => {
     log("START");
     initAuth();
@@ -196,99 +241,89 @@ document.addEventListener("DOMContentLoaded", () => {
     initGuilds();
 
     supabaseClient.auth.onAuthStateChange((event, session) => {
-        log("AUTH EVENT:", event);
-        if(event === "SIGNED_OUT"){ currentUser = null; }
-        else if(session && session.user){ currentUser = session.user; }
+        if(event === "SIGNED_OUT") currentUser = null;
+        else if(session && session.user) currentUser = session.user;
     });
 
     checkSession();
 });
 
-/* ===== AUTH ===== */
+/* ============================================================
+   АВТОРИЗАЦИЯ
+============================================================ */
 function initAuth(){
-    const loginTab = $("login-tab");
-    const registerTab = $("register-tab");
+    const loginTab = $("login-tab"), registerTab = $("register-tab");
 
-    if(loginTab){
-        loginTab.onclick = () => {
-            loginTab.classList.add("active");
-            if(registerTab) registerTab.classList.remove("active");
-            $("login-form").classList.remove("hidden");
-            $("register-form").classList.add("hidden");
-            setAuthMessage("");
-        };
-    }
-    if(registerTab){
-        registerTab.onclick = () => {
-            registerTab.classList.add("active");
-            if(loginTab) loginTab.classList.remove("active");
-            $("register-form").classList.remove("hidden");
-            $("login-form").classList.add("hidden");
-            setAuthMessage("");
-        };
-    }
+    if(loginTab) loginTab.onclick = () => {
+        loginTab.classList.add("active");
+        if(registerTab) registerTab.classList.remove("active");
+        $("login-form").classList.remove("hidden");
+        $("register-form").classList.add("hidden");
+        setAuthMessage("");
+    };
+    if(registerTab) registerTab.onclick = () => {
+        registerTab.classList.add("active");
+        if(loginTab) loginTab.classList.remove("active");
+        $("register-form").classList.remove("hidden");
+        $("login-form").classList.add("hidden");
+        setAuthMessage("");
+    };
 
     const loginForm = $("login-form");
-    if(loginForm){
-        loginForm.addEventListener("submit", async (e) => {
-            e.preventDefault(); e.stopPropagation();
-            setAuthMessage("Вход…", true);
-            const email = $("login-email").value.trim();
-            const password = $("login-password").value;
-            try{
-                const r = await supabaseClient.auth.signInWithPassword({ email, password });
-                if(r.error){ errLog("LOGIN", r.error.message); setAuthMessage(r.error.message); return; }
-                currentUser = r.data.user; setAuthMessage(""); openApp();
-            }catch(err){ setAuthMessage("Ошибка: " + err.message); }
-        });
-    }
+    if(loginForm) loginForm.addEventListener("submit", async (e) => {
+        e.preventDefault(); e.stopPropagation();
+        setAuthMessage("Вход…", true);
+        const email = $("login-email").value.trim();
+        const password = $("login-password").value;
+        try{
+            const r = await supabaseClient.auth.signInWithPassword({ email, password });
+            if(r.error){ setAuthMessage(r.error.message); return; }
+            currentUser = r.data.user; setAuthMessage(""); openApp();
+        }catch(err){ setAuthMessage("Ошибка: " + err.message); }
+    });
 
     const registerForm = $("register-form");
-    if(registerForm){
-        registerForm.addEventListener("submit", async (e) => {
-            e.preventDefault(); e.stopPropagation();
-            setAuthMessage("Регистрация…", true);
-            const nickname = $("register-nickname").value.trim() || "Player";
-            const email = $("register-email").value.trim();
-            const password = $("register-password").value;
+    if(registerForm) registerForm.addEventListener("submit", async (e) => {
+        e.preventDefault(); e.stopPropagation();
+        setAuthMessage("Регистрация…", true);
+        const nickname = $("register-nickname").value.trim() || "Player";
+        const email = $("register-email").value.trim();
+        const password = $("register-password").value;
+        try{
+            const r = await supabaseClient.auth.signUp({
+                email, password, options:{ data:{ nickname } }
+            });
+            if(r.error){ setAuthMessage(r.error.message); return; }
+            const user = r.data.user;
+            if(!user){ setAuthMessage("Проверьте email.", true); return; }
             try{
-                const r = await supabaseClient.auth.signUp({
-                    email, password, options:{ data:{ nickname } }
+                await supabaseClient.from("profiles").insert({
+                    id: user.id, nickname,
+                    avatar_url: DEFAULT_AVATAR, vip_level: 0
                 });
-                if(r.error){ setAuthMessage(r.error.message); return; }
-                const user = r.data.user;
-                if(!user){ setAuthMessage("Проверьте email.", true); return; }
-                try{
-                    await supabaseClient.from("profiles").insert({
-                        id: user.id, nickname,
-                        avatar_url: DEFAULT_AVATAR, vip_level: 0
-                    });
-                }catch(err){ errLog("PROFILE CREATE", err); }
-                if(!r.data.session){
-                    setAuthMessage("Регистрация успешна. Подтвердите email.", true);
-                    if(loginTab) loginTab.click();
-                    return;
-                }
-                currentUser = user; setAuthMessage(""); openApp();
-            }catch(err){ setAuthMessage("Ошибка: " + err.message); }
-        });
-    }
+            }catch(err){ errLog("PROFILE CREATE", err); }
+            if(!r.data.session){
+                setAuthMessage("Регистрация успешна. Подтвердите email.", true);
+                if(loginTab) loginTab.click();
+                return;
+            }
+            currentUser = user; setAuthMessage(""); openApp();
+        }catch(err){ setAuthMessage("Ошибка: " + err.message); }
+    });
 
     const logout = $("logout");
-    if(logout){
-        logout.onclick = async () => {
-            try{
-                if(presenceChannel){
-                    try{ await presenceChannel.untrack(); }catch(e){}
-                    try{ supabaseClient.removeChannel(presenceChannel); }catch(e){}
-                    presenceChannel = null;
-                }
-                closeMiroTalkRoom();
-                await supabaseClient.auth.signOut();
-                location.reload();
-            }catch(e){ errLog("LOGOUT", e); location.reload(); }
-        };
-    }
+    if(logout) logout.onclick = async () => {
+        try{
+            if(presenceChannel){
+                try{ await presenceChannel.untrack(); }catch(e){}
+                try{ supabaseClient.removeChannel(presenceChannel); }catch(e){}
+                presenceChannel = null;
+            }
+            closeMiroTalkRoom();
+            await supabaseClient.auth.signOut();
+            location.reload();
+        }catch(e){ location.reload(); }
+    };
 }
 
 async function checkSession(){
@@ -301,16 +336,17 @@ async function checkSession(){
     }catch(e){ errLog("SESSION", e); }
 }
 
-/* ===== APP ===== */
+/* ============================================================
+   ОТКРЫТИЕ ПРИЛОЖЕНИЯ
+============================================================ */
 async function openApp(){
     $("auth-screen").classList.add("hidden");
     $("app").classList.remove("hidden");
-    log("APP OPEN");
 
     if(currentUser){
         try{
             await supabaseClient.from("conference_users").delete().eq("user_id", currentUser.id);
-        }catch(e){ errLog("STALE", e); }
+        }catch(e){}
     }
 
     await safeRun(loadProfile);
@@ -327,16 +363,13 @@ async function openApp(){
     await safeRun(loadRooms);
 
     if(roomsPollTimer) clearInterval(roomsPollTimer);
-    roomsPollTimer = setInterval(() => {
-        loadRooms().catch(e => errLog("ROOMS POLL", e));
-    }, 5000);
+    roomsPollTimer = setInterval(() => loadRooms().catch(e => errLog(e)), 5000);
 }
+async function safeRun(fn){ try{ await fn(); } catch(e){ errLog(fn.name, e); } }
 
-async function safeRun(fn){
-    try{ await fn(); } catch(e){ errLog(fn.name, e); }
-}
-
-/* ===== НАВИГАЦИЯ ===== */
+/* ============================================================
+   НАВИГАЦИЯ
+============================================================ */
 function initNavigation(){
     const buttons = document.querySelectorAll(".menu-button[data-page]");
     buttons.forEach(btn => {
@@ -359,14 +392,14 @@ function initNavigation(){
     });
 }
 
-/* ===== ONLINE PRESENCE ===== */
+/* ============================================================
+   ONLINE PRESENCE
+============================================================ */
 function initOnlinePresence(){
     if(!currentUser || presenceChannel) return;
-
     presenceChannel = supabaseClient.channel("online-users", {
         config: { presence: { key: currentUser.id } }
     });
-
     presenceChannel
         .on("presence", { event: "sync" }, () => {
             buildOnlineUsers(presenceChannel.presenceState());
@@ -384,7 +417,6 @@ function initOnlinePresence(){
             }
         });
 }
-
 function buildOnlineUsers(state){
     onlineUsers = {};
     Object.keys(state).forEach(key => {
@@ -402,7 +434,6 @@ function renderOnlinePage(){
     const box = $("online-list-page"); if(!box) return;
     const list = Object.values(onlineUsers);
     setText("online-page-count", String(list.length));
-
     if(list.length === 0){
         box.innerHTML = "<div class='dash-recent-empty'>Никого нет онлайн</div>";
         return;
@@ -417,11 +448,8 @@ function renderOnlinePage(){
         const initial = nick[0].toUpperCase();
         div.innerHTML =
             "<div class='online-user-avatar'>" +
-                (u.avatar_url
-                    ? "<img referrerpolicy='no-referrer' src='" + escapeHtml(u.avatar_url) + "'>"
-                    : escapeHtml(initial)) +
-            "</div>" +
-            "<div>" +
+                (u.avatar_url ? "<img referrerpolicy='no-referrer' src='" + escapeHtml(u.avatar_url) + "'>" : escapeHtml(initial)) +
+            "</div><div>" +
                 "<div class='online-user-name'>" + escapeHtml(nick) + (isMe ? " (вы)" : "") + "</div>" +
                 "<div class='online-user-meta'>🟢 в сети</div>" +
             "</div>";
@@ -429,7 +457,9 @@ function renderOnlinePage(){
     });
 }
 
-/* ===== ГЛАВНАЯ ===== */
+/* ============================================================
+   ГЛАВНАЯ
+============================================================ */
 async function loadHomeStats(){
     updateOnlineCounters();
     try{
@@ -445,13 +475,11 @@ async function loadHomeStats(){
         setText("dash-guilds", String(count || 0));
     }catch(e){ setText("dash-guilds", "—"); }
 }
-
 async function loadHomeRecentMessages(){
     const box = $("home-recent-messages"); if(!box) return;
     const { data, error } = await supabaseClient
         .from("messages").select("nickname, text, created_at")
         .order("created_at", { ascending:false }).limit(8);
-
     if(error || !data || data.length === 0){
         box.innerHTML = "<div class='dash-recent-empty'>Сообщений пока нет</div>";
         return;
@@ -460,12 +488,9 @@ async function loadHomeRecentMessages(){
     data.forEach(m => {
         const div = document.createElement("div");
         div.className = "dash-recent-item";
-        const time = m.created_at
-            ? new Date(m.created_at).toLocaleTimeString("ru-RU", { hour:"2-digit", minute:"2-digit" })
-            : "";
+        const time = m.created_at ? new Date(m.created_at).toLocaleTimeString("ru-RU", { hour:"2-digit", minute:"2-digit" }) : "";
         const text = (m.text||"").slice(0, 90) + ((m.text||"").length > 90 ? "…" : "");
-        div.innerHTML =
-            "<b>" + escapeHtml(m.nickname || "Гость") + "</b>" +
+        div.innerHTML = "<b>" + escapeHtml(m.nickname || "Гость") + "</b>" +
             "<span class='dash-recent-time'>" + escapeHtml(time) + "</span>" +
             "<div>" + escapeHtml(text) + "</div>";
         box.appendChild(div);
@@ -473,7 +498,7 @@ async function loadHomeRecentMessages(){
 }
 
 /* ============================================================
-   ИГРЫ (динамические, с авто-иконкой)
+   ИГРЫ
 ============================================================ */
 function initGames(){
     const toggleBtn = $("toggle-add-game");
@@ -482,101 +507,64 @@ function initGames(){
     const urlInput = $("game-url-input");
     const iconInput = $("game-icon-input");
 
-    if(toggleBtn){
-        toggleBtn.onclick = () => {
-            const panel = $("add-game-panel");
-            if(!panel) return;
-            panel.classList.toggle("hidden");
-            if(!panel.classList.contains("hidden")){
-                $("game-name-input")?.focus();
-            }
-        };
-    }
-    if(cancelBtn){
-        cancelBtn.onclick = () => closeAddGameForm();
-    }
-    if(saveBtn){
-        saveBtn.onclick = saveNewGame;
-    }
-
-    // Автопревью иконки при вводе URL или своей иконки
-    if(urlInput){
-        urlInput.addEventListener("input", () => {
-            if(gameIconTimer) clearTimeout(gameIconTimer);
-            gameIconTimer = setTimeout(previewGameIcon, 400);
-        });
-    }
-    if(iconInput){
-        iconInput.addEventListener("input", () => {
-            if(gameIconTimer) clearTimeout(gameIconTimer);
-            gameIconTimer = setTimeout(previewGameIcon, 400);
-        });
-    }
+    if(toggleBtn) toggleBtn.onclick = () => {
+        const panel = $("add-game-panel"); if(!panel) return;
+        panel.classList.toggle("hidden");
+        if(!panel.classList.contains("hidden")) $("game-name-input")?.focus();
+    };
+    if(cancelBtn) cancelBtn.onclick = () => closeAddGameForm();
+    if(saveBtn) saveBtn.onclick = saveNewGame;
+    if(urlInput) urlInput.addEventListener("input", () => {
+        if(gameIconTimer) clearTimeout(gameIconTimer);
+        gameIconTimer = setTimeout(previewGameIcon, 400);
+    });
+    if(iconInput) iconInput.addEventListener("input", () => {
+        if(gameIconTimer) clearTimeout(gameIconTimer);
+        gameIconTimer = setTimeout(previewGameIcon, 400);
+    });
 }
-
 function closeAddGameForm(){
-    const panel = $("add-game-panel");
-    if(panel) panel.classList.add("hidden");
-    if($("game-name-input")) $("game-name-input").value = "";
-    if($("game-url-input")) $("game-url-input").value = "";
-    if($("game-desc-input")) $("game-desc-input").value = "";
-    if($("game-icon-input")) $("game-icon-input").value = "";
+    const panel = $("add-game-panel"); if(panel) panel.classList.add("hidden");
+    ["game-name-input","game-url-input","game-desc-input","game-icon-input"].forEach(id => {
+        const el = $(id); if(el) el.value = "";
+    });
     setGameStatus("");
     resetGamePreview();
 }
-
 function resetGamePreview(){
     const wrap = $("game-icon-preview-wrap");
     const text = $("game-icon-preview-text");
     if(wrap) wrap.innerHTML = "<span>🎮</span>";
     if(text){ text.textContent = "Превью иконки появится здесь"; text.className = "game-icon-preview-text"; }
 }
-
 function renderGamePreviewIcon(url){
     const wrap = $("game-icon-preview-wrap"); if(!wrap) return;
     wrap.innerHTML = "";
-    if(!url){
-        wrap.innerHTML = "<span>🎮</span>";
-        return;
-    }
+    if(!url){ wrap.innerHTML = "<span>🎮</span>"; return; }
     const img = document.createElement("img");
-    img.referrerPolicy = "no-referrer";
-    img.alt = "";
+    img.referrerPolicy = "no-referrer"; img.alt = "";
     img.onerror = () => { wrap.innerHTML = "<span>🎮</span>"; };
     img.src = url;
     wrap.appendChild(img);
 }
-
 function previewGameIcon(){
-    const urlInput = $("game-url-input");
-    const iconInput = $("game-icon-input");
-    const text = $("game-icon-preview-text");
+    const urlInput = $("game-url-input"), iconInput = $("game-icon-input"), text = $("game-icon-preview-text");
     if(!urlInput || !text) return;
-
     const siteUrl = (urlInput.value || "").trim();
     const customIcon = (iconInput?.value || "").trim();
-
-    if(!siteUrl && !customIcon){
-        resetGamePreview();
-        return;
-    }
-
+    if(!siteUrl && !customIcon){ resetGamePreview(); return; }
     if(!isValidHttpUrl(siteUrl) && siteUrl){
         text.textContent = "Некорректная ссылка на сайт";
         text.className = "game-icon-preview-text err";
         renderGamePreviewIcon("");
         return;
     }
-
-    // Если задана своя иконка — используем её
     if(customIcon && isValidHttpUrl(customIcon)){
-        text.textContent = "Своя иконка будет использована";
+        text.textContent = "Своя иконка";
         text.className = "game-icon-preview-text ok";
         renderGamePreviewIcon(customIcon);
         return;
     }
-
-    // Иначе — favicon с сайта
     const fav = faviconFromUrl(siteUrl);
     if(!fav){
         text.textContent = "Не удалось определить сайт";
@@ -584,77 +572,54 @@ function previewGameIcon(){
         renderGamePreviewIcon("");
         return;
     }
-    text.textContent = "Иконка подтянута с сайта игры";
+    text.textContent = "Иконка подтянута с сайта";
     text.className = "game-icon-preview-text ok";
     renderGamePreviewIcon(fav);
 }
-
 async function loadGames(){
     const box = $("games-list"); if(!box) return;
-
-    const { data, error } = await supabaseClient
-        .from("games").select("*").order("created_at", { ascending: false });
-
+    const { data, error } = await supabaseClient.from("games").select("*")
+        .order("created_at", { ascending: false });
     if(error){
         gamesAvailable = false;
-        box.innerHTML =
-            "<div class='dash-recent-empty'>" +
-            "Раздел «Игры» требует создания таблицы <code>games</code> в Supabase.<br>" +
-            "Откройте SQL Editor и выполните SQL из комментария в начале <code>app.js</code>." +
-            "</div>";
+        box.innerHTML = "<div class='dash-recent-empty'>Раздел требует таблицы <code>games</code>.</div>";
         return;
     }
     gamesAvailable = true;
     gamesCache = data || [];
 
-    // Загружаем количество гильдий по каждой игре
     const guildCounts = {};
     try{
         const gRes = await supabaseClient.from("guilds").select("game_id");
-        (gRes.data || []).forEach(g => {
-            if(g.game_id) guildCounts[g.game_id] = (guildCounts[g.game_id] || 0) + 1;
-        });
-    }catch(e){ /* column game_id может отсутствовать */ }
+        (gRes.data || []).forEach(g => { if(g.game_id) guildCounts[g.game_id] = (guildCounts[g.game_id]||0) + 1; });
+    }catch(e){}
 
     if(gamesCache.length === 0){
         box.innerHTML = "<div class='dash-recent-empty'>Игр пока нет. Добавьте первую!</div>";
         return;
     }
-
     box.innerHTML = "";
     gamesCache.forEach(g => {
         const card = document.createElement("div");
         card.className = "game-card";
-
         const guildCount = guildCounts[g.id] || 0;
         const isOwn = g.added_by === currentUser.id;
         const icon = g.icon_url || faviconFromUrl(g.url) || "";
 
         card.innerHTML =
-            "<div class='game-card-header'>" +
-                "<div class='game-card-icon'>" +
-                    (icon
-                        ? "<img referrerpolicy='no-referrer' src='" + escapeHtml(icon) +
-                          "' onerror=\"this.style.display='none';this.parentNode.textContent='🎮'\">"
-                        : "🎮") +
-                "</div>" +
-                "<div class='game-card-title'>" + escapeHtml(g.name) + "</div>" +
-            "</div>" +
+            "<div class='game-card-header'><div class='game-card-icon'>" +
+            (icon ? "<img referrerpolicy='no-referrer' src='" + escapeHtml(icon) + "' onerror=\"this.style.display='none';this.parentNode.textContent='🎮'\">" : "🎮") +
+            "</div><div class='game-card-title'>" + escapeHtml(g.name) + "</div></div>" +
             "<div class='game-card-desc'>" + escapeHtml(g.description || "Без описания") + "</div>" +
             "<div class='game-card-actions'></div>";
-
         const actions = card.querySelector(".game-card-actions");
-
         const openBtn = document.createElement("button");
-        openBtn.className = "main-button";
-        openBtn.type = "button";
-        openBtn.textContent = "🌐 Сайт";
+        openBtn.className = "main-button"; openBtn.type = "button"; openBtn.textContent = "🌐 Сайт";
         openBtn.onclick = () => window.open(g.url, "_blank", "noopener");
         actions.appendChild(openBtn);
 
         const guildBtn = document.createElement("button");
-        guildBtn.className = "main-button";
-        guildBtn.type = "button";
+        guildBtn.className = "main-button"; guildBtn.type = "button";
         guildBtn.textContent = "⚔ " + (guildCount ? "Гильдии (" + guildCount + ")" : "Создать гильдию");
         guildBtn.onclick = () => {
             currentGameFilter = g.id;
@@ -665,67 +630,32 @@ async function loadGames(){
 
         if(isOwn){
             const del = document.createElement("button");
-            del.className = "game-delete";
-            del.type = "button";
-            del.title = "Удалить игру";
-            del.textContent = "×";
-            del.onclick = (e) => {
-                e.stopPropagation();
-                deleteGame(g.id, g.name);
-            };
+            del.className = "game-delete"; del.type = "button";
+            del.title = "Удалить"; del.textContent = "×";
+            del.onclick = (e) => { e.stopPropagation(); deleteGame(g.id, g.name); };
             card.appendChild(del);
         }
-
         box.appendChild(card);
     });
 }
-
 async function saveNewGame(){
     const user = await ensureAuth();
     if(!user){ setGameStatus("Нет авторизации", "err"); return; }
     if(!gamesAvailable){ setGameStatus("Таблица games не создана", "err"); return; }
-
     const name = ($("game-name-input").value || "").trim();
     const url = ($("game-url-input").value || "").trim();
     const description = ($("game-desc-input").value || "").trim();
     const customIcon = ($("game-icon-input").value || "").trim();
+    if(!name || name.length < 2){ setGameStatus("Название: минимум 2 символа", "err"); return; }
+    if(!isValidHttpUrl(url) || !url){ setGameStatus("Ссылка на сайт некорректна", "err"); return; }
+    if(customIcon && !isValidHttpUrl(customIcon)){ setGameStatus("Ссылка на иконку некорректна", "err"); return; }
 
-    if(!name || name.length < 2){
-        setGameStatus("Название: минимум 2 символа", "err");
-        $("game-name-input").focus();
-        return;
-    }
-    if(!isValidHttpUrl(url) || !url){
-        setGameStatus("Ссылка на сайт некорректна", "err");
-        $("game-url-input").focus();
-        return;
-    }
-    if(customIcon && !isValidHttpUrl(customIcon)){
-        setGameStatus("Ссылка на иконку некорректна", "err");
-        return;
-    }
-
-    // Итоговая иконка: своя или favicon с сайта
     const iconUrl = customIcon || faviconFromUrl(url);
-
     setGameStatus("Сохранение…", "loading");
-
-    const payload = {
-        name,
-        description: description || null,
-        url,
-        icon_url: iconUrl,
-        added_by: user.id
-    };
-
-    const ins = await supabaseClient.from("games").insert(payload).select().single();
-
-    if(ins.error){
-        errLog("CREATE GAME", ins.error.message);
-        setGameStatus("Ошибка: " + ins.error.message, "err");
-        return;
-    }
-
+    const ins = await supabaseClient.from("games").insert({
+        name, description: description || null, url, icon_url: iconUrl, added_by: user.id
+    }).select().single();
+    if(ins.error){ setGameStatus("Ошибка: " + ins.error.message, "err"); return; }
     setGameStatus("Игра добавлена ✓");
     setTimeout(() => setGameStatus(""), 1500);
     closeAddGameForm();
@@ -733,16 +663,10 @@ async function saveNewGame(){
     populateGuildGameSelect();
     renderGuildGameFilter();
 }
-
 async function deleteGame(id, name){
-    if(!confirm("Удалить игру «" + name + "»? Гильдии этой игры останутся, но потеряют привязку.")) return;
-
+    if(!confirm("Удалить игру «" + name + "»?")) return;
     const del = await supabaseClient.from("games").delete().eq("id", id);
-    if(del.error){
-        errLog("DELETE GAME", del.error.message);
-        alert("Ошибка: " + del.error.message);
-        return;
-    }
+    if(del.error){ alert("Ошибка: " + del.error.message); return; }
     if(currentGameFilter === id) currentGameFilter = 0;
     await loadGames();
     await loadGuilds();
@@ -751,7 +675,7 @@ async function deleteGame(id, name){
 }
 
 /* ============================================================
-   ГИЛЬДИИ (привязаны к играм)
+   ГИЛЬДИИ
 ============================================================ */
 function initGuilds(){
     const btn = $("guild-create-btn");
@@ -760,32 +684,20 @@ function initGuilds(){
 
 function renderGuildGameFilter(){
     const box = $("guilds-game-filter"); if(!box) return;
-
     box.innerHTML = "";
-
-    // Чип "Все"
     const allChip = document.createElement("div");
     allChip.className = "guild-filter-chip" + (currentGameFilter === 0 ? " active" : "");
     allChip.textContent = "Все игры";
-    allChip.onclick = () => {
-        currentGameFilter = 0;
-        loadGuilds().catch(e => errLog(e));
-    };
+    allChip.onclick = () => { currentGameFilter = 0; loadGuilds().catch(e => errLog(e)); };
     box.appendChild(allChip);
 
-    // Чипы игр
     gamesCache.forEach(g => {
         const chip = document.createElement("div");
         chip.className = "guild-filter-chip" + (currentGameFilter === g.id ? " active" : "");
         const icon = g.icon_url || faviconFromUrl(g.url);
-        chip.innerHTML =
-            (icon ? "<img referrerpolicy='no-referrer' src='" + escapeHtml(icon) +
-                "' onerror=\"this.style.display='none'\">" : "") +
+        chip.innerHTML = (icon ? "<img referrerpolicy='no-referrer' src='" + escapeHtml(icon) + "' onerror=\"this.style.display='none'\">" : "") +
             "<span>" + escapeHtml(g.name) + "</span>";
-        chip.onclick = () => {
-            currentGameFilter = g.id;
-            loadGuilds().catch(e => errLog(e));
-        };
+        chip.onclick = () => { currentGameFilter = g.id; loadGuilds().catch(e => errLog(e)); };
         box.appendChild(chip);
     });
 }
@@ -796,63 +708,41 @@ function populateGuildGameSelect(){
     sel.innerHTML = '<option value="">— Выберите игру —</option>';
     gamesCache.forEach(g => {
         const opt = document.createElement("option");
-        opt.value = String(g.id);
-        opt.textContent = g.name;
+        opt.value = String(g.id); opt.textContent = g.name;
         sel.appendChild(opt);
     });
-    // Если отфильтровано — предвыберем
-    if(currentGameFilter > 0){
-        sel.value = String(currentGameFilter);
-    } else if(current){
-        sel.value = current;
-    }
+    if(currentGameFilter > 0) sel.value = String(currentGameFilter);
+    else if(current) sel.value = current;
 }
 
 async function loadGuilds(){
     const box = $("guilds-list"); if(!box) return;
-
-    // Загружаем список игр для фильтра и селекта
-    if(gamesCache.length === 0 && gamesAvailable){
-        await loadGames();
-    }
+    if(gamesCache.length === 0 && gamesAvailable) await loadGames();
     populateGuildGameSelect();
     renderGuildGameFilter();
 
-    // Запрос гильдий (с фильтром по игре)
     let query = supabaseClient.from("guilds").select("*");
     if(currentGameFilter > 0) query = query.eq("game_id", currentGameFilter);
-
     let { data, error } = await query.order("created_at", { ascending: false });
 
-    // Если колонки game_id нет — показываем предупреждение
     if(error && /column.*game_id.*does not exist/i.test(error.message || "")){
         guildsGameIdAvailable = false;
-        // Запрашиваем без фильтра
-        const fallback = await supabaseClient.from("guilds").select("*")
-            .order("created_at", { ascending: false });
-        data = fallback.data;
-        error = fallback.error;
-    } else {
-        guildsGameIdAvailable = true;
-    }
+        const fb = await supabaseClient.from("guilds").select("*").order("created_at", { ascending: false });
+        data = fb.data; error = fb.error;
+    } else guildsGameIdAvailable = true;
 
     if(error){
         guildsAvailable = false;
-        box.innerHTML =
-            "<div class='dash-recent-empty'>" +
-            "Раздел «Гильдии» требует создания таблиц <code>guilds</code> и <code>guild_members</code>.<br>" +
-            "Смотрите SQL в комментарии в начале <code>app.js</code>." +
-            "</div>";
+        box.innerHTML = "<div class='dash-recent-empty'>Раздел требует таблиц <code>guilds</code> и <code>guild_members</code>.</div>";
         return;
     }
     guildsAvailable = true;
     guildsCache = data || [];
 
-    // Подтягиваем состав гильдий
     guildMembersCache = {};
     try{
         const { data: members } = await supabaseClient
-            .from("guild_members").select("guild_id, user_id, nickname, role");
+            .from("guild_members").select("guild_id, user_id, nickname, role, status");
         (members || []).forEach(m => {
             if(!guildMembersCache[m.guild_id]) guildMembersCache[m.guild_id] = [];
             guildMembersCache[m.guild_id].push(m);
@@ -860,28 +750,33 @@ async function loadGuilds(){
     }catch(e){ errLog("GUILD MEMBERS", e); }
 
     if(guildsCache.length === 0){
-        const msg = currentGameFilter > 0
-            ? "В этой игре пока нет гильдий. Создайте первую!"
-            : "Гильдий пока нет. Создайте первую!";
+        const msg = currentGameFilter > 0 ? "В этой игре пока нет гильдий." : "Гильдий пока нет. Создайте первую!";
         box.innerHTML = "<div class='dash-recent-empty'>" + msg + "</div>";
         return;
     }
-
     box.innerHTML = "";
     guildsCache.forEach(g => {
         const members = guildMembersCache[g.id] || [];
-        const isMember = members.some(m => m.user_id === currentUser.id);
+        const my = members.find(m => m.user_id === currentUser.id);
+        const approved = members.filter(m => m.status === "approved" || !m.status);
         const game = gamesCache.find(x => x.id === g.game_id);
+        const icon = g.icon_url || (game ? (game.icon_url || faviconFromUrl(game.url)) : "");
 
         const card = document.createElement("div");
         card.className = "guild-card" + (currentGuildId === g.id ? " active" : "");
         card.innerHTML =
-            "<h3>⚔ " + escapeHtml(g.name) + "</h3>" +
-            "<p>" + escapeHtml((g.description || "").slice(0, 80)) + "</p>" +
-            "<div class='guild-meta'>" +
-                (game ? "<span class='guild-game-badge'>🎮 " + escapeHtml(game.name) + "</span>" : "") +
-                "<span>👥 " + members.length + "</span>" +
-                (isMember ? "<span class='joined-badge'>Вы в гильдии</span>" : "") +
+            "<div class='guild-card-icon'>" +
+            (icon ? "<img referrerpolicy='no-referrer' src='" + escapeHtml(icon) + "' onerror=\"this.style.display='none';this.parentNode.textContent='⚔'\">" : "⚔") +
+            "</div>" +
+            "<div class='guild-card-body'>" +
+                "<h3>⚔ " + escapeHtml(g.name) + "</h3>" +
+                "<p>" + escapeHtml((g.description || "").slice(0, 80)) + "</p>" +
+                "<div class='guild-meta'>" +
+                    (game ? "<span class='guild-game-badge'>🎮 " + escapeHtml(game.name) + "</span>" : "") +
+                    "<span>👥 " + approved.length + "</span>" +
+                    (my && (my.status === "approved" || !my.status) ? "<span class='joined-badge'>Вы в гильдии</span>" : "") +
+                    (my && my.status === "pending" ? "<span class='pending-badge'>Заявка на рассмотрении</span>" : "") +
+                "</div>" +
             "</div>";
         card.onclick = () => openGuild(g.id);
         box.appendChild(card);
@@ -904,45 +799,54 @@ async function createGuild(){
     if(!user){ alert("Нет авторизации"); return; }
     if(!guildsAvailable){ alert("Таблицы гильдий не созданы"); return; }
     if(!guildsGameIdAvailable){
-        alert("Колонка guilds.game_id отсутствует. Выполните SQL:\n\n" +
-              "alter table guilds add column if not exists game_id bigint references games(id) on delete set null;");
+        alert("Колонка guilds.game_id отсутствует. Выполните SQL:\n\nalter table guilds add column if not exists game_id bigint references games(id) on delete set null;");
         return;
     }
-
     const gameId = parseInt($("guild-game-select").value, 10);
     const name = $("guild-name-input").value.trim();
     const description = $("guild-desc-input").value.trim();
-
-    if(!gameId){ alert("Выберите игру"); $("guild-game-select").focus(); return; }
+    if(!gameId){ alert("Выберите игру"); return; }
     if(!name || name.length < 2){ alert("Название: минимум 2 символа"); return; }
 
     const ins = await supabaseClient.from("guilds").insert({
-        name,
-        description: description || null,
-        owner_id: user.id,
-        game_id: gameId
+        name, description: description || null, owner_id: user.id, game_id: gameId
     }).select().single();
-
-    if(ins.error){
-        errLog("CREATE GUILD", ins.error.message);
-        alert("Ошибка: " + ins.error.message);
-        return;
-    }
+    if(ins.error){ alert("Ошибка: " + ins.error.message); return; }
 
     await supabaseClient.from("guild_members").insert({
         guild_id: ins.data.id,
         user_id: user.id,
         nickname: currentProfile?.nickname || "Player",
-        role: "owner"
+        role: "owner",
+        status: "approved"
     });
 
     $("guild-name-input").value = "";
     $("guild-desc-input").value = "";
-
     currentGuildId = ins.data.id;
+    currentGuildTab = "members";
     await loadGuilds();
 }
 
+/* ----- Роли ----- */
+function getMyMembership(guildId){
+    const members = guildMembersCache[guildId] || [];
+    return members.find(m => m.user_id === currentUser.id) || null;
+}
+function isManager(guildId){
+    const my = getMyMembership(guildId);
+    if(!my) return false;
+    if(my.status && my.status !== "approved") return false;
+    return my.role === "owner" || my.role === "deputy";
+}
+function isOwner(guildId){
+    const my = getMyMembership(guildId);
+    if(!my) return false;
+    if(my.status && my.status !== "approved") return false;
+    return my.role === "owner";
+}
+
+/* ----- Открытие гильдии ----- */
 async function openGuild(guildId){
     currentGuildId = guildId;
 
@@ -950,10 +854,12 @@ async function openGuild(guildId){
     if(!guild) return;
 
     const members = guildMembersCache[guildId] || [];
-    const isMember = members.some(m => m.user_id === currentUser.id);
+    const my = getMyMembership(guildId);
+    const amManager = isManager(guildId);
+    const amOwner = isOwner(guildId);
     const game = gamesCache.find(x => x.id === guild.game_id);
+    const icon = guild.icon_url || (game ? (game.icon_url || faviconFromUrl(game.url)) : "");
 
-    // Владелец
     let ownerNick = "—";
     if(guild.owner_id){
         const ownerMember = members.find(m => m.user_id === guild.owner_id);
@@ -965,92 +871,306 @@ async function openGuild(guildId){
         }
     }
 
-    const detail = $("guild-detail");
-    detail.innerHTML =
-        "<h2>⚔ " + escapeHtml(guild.name) + "</h2>" +
-        (game
-            ? "<div class='guild-detail-game'>" +
-                "<img referrerpolicy='no-referrer' src='" +
-                escapeHtml(game.icon_url || faviconFromUrl(game.url)) +
-                "' onerror=\"this.style.display='none'\">" +
-                "🎮 " + escapeHtml(game.name) + "</div>"
-            : "<div class='guild-detail-game' style='background:#f8fafc;border-color:#e3e9f2;color:#98a2b5'>🎮 Игра не привязана</div>") +
-        "<div class='guild-owner'>Владелец: <b>" + escapeHtml(ownerNick) + "</b></div>" +
-        "<div class='guild-detail-desc'>" + escapeHtml(guild.description || "Без описания") + "</div>" +
-        "<div class='guild-members-title'>Участники · " + members.length + "</div>" +
-        "<div class='guild-members-list' id='guild-members-list'></div>" +
-        "<div class='guild-detail-actions' id='guild-detail-actions'></div>";
+    const approved = members.filter(m => m.status === "approved" || !m.status);
+    const pending = members.filter(m => m.status === "pending");
 
-    const membersList = $("guild-members-list");
-    if(members.length === 0){
-        membersList.innerHTML = "<span style='color:#98a2b5;font-size:13px'>Пока никого</span>";
-    } else {
-        members.forEach(m => {
-            const chip = document.createElement("div");
-            chip.className = "guild-member-chip";
-            chip.innerHTML =
-                escapeHtml(m.nickname || "Участник") +
-                (m.role === "owner" ? " <span class='role-owner'>👑 владелец</span>" : "") +
-                (m.user_id === currentUser.id ? " (вы)" : "");
-            membersList.appendChild(chip);
-        });
-    }
+    const detail = $("guild-detail");
+    detail.innerHTML = `
+        <div class="guild-detail-header">
+            <div class="guild-detail-icon-wrap">
+                <div class="gd-icon" id="gd-icon">${icon
+                    ? `<img referrerpolicy="no-referrer" src="${escapeHtml(icon)}" onerror="this.style.display='none';this.parentNode.textContent='⚔'">`
+                    : "⚔"}</div>
+                ${amManager ? `<button class="gd-icon-edit" id="gd-icon-edit" type="button" title="Изменить иконку">✏️</button>` : ""}
+                <input type="file" id="gd-icon-file" accept="image/*" hidden>
+            </div>
+            <div class="guild-detail-info">
+                <h2>⚔ ${escapeHtml(guild.name)}</h2>
+                ${game
+                    ? `<div class="guild-detail-game">
+                        <img referrerpolicy="no-referrer" src="${escapeHtml(game.icon_url || faviconFromUrl(game.url))}" onerror="this.style.display='none'">
+                        🎮 ${escapeHtml(game.name)}
+                       </div>`
+                    : `<div class="guild-detail-game" style="background:#f8fafc;border-color:#e3e9f2;color:#98a2b5">🎮 Игра не привязана</div>`}
+                <div class="guild-owner">Владелец: <b>${escapeHtml(ownerNick)}</b></div>
+                <div class="guild-detail-desc">${escapeHtml(guild.description || "Без описания")}</div>
+                <div class="guild-detail-actions" id="guild-detail-actions"></div>
+            </div>
+        </div>
+
+        <div class="guild-tabs">
+            <button class="guild-tab-btn ${currentGuildTab === "members" ? "active" : ""}" data-tab="members" type="button">
+                👥 Участники (${approved.length})
+            </button>
+            <button class="guild-tab-btn ${currentGuildTab === "materials" ? "active" : ""}" data-tab="materials" type="button">
+                📁 Материалы
+            </button>
+        </div>
+
+        <div class="guild-tab-content ${currentGuildTab === "members" ? "active" : ""}" id="guild-tab-members"></div>
+        <div class="guild-tab-content ${currentGuildTab === "materials" ? "active" : ""}" id="guild-tab-materials"></div>
+    `;
 
     const actions = $("guild-detail-actions");
-
-    // Кнопка перехода к игре в каталоге
     if(game){
-        const openSite = document.createElement("button");
-        openSite.className = "main-button secondary";
-        openSite.type = "button";
-        openSite.textContent = "🌐 Сайт игры";
-        openSite.onclick = () => window.open(game.url, "_blank", "noopener");
-        actions.appendChild(openSite);
+        const site = document.createElement("button");
+        site.className = "main-button secondary"; site.type = "button";
+        site.textContent = "🌐 Сайт игры";
+        site.onclick = () => window.open(game.url, "_blank", "noopener");
+        actions.appendChild(site);
+    }
+    if(!my){
+        const join = document.createElement("button");
+        join.className = "main-button"; join.type = "button";
+        join.textContent = "✉️ Запросить вступление";
+        join.onclick = () => requestJoinGuild(guildId);
+        actions.appendChild(join);
+    } else if(my.status === "pending"){
+        const pendingBtn = document.createElement("button");
+        pendingBtn.className = "main-button secondary"; pendingBtn.type = "button";
+        pendingBtn.textContent = "⏳ Заявка на рассмотрении";
+        pendingBtn.disabled = true;
+        actions.appendChild(pendingBtn);
+
+        const cancel = document.createElement("button");
+        cancel.className = "main-button danger"; cancel.type = "button";
+        cancel.textContent = "Отменить заявку";
+        cancel.onclick = () => cancelJoinRequest(guildId);
+        actions.appendChild(cancel);
+    } else {
+        const leave = document.createElement("button");
+        leave.className = "main-button secondary"; leave.type = "button";
+        leave.textContent = amOwner ? "🗑 Удалить гильдию" : "Покинуть гильдию";
+        leave.onclick = () => leaveGuild(guildId, amOwner);
+        actions.appendChild(leave);
     }
 
-    if(isMember){
-        const leave = document.createElement("button");
-        leave.className = "main-button secondary";
-        leave.type = "button";
-        leave.textContent = "Покинуть гильдию";
-        leave.onclick = () => leaveGuild(guildId, guild.owner_id === currentUser.id);
-        actions.appendChild(leave);
-    } else {
-        const join = document.createElement("button");
-        join.className = "main-button";
-        join.type = "button";
-        join.textContent = "Вступить";
-        join.onclick = () => joinGuild(guildId);
-        actions.appendChild(join);
+    if(amManager){
+        const edit = $("gd-icon-edit");
+        const fileInput = $("gd-icon-file");
+        if(edit && fileInput){
+            edit.onclick = () => fileInput.click();
+            fileInput.onchange = () => {
+                const f = fileInput.files && fileInput.files[0];
+                if(f) uploadGuildIcon(guildId, f);
+            };
+        }
     }
+
+    detail.querySelectorAll(".guild-tab-btn").forEach(btn => {
+        btn.onclick = () => {
+            const t = btn.dataset.tab;
+            currentGuildTab = t;
+            detail.querySelectorAll(".guild-tab-btn").forEach(b =>
+                b.classList.toggle("active", b.dataset.tab === t));
+            detail.querySelectorAll(".guild-tab-content").forEach(c =>
+                c.classList.remove("active"));
+            const target = $("guild-tab-" + t);
+            if(target) target.classList.add("active");
+        };
+    });
+
+    renderMembersTab(guildId, approved, pending, amManager, amOwner);
+    await renderMaterialsTab(guildId, amManager);
 }
 
-async function joinGuild(guildId){
+/* ----- Вкладка "Участники" ----- */
+function renderMembersTab(guildId, approved, pending, amManager, amOwner){
+    const box = $("guild-tab-members"); if(!box) return;
+    box.innerHTML = "";
+
+    if(pending.length > 0){
+        const sec = document.createElement("div");
+        sec.className = "guild-pending-section";
+        sec.innerHTML = "<div class='guild-pending-title'>Заявки на вступление · " + pending.length + "</div>";
+        pending.forEach(p => {
+            const row = document.createElement("div");
+            row.className = "guild-pending-item";
+            row.innerHTML = "<div class='guild-pending-name'>" + escapeHtml(p.nickname || "Player") + "</div>";
+
+            if(amManager){
+                const approve = document.createElement("button");
+                approve.className = "main-button"; approve.type = "button";
+                approve.textContent = "✓ Принять";
+                approve.onclick = () => approveMember(guildId, p.user_id);
+                row.appendChild(approve);
+
+                const reject = document.createElement("button");
+                reject.className = "main-button danger"; reject.type = "button";
+                reject.textContent = "× Отклонить";
+                reject.onclick = () => rejectMember(guildId, p.user_id);
+                row.appendChild(reject);
+            } else {
+                const wait = document.createElement("span");
+                wait.style.cssText = "color:#8a6a10;font-size:12.5px;font-weight:700";
+                wait.textContent = "Ожидает одобрения";
+                row.appendChild(wait);
+            }
+            sec.appendChild(row);
+        });
+        box.appendChild(sec);
+    }
+
+    const list = document.createElement("div");
+    list.className = "guild-members-list";
+
+    const order = { owner: 0, deputy: 1, member: 2 };
+    const sorted = approved.slice().sort((a,b) => (order[a.role]??9) - (order[b.role]??9));
+
+    if(sorted.length === 0){
+        list.innerHTML = "<div class='dash-recent-empty'>Пока никого</div>";
+    }
+
+    sorted.forEach(m => {
+        const row = document.createElement("div");
+        row.className = "guild-member-row";
+
+        const initial = (m.nickname || "?")[0].toUpperCase();
+        const roleLabel = m.role === "owner" ? "👑 Владелец" :
+                          m.role === "deputy" ? "🛡 Заместитель" :
+                          "Участник";
+        const roleCls = m.role === "owner" ? "owner" :
+                        m.role === "deputy" ? "deputy" : "member";
+
+        row.innerHTML = `
+            <div class="guild-member-avatar">${escapeHtml(initial)}</div>
+            <div class="guild-member-info">
+                <div class="guild-member-name">${escapeHtml(m.nickname || "Player")}${m.user_id === currentUser.id ? " (вы)" : ""}</div>
+                <div class="guild-member-role ${roleCls}">${roleLabel}</div>
+            </div>
+            <div class="guild-member-actions"></div>
+        `;
+
+        const acts = row.querySelector(".guild-member-actions");
+        const isMe = m.user_id === currentUser.id;
+
+        if(amManager && !isMe){
+            if(m.role === "member"){
+                if(amOwner){
+                    const promote = document.createElement("button");
+                    promote.className = "main-button small"; promote.type = "button";
+                    promote.textContent = "🛡 В замы";
+                    promote.onclick = () => changeRole(guildId, m.user_id, "deputy");
+                    acts.appendChild(promote);
+                }
+                const kick = document.createElement("button");
+                kick.className = "main-button danger small"; kick.type = "button";
+                kick.textContent = "Кикнуть";
+                kick.onclick = () => kickMember(guildId, m.user_id, m.nickname);
+                acts.appendChild(kick);
+            } else if(m.role === "deputy"){
+                if(amOwner){
+                    const demote = document.createElement("button");
+                    demote.className = "main-button secondary small"; demote.type = "button";
+                    demote.textContent = "Снять зама";
+                    demote.onclick = () => changeRole(guildId, m.user_id, "member");
+                    acts.appendChild(demote);
+
+                    const kick = document.createElement("button");
+                    kick.className = "main-button danger small"; kick.type = "button";
+                    kick.textContent = "Кикнуть";
+                    kick.onclick = () => kickMember(guildId, m.user_id, m.nickname);
+                    acts.appendChild(kick);
+                }
+            }
+        }
+
+        if(amOwner && !isMe && m.role !== "owner"){
+            const transfer = document.createElement("button");
+            transfer.className = "main-button secondary small"; transfer.type = "button";
+            transfer.textContent = "👑 Передать";
+            transfer.title = "Передать владение";
+            transfer.onclick = () => transferOwnership(guildId, m.user_id, m.nickname);
+            acts.appendChild(transfer);
+        }
+
+        list.appendChild(row);
+    });
+    box.appendChild(list);
+}
+
+/* ----- Действия с участниками ----- */
+async function requestJoinGuild(guildId){
     const user = await ensureAuth();
     if(!user) return;
     const ins = await supabaseClient.from("guild_members").insert({
-        guild_id: guildId,
-        user_id: user.id,
+        guild_id: guildId, user_id: user.id,
         nickname: currentProfile?.nickname || "Player",
-        role: "member"
+        role: "member", status: "pending"
     });
-    if(ins.error){ errLog("JOIN GUILD", ins.error.message); alert("Ошибка: " + ins.error.message); return; }
+    if(ins.error){ alert("Ошибка: " + ins.error.message); return; }
     await loadGuilds();
 }
-
-async function leaveGuild(guildId, isOwner){
+async function cancelJoinRequest(guildId){
+    const user = await ensureAuth();
+    if(!user) return;
+    await supabaseClient.from("guild_members").delete()
+        .eq("guild_id", guildId).eq("user_id", user.id);
+    await loadGuilds();
+}
+async function approveMember(guildId, userId){
+    const up = await supabaseClient.from("guild_members")
+        .update({ status: "approved" })
+        .eq("guild_id", guildId).eq("user_id", userId);
+    if(up.error){ alert("Ошибка: " + up.error.message); return; }
+    await loadGuilds();
+}
+async function rejectMember(guildId, userId){
+    if(!confirm("Отклонить заявку?")) return;
+    const del = await supabaseClient.from("guild_members").delete()
+        .eq("guild_id", guildId).eq("user_id", userId);
+    if(del.error){ alert("Ошибка: " + del.error.message); return; }
+    await loadGuilds();
+}
+async function kickMember(guildId, userId, nickname){
+    if(!confirm("Кикнуть " + (nickname || "участника") + "?")) return;
+    const del = await supabaseClient.from("guild_members").delete()
+        .eq("guild_id", guildId).eq("user_id", userId);
+    if(del.error){ alert("Ошибка: " + del.error.message); return; }
+    await loadGuilds();
+}
+async function changeRole(guildId, userId, newRole){
+    const up = await supabaseClient.from("guild_members")
+        .update({ role: newRole })
+        .eq("guild_id", guildId).eq("user_id", userId);
+    if(up.error){ alert("Ошибка: " + up.error.message); return; }
+    await loadGuilds();
+}
+async function transferOwnership(guildId, newOwnerId, nickname){
+    if(!confirm("Передать владение " + (nickname || "игроку") + "? Вы станете заместителем.")) return;
     const user = await ensureAuth();
     if(!user) return;
 
-    if(isOwner){
+    const up1 = await supabaseClient.from("guilds")
+        .update({ owner_id: newOwnerId }).eq("id", guildId);
+    if(up1.error){ alert("Ошибка: " + up1.error.message); return; }
+
+    await supabaseClient.from("guild_members")
+        .update({ role: "owner", status: "approved" })
+        .eq("guild_id", guildId).eq("user_id", newOwnerId);
+
+    await supabaseClient.from("guild_members")
+        .update({ role: "deputy" })
+        .eq("guild_id", guildId).eq("user_id", user.id);
+
+    await loadGuilds();
+}
+
+async function leaveGuild(guildId, isOwnerFlag){
+    const user = await ensureAuth();
+    if(!user) return;
+
+    if(isOwnerFlag){
         const members = guildMembersCache[guildId] || [];
-        if(members.length > 1){
-            alert("Нельзя покинуть гильдию, пока в ней есть другие участники. Сначала передайте владение или удалите гильдию.");
+        const approved = members.filter(m => m.status === "approved" || !m.status);
+        if(approved.length > 1){
+            alert("Нельзя удалить гильдию, пока в ней есть другие участники. Сначала передайте владение или удалите участников.");
             return;
         }
-        if(!confirm("Вы владелец. Удалить гильдию?")) return;
+        if(!confirm("Вы владелец. Удалить гильдию вместе со всеми материалами?")) return;
         await supabaseClient.from("guilds").delete().eq("id", guildId);
         await supabaseClient.from("guild_members").delete().eq("guild_id", guildId);
+        await supabaseClient.from("guild_materials").delete().eq("guild_id", guildId);
         currentGuildId = null;
         $("guild-detail").innerHTML =
             "<div class='guild-detail-empty'><div class='guild-detail-icon'>⚔</div>" +
@@ -1067,11 +1187,283 @@ async function leaveGuild(guildId, isOwner){
     await loadGames();
 }
 
-/* ===== ПРОФИЛЬ ===== */
-async function loadProfile(){
+/* ----- Иконка гильдии (загрузка файла) ----- */
+async function uploadGuildIcon(guildId, file){
     const user = await ensureAuth();
     if(!user) return;
 
+    if(!file.type.startsWith("image/")){
+        alert("Можно загружать только изображения");
+        return;
+    }
+    if(file.size > 5 * 1024 * 1024){
+        alert("Файл больше 5 МБ");
+        return;
+    }
+
+    const ext = fileExt(file.name) || "png";
+    const path = user.id + "/" + guildId + "-" + Date.now() + "." + ext;
+
+    const iconWrap = $("gd-icon");
+    if(iconWrap){
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            iconWrap.innerHTML = "<img src='" + e.target.result + "' alt=''>";
+        };
+        reader.readAsDataURL(file);
+    }
+
+    const up = await supabaseClient.storage
+        .from("guild-icons").upload(path, file, { upsert: false, cacheControl: "3600" });
+
+    if(up.error){
+        errLog("ICON UPLOAD", up.error.message);
+        alert("Ошибка загрузки: " + up.error.message);
+        return;
+    }
+
+    const { data: pub } = supabaseClient.storage.from("guild-icons").getPublicUrl(path);
+    const url = pub.publicUrl;
+
+    const upd = await supabaseClient.from("guilds").update({ icon_url: url }).eq("id", guildId);
+    if(upd.error){ alert("Ошибка сохранения: " + upd.error.message); return; }
+
+    await loadGuilds();
+}
+
+/* ----- Вкладка "Материалы" ----- */
+async function renderMaterialsTab(guildId, amManager){
+    const box = $("guild-tab-materials"); if(!box) return;
+    box.innerHTML = "";
+
+    if(amManager){
+        const form = document.createElement("div");
+        form.className = "material-upload-form";
+        form.innerHTML = `
+            <h3>📤 Загрузить материал</h3>
+            <div class="material-form-row">
+                <input id="mat-title" placeholder="Название материала" maxlength="80">
+                <input id="mat-desc" placeholder="Краткое описание" maxlength="200">
+            </div>
+            <label class="material-file-input">
+                <span class="file-icon">📎</span>
+                <span class="file-text" id="mat-file-text">
+                    <b>Выберите файл</b> или перетащите сюда
+                </span>
+                <input type="file" id="mat-file">
+            </label>
+            <div class="upload-progress hidden" id="mat-progress">
+                <div class="upload-progress-bar" id="mat-progress-bar"></div>
+            </div>
+            <div class="profile-actions" style="margin-top:12px">
+                <button class="main-button" id="mat-upload-btn" type="button">Загрузить</button>
+            </div>
+            <div class="profile-status" id="mat-status"></div>
+        `;
+        box.appendChild(form);
+
+        const fileInput = $("mat-file");
+        const fileText = $("mat-file-text");
+        fileInput.onchange = () => {
+            const f = fileInput.files[0];
+            if(f){
+                fileText.innerHTML = "<b>" + escapeHtml(f.name) + "</b> · " + humanFileSize(f.size);
+            } else {
+                fileText.innerHTML = "<b>Выберите файл</b> или перетащите сюда";
+            }
+        };
+
+        const dropZone = form.querySelector(".material-file-input");
+        dropZone.addEventListener("dragover", (e) => {
+            e.preventDefault(); dropZone.style.background = "#eaf2ff";
+        });
+        dropZone.addEventListener("dragleave", () => { dropZone.style.background = ""; });
+        dropZone.addEventListener("drop", (e) => {
+            e.preventDefault(); dropZone.style.background = "";
+            const f = e.dataTransfer.files[0];
+            if(f){
+                fileInput.files = e.dataTransfer.files;
+                fileText.innerHTML = "<b>" + escapeHtml(f.name) + "</b> · " + humanFileSize(f.size);
+            }
+        });
+
+        $("mat-upload-btn").onclick = () => uploadMaterial(guildId);
+    }
+
+    const listWrap = document.createElement("div");
+    listWrap.id = "materials-grid";
+    listWrap.className = "materials-grid";
+    listWrap.innerHTML = "<div class='dash-recent-empty'>Загрузка материалов…</div>";
+    box.appendChild(listWrap);
+
+    const { data, error } = await supabaseClient
+        .from("guild_materials").select("*")
+        .eq("guild_id", guildId)
+        .order("created_at", { ascending: false });
+
+    if(error){
+        listWrap.innerHTML = "<div class='dash-recent-empty'>Материалов пока нет</div>";
+        return;
+    }
+    const mats = data || [];
+
+    if(mats.length === 0){
+        listWrap.innerHTML = "<div class='dash-recent-empty'>Материалов пока нет" +
+            (amManager ? ". Загрузите первый!" : "") + "</div>";
+        return;
+    }
+
+    listWrap.innerHTML = "";
+    mats.forEach(m => {
+        const card = document.createElement("div");
+        card.className = "material-card";
+        const ico = fileIconByName(m.file_name || m.file_url, m.file_type);
+        const canDelete = amManager || (m.uploaded_by === currentUser.id);
+
+        card.innerHTML = `
+            <div class="material-card-header">
+                <div class="material-icon">${ico}</div>
+                <div class="material-info">
+                    <div class="material-title">${escapeHtml(m.title || "Без названия")}</div>
+                    <div class="material-meta">
+                        ${escapeHtml(m.file_name || "")}
+                        ${m.file_size ? " · " + humanFileSize(m.file_size) : ""}
+                    </div>
+                </div>
+            </div>
+            ${m.description ? `<div class="material-desc">${escapeHtml(m.description)}</div>` : ""}
+            <div class="material-actions">
+                <button class="main-button" data-action="download" type="button">⬇ Скачать</button>
+            </div>
+        `;
+        card.querySelector('[data-action="download"]').onclick = () => {
+            const a = document.createElement("a");
+            a.href = m.file_url;
+            a.target = "_blank";
+            a.rel = "noopener";
+            a.download = m.file_name || "";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        };
+
+        if(canDelete){
+            const del = document.createElement("button");
+            del.className = "material-delete";
+            del.type = "button";
+            del.title = "Удалить";
+            del.textContent = "×";
+            del.onclick = (e) => { e.stopPropagation(); deleteMaterial(guildId, m); };
+            card.appendChild(del);
+        }
+        listWrap.appendChild(card);
+    });
+}
+
+async function uploadMaterial(guildId){
+    const user = await ensureAuth();
+    if(!user) return;
+
+    const title = ($("mat-title").value || "").trim();
+    const description = ($("mat-desc").value || "").trim();
+    const fileInput = $("mat-file");
+    const file = fileInput.files && fileInput.files[0];
+    const status = $("mat-status");
+
+    status.className = "profile-status";
+    if(!title){ status.textContent = "Укажите название"; status.classList.add("err"); return; }
+    if(!file){ status.textContent = "Выберите файл"; status.classList.add("err"); return; }
+    if(file.size > 100 * 1024 * 1024){
+        status.textContent = "Файл больше 100 МБ";
+        status.classList.add("err");
+        return;
+    }
+
+    const ext = fileExt(file.name);
+    const path = user.id + "/" + guildId + "/" + Date.now() + "-" + Math.random().toString(36).slice(2,8) + "." + ext;
+
+    status.textContent = "Загрузка файла…";
+    status.classList.add("loading");
+
+    const progressWrap = $("mat-progress");
+    const progressBar = $("mat-progress-bar");
+    if(progressWrap){
+        progressWrap.classList.remove("hidden");
+        progressBar.style.width = "0%";
+    }
+
+    let p = 0;
+    const fake = setInterval(() => {
+        p = Math.min(p + 5 + Math.random()*10, 90);
+        if(progressBar) progressBar.style.width = p + "%";
+    }, 200);
+
+    const up = await supabaseClient.storage
+        .from("guild-files")
+        .upload(path, file, { upsert: false, contentType: file.type || undefined });
+
+    clearInterval(fake);
+    if(progressBar) progressBar.style.width = "100%";
+
+    if(up.error){
+        errLog("FILE UPLOAD", up.error.message);
+        status.textContent = "Ошибка загрузки: " + up.error.message;
+        status.classList.remove("loading");
+        status.classList.add("err");
+        return;
+    }
+
+    const { data: pub } = supabaseClient.storage.from("guild-files").getPublicUrl(path);
+
+    const ins = await supabaseClient.from("guild_materials").insert({
+        guild_id: guildId,
+        uploaded_by: user.id,
+        title,
+        description: description || null,
+        file_url: pub.publicUrl,
+        file_path: path,
+        file_name: file.name,
+        file_size: file.size,
+        file_type: file.type || null
+    });
+
+    if(ins.error){
+        status.textContent = "Ошибка: " + ins.error.message;
+        status.classList.remove("loading");
+        status.classList.add("err");
+        return;
+    }
+
+    status.textContent = "Материал загружен ✓";
+    status.classList.remove("loading");
+    setTimeout(() => status.textContent = "", 2000);
+
+    $("mat-title").value = "";
+    $("mat-desc").value = "";
+    $("mat-file").value = "";
+    $("mat-file-text").innerHTML = "<b>Выберите файл</b> или перетащите сюда";
+
+    await openGuild(guildId);
+}
+
+async function deleteMaterial(guildId, mat){
+    if(!confirm("Удалить материал «" + (mat.title || "без названия") + "»?")) return;
+    const del = await supabaseClient.from("guild_materials").delete().eq("id", mat.id);
+    if(del.error){ alert("Ошибка: " + del.error.message); return; }
+
+    if(mat.file_path){
+        try{ await supabaseClient.storage.from("guild-files").remove([mat.file_path]); }
+        catch(e){ errLog("DELETE FILE", e); }
+    }
+    await openGuild(guildId);
+}
+
+/* ============================================================
+   ПРОФИЛЬ
+============================================================ */
+async function loadProfile(){
+    const user = await ensureAuth();
+    if(!user) return;
     if(!availableColumns){
         const { columns, row } = await detectProfileColumns(user.id);
         availableColumns = columns;
@@ -1270,7 +1662,9 @@ async function saveProfileChanges(){
     }finally{ savingProfile = false; }
 }
 
-/* ===== НОВОСТИ ===== */
+/* ============================================================
+   НОВОСТИ
+============================================================ */
 async function loadNews(){
     const boxHome = $("news-list");
     const boxPage = $("news-page-list");
@@ -1279,12 +1673,7 @@ async function loadNews(){
         .from("news").select("*").order("created_at", { ascending: false });
 
     const empty = "<p style='color:#888'>Новостей пока нет</p>";
-    if(error){
-        if(boxHome) boxHome.innerHTML = empty;
-        if(boxPage) boxPage.innerHTML = empty;
-        return;
-    }
-    if(!data || data.length === 0){
+    if(error || !data || data.length === 0){
         if(boxHome) boxHome.innerHTML = empty;
         if(boxPage) boxPage.innerHTML = empty;
         return;
@@ -1305,7 +1694,9 @@ async function loadNews(){
     if(boxPage){ boxPage.innerHTML = ""; boxPage.appendChild(render(data, 0)); }
 }
 
-/* ===== ЧАТ ===== */
+/* ============================================================
+   ЧАТ
+============================================================ */
 function initChat(){
     const button = $("send-message");
     if(button) button.onclick = sendMessage;
@@ -1419,7 +1810,9 @@ function startChatRealtime(){
         .subscribe();
 }
 
-/* ===== КОНФЕРЕНЦИЯ ===== */
+/* ============================================================
+   КОНФЕРЕНЦИЯ (MiroTalk P2P)
+============================================================ */
 function initConference(){
     const createBtn = $("create-room-btn");
     if(createBtn) createBtn.onclick = createRoom;
@@ -1526,16 +1919,9 @@ async function leaveRoom(){
     await loadRooms();
 }
 
-/* ===== УТИЛИТЫ ===== */
-function switchPage(pageName){
-    document.querySelectorAll(".menu-button").forEach(b => {
-        b.classList.toggle("active", b.dataset.page === pageName);
-    });
-    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-    const page = $(pageName);
-    if(page) page.classList.add("active");
-}
-
+/* ============================================================
+   BEFORE UNLOAD
+============================================================ */
 window.addEventListener("beforeunload", () => {
     if(currentRoom && currentUser){
         try{
@@ -1548,3 +1934,103 @@ window.addEventListener("beforeunload", () => {
     }
 });
 
+/* ============================================================
+   SQL ДЛЯ SUPABASE (для справки, выполнить в SQL Editor):
+
+-- Игры
+create table if not exists games (
+  id bigserial primary key,
+  name text not null,
+  description text,
+  url text not null,
+  icon_url text,
+  added_by uuid references auth.users(id),
+  created_at timestamp default now()
+);
+
+-- Гильдии: расширение
+alter table guilds add column if not exists icon_url text;
+alter table guilds add column if not exists approval_required boolean default true;
+alter table guilds add column if not exists game_id bigint references games(id) on delete set null;
+alter table guild_members add column if not exists status text default 'approved';
+
+-- Материалы
+create table if not exists guild_materials (
+  id bigserial primary key,
+  guild_id bigint references guilds(id) on delete cascade,
+  uploaded_by uuid references auth.users(id),
+  title text not null,
+  description text,
+  file_url text not null,
+  file_path text,
+  file_name text,
+  file_size bigint,
+  file_type text,
+  created_at timestamp default now()
+);
+
+-- Функция проверки роли
+create or replace function is_guild_manager(gid bigint, uid uuid)
+returns boolean language sql security definer as $$
+  select exists (
+    select 1 from guild_members
+    where guild_id = gid and user_id = uid
+    and role in ('owner','deputy') and status = 'approved'
+  );
+$$;
+
+alter table guild_materials enable row level security;
+
+drop policy if exists "gmaterials read all" on guild_materials;
+create policy "gmaterials read all" on guild_materials for select using (true);
+
+drop policy if exists "gmaterials insert manager" on guild_materials;
+create policy "gmaterials insert manager" on guild_materials for insert
+  with check (auth.uid() = uploaded_by and is_guild_manager(guild_id, auth.uid()));
+
+drop policy if exists "gmaterials delete manager" on guild_materials;
+create policy "gmaterials delete manager" on guild_materials for delete
+  using (is_guild_manager(guild_id, auth.uid()) or auth.uid() = uploaded_by);
+
+drop policy if exists "gm update manager" on guild_members;
+create policy "gm update manager" on guild_members for update
+  using (is_guild_manager(guild_id, auth.uid()));
+
+drop policy if exists "gm delete manager" on guild_members;
+create policy "gm delete manager" on guild_members for delete
+  using (is_guild_manager(guild_id, auth.uid()) or auth.uid() = user_id);
+
+drop policy if exists "guilds update owner" on guilds;
+create policy "guilds update owner" on guilds for update
+  using (is_guild_manager(id, auth.uid()));
+
+-- Storage
+insert into storage.buckets (id, name, public)
+values ('guild-icons', 'guild-icons', true) on conflict (id) do nothing;
+insert into storage.buckets (id, name, public)
+values ('guild-files', 'guild-files', true) on conflict (id) do nothing;
+
+drop policy if exists "guild-icons read" on storage.objects;
+create policy "guild-icons read" on storage.objects for select
+  using (bucket_id = 'guild-icons');
+
+drop policy if exists "guild-icons insert" on storage.objects;
+create policy "guild-icons insert" on storage.objects for insert
+  with check (bucket_id = 'guild-icons' and auth.role() = 'authenticated');
+
+drop policy if exists "guild-icons delete" on storage.objects;
+create policy "guild-icons delete" on storage.objects for delete
+  using (bucket_id = 'guild-icons' and auth.uid()::text = (storage.foldername(name))[1]);
+
+drop policy if exists "guild-files read" on storage.objects;
+create policy "guild-files read" on storage.objects for select
+  using (bucket_id = 'guild-files');
+
+drop policy if exists "guild-files insert" on storage.objects;
+create policy "guild-files insert" on storage.objects for insert
+  with check (bucket_id = 'guild-files' and auth.role() = 'authenticated');
+
+drop policy if exists "guild-files delete" on storage.objects;
+create policy "guild-files delete" on storage.objects for delete
+  using (bucket_id = 'guild-files' and auth.uid()::text = (storage.foldername(name))[1]);
+============================================================ */
