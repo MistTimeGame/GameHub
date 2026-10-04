@@ -28,6 +28,8 @@ body{
     background:
         radial-gradient(circle at top, #d9ecff, transparent 45%),
         #f5f6f8;
+    position:relative;
+    z-index:10;
 }
 
 .auth-card{
