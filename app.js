@@ -1,6 +1,6 @@
 /* =====================================================
    GAME PLATFORM — app.js
-   VERSION: WebRTC FIX — subscription race + offer retry
+   VERSION: AUTH FIX + ROOM JOIN FIX
 ===================================================== */
 
 const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -28,16 +28,17 @@ let signalChannel = null;
 let signalReady = false;
 let usersPollTimer = null;
 let roomsPollTimer = null;
+let roomUsersChannel = null;
 let dummyVideoTrack = null;
-let offerRetryTimers = {};
+let joiningRoom = false;
 
 /* =====================================================
    ХЕЛПЕРЫ
 ===================================================== */
 
 function $(id){ return document.getElementById(id); }
-function log(...a){ console.log("[GAME PLATFORM]", ...a); }
-function errLog(...a){ console.error("[GAME PLATFORM][ОШИБКА]", ...a); }
+function log(...a){ console.log("[GP]", ...a); }
+function errLog(...a){ console.error("[GP][ОШИБКА]", ...a); }
 
 function escapeHtml(s){
     return String(s == null ? "" : s)
@@ -76,7 +77,37 @@ function setImage(id, url){
 }
 
 /* =====================================================
-   DUMMY-ВИДЕО (заглушка для видео-трансивера)
+   ГАРАНТИЯ АВТОРИЗАЦИИ
+   Всегда возвращает актуального пользователя.
+   Если currentUser потерян — перезапрашивает у Supabase.
+===================================================== */
+
+async function ensureAuth(){
+    if(currentUser && currentUser.id){
+        return currentUser;
+    }
+    try{
+        const { data, error } = await supabaseClient.auth.getUser();
+        if(error){
+            errLog("ensureAuth getUser error", error.message);
+        }
+        if(data && data.user){
+            currentUser = data.user;
+            return currentUser;
+        }
+        const session = await supabaseClient.auth.getSession();
+        if(session.data && session.data.session && session.data.session.user){
+            currentUser = session.data.session.user;
+            return currentUser;
+        }
+    }catch(e){
+        errLog("ensureAuth exception", e);
+    }
+    return null;
+}
+
+/* =====================================================
+   DUMMY VIDEO TRACK
 ===================================================== */
 
 function getDummyVideoTrack(){
@@ -111,11 +142,22 @@ function getDummyVideoTrack(){
 ===================================================== */
 
 document.addEventListener("DOMContentLoaded", () => {
-    log("GAME PLATFORM START");
+    log("START");
     initAuth();
     initNavigation();
     initChat();
     initConference();
+
+    // Слушаем изменения auth-состояния — критично для стабильности
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+        log("AUTH EVENT:", event);
+        if(event === "SIGNED_OUT"){
+            currentUser = null;
+        } else if(session && session.user){
+            currentUser = session.user;
+        }
+    });
+
     checkSession();
 });
 
@@ -149,65 +191,81 @@ function initAuth(){
 
     const loginForm = $("login-form");
     if(loginForm){
-        loginForm.onsubmit = async (e) => {
+        loginForm.addEventListener("submit", async (e) => {
             e.preventDefault();
+            e.stopPropagation();
             setAuthMessage("Вход…", true);
+
             const email = $("login-email").value.trim();
             const password = $("login-password").value;
-            const result = await supabaseClient.auth.signInWithPassword({ email, password });
-            if(result.error){
-                errLog("LOGIN ERROR", result.error.message);
-                setAuthMessage(result.error.message);
-                return;
+
+            try{
+                const result = await supabaseClient.auth.signInWithPassword({ email, password });
+                if(result.error){
+                    errLog("LOGIN ERROR", result.error.message);
+                    setAuthMessage(result.error.message);
+                    return;
+                }
+                currentUser = result.data.user;
+                log("LOGIN OK", currentUser.id);
+                setAuthMessage("");
+                openApp();
+            }catch(err){
+                errLog("LOGIN EXC", err);
+                setAuthMessage("Ошибка: " + err.message);
             }
-            currentUser = result.data.user;
-            setAuthMessage("");
-            openApp();
-        };
+        });
     }
 
     const registerForm = $("register-form");
     if(registerForm){
-        registerForm.onsubmit = async (e) => {
+        registerForm.addEventListener("submit", async (e) => {
             e.preventDefault();
+            e.stopPropagation();
             setAuthMessage("Регистрация…", true);
+
             const nickname = $("register-nickname").value.trim() || "Player";
             const email = $("register-email").value.trim();
             const password = $("register-password").value;
 
-            const result = await supabaseClient.auth.signUp({
-                email, password, options: { data: { nickname } }
-            });
-
-            if(result.error){
-                errLog("REGISTER ERROR", result.error.message);
-                setAuthMessage(result.error.message);
-                return;
-            }
-
-            const user = result.data.user;
-            if(!user){
-                setAuthMessage("Проверьте email для подтверждения.", true);
-                return;
-            }
-
             try{
-                const ins = await supabaseClient.from("profiles").insert({
-                    id: user.id, nickname, avatar_url: DEFAULT_AVATAR, vip_level: 0
+                const result = await supabaseClient.auth.signUp({
+                    email, password, options: { data: { nickname } }
                 });
-                if(ins.error) errLog("PROFILE CREATE ERROR", ins.error.message);
-            }catch(err){ errLog("PROFILE CREATE EXCEPTION", err); }
 
-            if(!result.data.session){
-                setAuthMessage("Регистрация успешна. Подтвердите email.", true);
-                if(loginTab) loginTab.click();
-                return;
+                if(result.error){
+                    errLog("REGISTER ERROR", result.error.message);
+                    setAuthMessage(result.error.message);
+                    return;
+                }
+
+                const user = result.data.user;
+                if(!user){
+                    setAuthMessage("Проверьте email для подтверждения.", true);
+                    return;
+                }
+
+                try{
+                    const ins = await supabaseClient.from("profiles").insert({
+                        id: user.id, nickname, avatar_url: DEFAULT_AVATAR, vip_level: 0
+                    });
+                    if(ins.error) errLog("PROFILE CREATE ERROR", ins.error.message);
+                }catch(err){ errLog("PROFILE CREATE EXC", err); }
+
+                if(!result.data.session){
+                    setAuthMessage("Регистрация успешна. Подтвердите email.", true);
+                    if(loginTab) loginTab.click();
+                    return;
+                }
+
+                currentUser = user;
+                setAuthMessage("");
+                openApp();
+            }catch(err){
+                errLog("REGISTER EXC", err);
+                setAuthMessage("Ошибка: " + err.message);
             }
-
-            currentUser = user;
-            setAuthMessage("");
-            openApp();
-        };
+        });
     }
 
     const logout = $("logout");
@@ -230,7 +288,10 @@ async function checkSession(){
         const { data } = await supabaseClient.auth.getSession();
         if(data.session && data.session.user){
             currentUser = data.session.user;
+            log("SESSION FOUND", currentUser.id);
             openApp();
+        } else {
+            log("NO SESSION — auth screen");
         }
     }catch(e){ errLog("SESSION ERROR", e); }
 }
@@ -244,6 +305,18 @@ async function openApp(){
     const app = $("app");
     if(auth) auth.classList.add("hidden");
     if(app) app.classList.remove("hidden");
+
+    log("APP OPEN");
+
+    // Автоочистка stale-записей пользователя из конференций
+    if(currentUser){
+        try{
+            await supabaseClient
+                .from("conference_users")
+                .delete()
+                .eq("user_id", currentUser.id);
+        }catch(e){ errLog("STALE CLEANUP", e); }
+    }
 
     await safeRun(loadProfile);
     await safeRun(loadNews);
@@ -288,17 +361,18 @@ function initNavigation(){
 ===================================================== */
 
 async function loadProfile(){
-    if(!currentUser) return;
+    const user = await ensureAuth();
+    if(!user){ log("NO USER — PROFILE SKIPPED"); return; }
 
     let result = await supabaseClient
-        .from("profiles").select("*").eq("id", currentUser.id).maybeSingle();
+        .from("profiles").select("*").eq("id", user.id).maybeSingle();
 
     if(result.error){ errLog("PROFILE SELECT ERROR", result.error.message); return; }
 
     if(!result.data){
-        const fallbackNick = currentUser.email ? currentUser.email.split("@")[0] : "Player";
+        const fallbackNick = user.email ? user.email.split("@")[0] : "Player";
         const create = await supabaseClient.from("profiles").insert({
-            id: currentUser.id, nickname: fallbackNick,
+            id: user.id, nickname: fallbackNick,
             avatar_url: DEFAULT_AVATAR, vip_level: 0
         });
         if(create.error){ errLog("PROFILE INSERT ERROR", create.error.message); return; }
@@ -323,7 +397,8 @@ async function loadProfile(){
 const saveProfile = $("save-profile");
 if(saveProfile){
     saveProfile.onclick = async () => {
-        if(!currentUser) return;
+        const user = await ensureAuth();
+        if(!user){ alert("Нет авторизации"); return; }
         const status = $("profile-status");
         if(status){ status.classList.remove("err"); status.textContent = "Сохранение…"; }
 
@@ -334,7 +409,7 @@ if(saveProfile){
         };
 
         const update = await supabaseClient
-            .from("profiles").update(payload).eq("id", currentUser.id).select().single();
+            .from("profiles").update(payload).eq("id", user.id).select().single();
 
         if(update.error){
             errLog("PROFILE SAVE ERROR", update.error.message);
@@ -370,12 +445,10 @@ async function loadNews(){
         box.innerHTML = "<p style='color:#888'>Новостей пока нет</p>";
         return;
     }
-
     if(!result.data || result.data.length === 0){
         box.innerHTML = "<p style='color:#888'>Новостей пока нет</p>";
         return;
     }
-
     box.innerHTML = "";
     result.data.forEach(item => {
         const div = document.createElement("div");
@@ -403,19 +476,20 @@ function initChat(){
 }
 
 async function sendMessage(){
-    if(!currentUser){ alert("Нет авторизации"); return; }
+    const user = await ensureAuth();
+    if(!user){ alert("Нет авторизации"); return; }
     const input = $("message-text");
     if(!input) return;
     const text = input.value.trim();
     if(!text) return;
 
     const profile = await supabaseClient
-        .from("profiles").select("nickname").eq("id", currentUser.id).maybeSingle();
+        .from("profiles").select("nickname").eq("id", user.id).maybeSingle();
 
     const nickname = (profile.data && profile.data.nickname) || "Player";
 
     const result = await supabaseClient.from("messages").insert({
-        user_id: currentUser.id, nickname, text
+        user_id: user.id, nickname, text
     });
 
     if(result.error){
@@ -437,7 +511,6 @@ async function loadMessages(){
         box.innerHTML = "<div class='chat-message'>Ошибка: " + escapeHtml(result.error.message) + "</div>";
         return;
     }
-
     box.innerHTML = "";
     (result.data || []).forEach(m => appendMessage(m));
     box.scrollTop = box.scrollHeight;
@@ -481,17 +554,20 @@ function initConference(){
     if(screen) screen.onclick = toggleScreenShare;
     const leave = $("leave-room");
     if(leave) leave.onclick = leaveRoom;
-    const createForm = $("create-room-form");
-    if(createForm) createForm.onsubmit = createRoom;
+
+    const createBtn = $("create-room-btn");
+    if(createBtn) createBtn.onclick = createRoom;
 }
 
-async function createRoom(e){
-    e.preventDefault();
-    if(!currentUser){ alert("Нет авторизации"); return; }
+async function createRoom(){
+    const user = await ensureAuth();
+    if(!user){ alert("Нет авторизации"); return; }
+
     const name = $("room-name-input").value.trim();
     const description = $("room-desc-input").value.trim();
-    if(!name) return;
+    if(!name){ alert("Введите название комнаты"); return; }
 
+    setRoomStatus("Создание комнаты…");
     const result = await supabaseClient
         .from("conference_rooms")
         .insert({ name, description: description || null })
@@ -499,7 +575,7 @@ async function createRoom(e){
 
     if(result.error){
         errLog("CREATE ROOM ERROR", result.error.message);
-        alert("Ошибка создания: " + result.error.message);
+        setRoomStatus("Ошибка создания: " + result.error.message, "err");
         return;
     }
 
@@ -522,10 +598,9 @@ async function loadRooms(){
         box.innerHTML = "<p style='color:#888'>Ошибка загрузки комнат</p>";
         return;
     }
-
     const rooms = roomsRes.data || [];
-    const usersRes = await supabaseClient.from("conference_users").select("room_id");
 
+    const usersRes = await supabaseClient.from("conference_users").select("room_id");
     const counts = {};
     (usersRes.data || []).forEach(u => {
         counts[u.room_id] = (counts[u.room_id] || 0) + 1;
@@ -545,74 +620,110 @@ async function loadRooms(){
         card.innerHTML =
             "<h3>🎙 " + escapeHtml(room.name || "Комната") + "</h3>" +
             "<p>" + escapeHtml(room.description || "") + "</p>" +
-            "<p>👥 " + (counts[room.id] || 0) + " участников</p>" +
-            "<button class='main-button' type='button'>Войти</button>";
-        card.querySelector("button").onclick = () => joinRoom(room);
+            "<p>👥 " + (counts[room.id] || 0) + " участников</p>";
+
+        const btn = document.createElement("button");
+        btn.className = "main-button";
+        btn.type = "button";
+        btn.textContent = "Войти";
+        btn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            joinRoom(room);
+        };
+        card.appendChild(btn);
+
         box.appendChild(card);
     });
 }
 
 /* =====================================================
-   ВХОД В КОМНАТУ — КРИТИЧЕСКИЙ ПОРЯДОК ОПЕРАЦИЙ
+   ВХОД В КОМНАТУ
 ===================================================== */
 
 async function joinRoom(room){
-    if(!currentUser){ alert("Нет авторизации"); return; }
-    if(currentRoom){ await leaveRoom(); }
-
-    setRoomStatus("Вход в комнату…");
-
-    // 1) Ник
-    const profile = await supabaseClient
-        .from("profiles").select("nickname").eq("id", currentUser.id).maybeSingle();
-    const nickname = (profile.data && profile.data.nickname) || "Player";
-    nicknames[currentUser.id] = nickname;
-
-    // 2) Микрофон — ДО подписки на сигналинг, чтобы localStream уже был
-    await startLocalAudio();
-    setRoomStatus("Микрофон: " + (localStream ? "получен" : "нет доступа"));
-
-    // 3) Убираем возможные старые записи из БД
-    await supabaseClient.from("conference_users").delete().eq("user_id", currentUser.id);
-
-    currentRoom = room;
-    setText("current-room-title", "🎙 " + (room.name || "Комната"));
-
-    // 4) ПОДПИСКА НА СИГНАЛИНГ И ОЖИДАНИЕ SUBSCRIBED
-    //    Это ключевой момент: без него offer'ы приходят в пустоту.
-    setRoomStatus("Подключение к сигнальному каналу…");
-    await subscribeSignaling(room.id);
-    setRoomStatus("Сигнальный канал готов", "ok");
-
-    // 5) ТОЛЬКО ТЕПЕРЬ регистрируемся в комнате,
-    //    чтобы другие видели нас уже подписанными
-    const insert = await supabaseClient.from("conference_users").insert({
-        room_id: room.id,
-        user_id: currentUser.id,
-        nickname
-    });
-
-    if(insert.error){
-        errLog("JOIN ROOM ERROR", insert.error.message);
-        setRoomStatus("Ошибка входа: " + insert.error.message, "err");
-        alert("Не удалось войти: " + insert.error.message);
-        currentRoom = null;
+    if(joiningRoom){
+        log("ALREADY JOINING…");
         return;
     }
+    joiningRoom = true;
 
-    // 6) Подписка на изменения в conference_users для мгновенной реакции
-    subscribeRoomUsersRealtime(room.id);
+    try{
+        // 1. Проверка авторизации
+        const user = await ensureAuth();
+        if(!user){
+            setRoomStatus("Требуется вход в аккаунт", "err");
+            joiningRoom = false;
+            return;
+        }
 
-    // 7) Опрос участников (страховка)
-    startUsersPolling(room.id);
-    await pollRoomUsers(room.id);
+        // 2. Если уже в комнате — выходим
+        if(currentRoom){
+            await leaveRoom();
+        }
 
-    updateMicButton();
-    setScreenButton(false);
-    resetVideoPlaceholder();
-    setRoomStatus("В комнате: " + (room.name || ""), "ok");
+        setRoomStatus("Вход в комнату…");
 
-    log("JOINED ROOM", room.id);
+        // 3. Ник
+        const profile = await supabaseClient
+            .from("profiles").select("nickname").eq("id", user.id).maybeSingle();
+        const nickname = (profile.data && profile.data.nickname) || "Player";
+        nicknames[user.id] = nickname;
+
+        // 4. Удаляем ВСЕ свои прежние записи (страховка от stale)
+        await supabaseClient.from("conference_users").delete().eq("user_id", user.id);
+
+        // 5. Микрофон
+        setRoomStatus("Запрос микрофона…");
+        await startLocalAudio();
+        if(!localStream){
+            setRoomStatus("Нет доступа к микрофону (можно без него)", "err");
+        }
+
+        currentRoom = room;
+        setText("current-room-title", "🎙 " + (room.name || "Комната"));
+
+        // 6. Подписка на сигналинг ДО регистрации в БД
+        setRoomStatus("Подключение к сигнальному каналу…");
+        await subscribeSignaling(room.id);
+        setRoomStatus("Сигнальный канал готов", "ok");
+
+        // 7. Регистрация в комнате (теперь нас увидят)
+        setRoomStatus("Регистрация в комнате…");
+        const insert = await supabaseClient.from("conference_users").insert({
+            room_id: room.id,
+            user_id: user.id,
+            nickname: nickname
+        });
+
+        if(insert.error){
+            errLog("JOIN ROOM DB ERROR", insert.error.message);
+            setRoomStatus("Ошибка: " + insert.error.message, "err");
+            // Откат
+            currentRoom = null;
+            joiningRoom = false;
+            return;
+        }
+
+        // 8. Realtime на conference_users (мгновенное обновление)
+        subscribeRoomUsersRealtime(room.id);
+
+        // 9. Polling
+        startUsersPolling(room.id);
+        await pollRoomUsers(room.id);
+
+        updateMicButton();
+        setScreenButton(false);
+        resetVideoPlaceholder();
+        setRoomStatus("В комнате: " + (room.name || "") + " — ожидание участников", "ok");
+
+        log("JOINED ROOM", room.id);
+    }catch(err){
+        errLog("JOIN ROOM EXCEPTION", err);
+        setRoomStatus("Ошибка: " + err.message, "err");
+    }finally{
+        joiningRoom = false;
+    }
 }
 
 /* =====================================================
@@ -631,10 +742,11 @@ async function startLocalAudio(){
             video: false
         });
         microphoneEnabled = true;
-        log("MIC START, tracks:", localStream.getAudioTracks().length);
+        log("MIC OK");
     }catch(e){
         errLog("MIC ERROR", e);
         localStream = null;
+        microphoneEnabled = false;
     }
 }
 
@@ -678,7 +790,6 @@ async function toggleScreenShare(){
 
         track.onended = () => stopScreenShare();
         setScreenButton(true);
-        log("SCREEN START");
     }catch(e){
         errLog("SCREEN CANCEL", e);
     }
@@ -736,7 +847,7 @@ function showLocalScreenPreview(track){
 }
 
 /* =====================================================
-   СИГНАЛИНГ — ЖДЁМ SUBSCRIBED
+   СИГНАЛИНГ
 ===================================================== */
 
 function subscribeSignaling(roomId){
@@ -761,33 +872,27 @@ function subscribeSignaling(roomId){
         const finish = () => { if(!resolved){ resolved = true; resolve(); } };
 
         signalChannel.subscribe((status) => {
-            log("SIGNAL CHANNEL:", status);
+            log("SIGNAL CH:", status);
             if(status === "SUBSCRIBED"){
                 signalReady = true;
                 finish();
-                setTimeout(() => {
-                    if(currentRoom){
-                        pollRoomUsers(currentRoom.id).catch(e => errLog("INIT POLL", e));
-                    }
-                }, 300);
             }
         });
 
-        // Fallback — не зависаем дольше 6 секунд
-        setTimeout(finish, 6000);
+        setTimeout(finish, 4000);
     });
 }
 
 function sendSignal(toUserId, type, data){
     if(!signalChannel || !signalReady){
-        errLog("SEND SIGNAL: channel not ready");
+        errLog("SIGNAL: channel not ready");
         return;
     }
     signalChannel.send({
         type: "broadcast",
         event: "signal",
         payload: { from: currentUser.id, to: toUserId, type, data }
-    }).then(() => log("SIGNAL SENT", type, "→", toUserId))
+    }).then(() => log("SIG SENT", type, "→", toUserId))
       .catch(e => errLog("SEND SIGNAL ERROR", e));
 }
 
@@ -795,8 +900,7 @@ async function handleSignal(payload){
     const fromId = payload.from;
     const type = payload.type;
     const data = payload.data || {};
-
-    log("SIGNAL RECV", type, "from", fromId);
+    log("SIG RECV", type, "←", fromId);
 
     let pc = peers[fromId];
 
@@ -820,11 +924,6 @@ async function handleSignal(payload){
             try{
                 await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
                 await drainCandidates(fromId, pc);
-                // Ответ получен — отменяем retry
-                if(offerRetryTimers[fromId]){
-                    clearInterval(offerRetryTimers[fromId]);
-                    delete offerRetryTimers[fromId];
-                }
             }catch(e){ errLog("SET REMOTE ANSWER", e); }
         }
     }
@@ -871,31 +970,26 @@ function createPeer(peerId, initiator){
 
     // AUDIO
     if(localStream){
-        const audioTrack = localStream.getAudioTracks()[0];
-        if(audioTrack){
-            pc.addTransceiver(audioTrack, { direction: "sendrecv" });
-            log("ADD AUDIO TRACK for", peerId);
+        const at = localStream.getAudioTracks()[0];
+        if(at){
+            pc.addTransceiver(at, { direction: "sendrecv" });
+            log("ADD AUDIO →", peerId);
         }
     } else {
         pc.addTransceiver("audio", { direction: "recvonly" });
-        log("ADD AUDIO recvonly for", peerId);
     }
 
-    // VIDEO (всегда, с реальным треком)
-    const videoTrack = screenStream
+    // VIDEO (always)
+    const vt = screenStream
         ? screenStream.getVideoTracks()[0]
         : getDummyVideoTrack();
     try{
-        const vt = pc.addTransceiver(videoTrack, { direction: "sendrecv" });
-        videoSenders[peerId] = vt.sender;
-    }catch(e){
-        errLog("addTransceiver video", e);
-    }
+        const t = pc.addTransceiver(vt, { direction: "sendrecv" });
+        videoSenders[peerId] = t.sender;
+    }catch(e){ errLog("addTransceiver video", e); }
 
     pc.onicecandidate = (e) => {
-        if(e.candidate){
-            sendSignal(peerId, "candidate", { candidate: e.candidate });
-        }
+        if(e.candidate) sendSignal(peerId, "candidate", { candidate: e.candidate });
     };
 
     pc.ontrack = (e) => {
@@ -911,61 +1005,28 @@ function createPeer(peerId, initiator){
         if(pc.connectionState === "failed"){
             try{ pc.restartIce(); }catch(e){}
         }
-        if(pc.connectionState === "closed"){
-            closePeer(peerId);
-        }
+        if(pc.connectionState === "closed") closePeer(peerId);
     };
 
     pc.oniceconnectionstatechange = () => log("ICE", peerId, pc.iceConnectionState);
 
     if(initiator){
-        sendOfferWithRetry(pc, peerId);
+        (async () => {
+            try{
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                sendSignal(peerId, "offer", { sdp: pc.localDescription });
+                log("OFFER SENT →", peerId);
+            }catch(e){
+                errLog("CREATE OFFER ERROR", e);
+            }
+        })();
     }
 
     return pc;
 }
 
-function sendOfferWithRetry(pc, peerId){
-    const doOffer = async () => {
-        try{
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            sendSignal(peerId, "offer", { sdp: pc.localDescription });
-            log("OFFER SENT to", peerId);
-        }catch(e){
-            errLog("CREATE OFFER ERROR", e);
-        }
-    };
-
-    doOffer();
-
-    // Ретраи, если ответ не пришёл
-    if(offerRetryTimers[peerId]) clearInterval(offerRetryTimers[peerId]);
-    let attempt = 0;
-    offerRetryTimers[peerId] = setInterval(() => {
-        attempt++;
-        const p = peers[peerId];
-        if(!p || p.signalingState !== "have-local-offer"){
-            clearInterval(offerRetryTimers[peerId]);
-            delete offerRetryTimers[peerId];
-            return;
-        }
-        if(attempt > 4){
-            clearInterval(offerRetryTimers[peerId]);
-            delete offerRetryTimers[peerId];
-            errLog("OFFER RETRIES EXHAUSTED for", peerId);
-            return;
-        }
-        log("RETRY OFFER #" + attempt + " to", peerId);
-        doOffer();
-    }, 2500);
-}
-
 function closePeer(peerId){
-    if(offerRetryTimers[peerId]){
-        clearInterval(offerRetryTimers[peerId]);
-        delete offerRetryTimers[peerId];
-    }
     const pc = peers[peerId];
     if(pc){
         try{ pc.close(); }catch(e){}
@@ -991,7 +1052,7 @@ function resetVideoPlaceholder(){
 }
 
 /* =====================================================
-   ПРИЁМ УДАЛЁННЫХ ДОРОЖЕК
+   REMOTE TRACKS
 ===================================================== */
 
 function handleRemoteTrack(peerId, track){
@@ -1006,7 +1067,7 @@ function handleRemoteTrack(peerId, track){
         }
         audio.srcObject = new MediaStream([track]);
         tryPlayAudio(audio);
-        log("REMOTE AUDIO from", peerId);
+        log("REMOTE AUDIO ←", peerId);
     }
     else if(track.kind === "video"){
         const area = $("video-area");
@@ -1034,7 +1095,7 @@ function handleRemoteTrack(peerId, track){
         video.srcObject = new MediaStream([track]);
         video.play().catch(() => {});
         resetVideoPlaceholder();
-        log("REMOTE VIDEO from", peerId);
+        log("REMOTE VIDEO ←", peerId);
     }
 }
 
@@ -1044,7 +1105,7 @@ function tryPlayAudio(audio){
         p.catch(err => {
             errLog("AUDIO PLAY FAIL:", err.message);
             const retry = () => {
-                audio.play().catch(e => errLog("AUDIO RETRY FAIL", e.message));
+                audio.play().catch(e => errLog("AUDIO RETRY", e.message));
                 document.removeEventListener("click", retry);
                 document.removeEventListener("keydown", retry);
                 document.removeEventListener("touchstart", retry);
@@ -1057,10 +1118,8 @@ function tryPlayAudio(audio){
 }
 
 /* =====================================================
-   REALTIME НА conference_users (мгновенная реакция)
+   REALTIME НА conference_users
 ===================================================== */
-
-let roomUsersChannel = null;
 
 function subscribeRoomUsersRealtime(roomId){
     if(roomUsersChannel){
@@ -1071,34 +1130,29 @@ function subscribeRoomUsersRealtime(roomId){
     roomUsersChannel = supabaseClient
         .channel("room-users-" + roomId)
         .on("postgres_changes",
-            {
-                event: "*",
-                schema: "public",
-                table: "conference_users",
-                filter: "room_id=eq." + roomId
-            },
+            { event: "*", schema: "public", table: "conference_users",
+              filter: "room_id=eq." + roomId },
             (payload) => {
-                log("USERS REALTIME", payload.eventType);
-                if(currentRoom) {
-                    pollRoomUsers(currentRoom.id).catch(e => errLog("POLL ON EVENT", e));
-                }
-            }
-        )
-        .subscribe((status) => log("USERS RT:", status));
+                log("USERS RT", payload.eventType);
+                if(currentRoom) pollRoomUsers(currentRoom.id).catch(e => errLog(e));
+            })
+        .subscribe((status) => log("USERS RT CH:", status));
 }
 
 /* =====================================================
-   ОПРОС УЧАСТНИКОВ
+   POLLING
 ===================================================== */
 
 function startUsersPolling(roomId){
     if(usersPollTimer) clearInterval(usersPollTimer);
     usersPollTimer = setInterval(() => {
-        pollRoomUsers(roomId).catch(e => errLog("POLL USERS", e));
+        pollRoomUsers(roomId).catch(e => errLog("POLL", e));
     }, 2500);
 }
 
 async function pollRoomUsers(roomId){
+    if(!currentUser) return;
+
     const { data, error } = await supabaseClient
         .from("conference_users")
         .select("user_id, nickname")
@@ -1116,7 +1170,7 @@ async function pollRoomUsers(roomId){
         if(lbl && nicknames[peerId]) lbl.textContent = "🖥 " + nicknames[peerId];
     });
 
-    // Создаём peer'ы для новых
+    // Создаём peer'ы для новых участников
     for(const u of users){
         if(u.user_id === currentUser.id) continue;
 
@@ -1175,10 +1229,14 @@ function updateParticipants(users){
 async function leaveRoom(){
     if(!currentRoom) return;
     const roomId = currentRoom.id;
+    log("LEAVING ROOM", roomId);
 
     try{
-        await supabaseClient.from("conference_users")
-            .delete().eq("user_id", currentUser.id).eq("room_id", roomId);
+        await supabaseClient
+            .from("conference_users")
+            .delete()
+            .eq("user_id", currentUser.id)
+            .eq("room_id", roomId);
     }catch(e){ errLog("LEAVE ROOM DB ERROR", e); }
 
     Object.keys(peers).forEach(id => closePeer(id));
@@ -1221,8 +1279,23 @@ async function leaveRoom(){
     currentRoom = null;
     signalReady = false;
     await loadRooms();
-    log("LEFT ROOM");
 }
+
+/* =====================================================
+   BEFORE UNLOAD — попытка очистки
+===================================================== */
+
+window.addEventListener("beforeunload", () => {
+    if(currentRoom && currentUser){
+        try{
+            supabaseClient
+                .from("conference_users")
+                .delete()
+                .eq("user_id", currentUser.id)
+                .eq("room_id", currentRoom.id);
+        }catch(e){}
+    }
+});
 
 /* =====================================================
    END
