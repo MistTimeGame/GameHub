@@ -162,33 +162,35 @@
             <code id="profile-id">—</code>
           </div>
 
+          <div id="schema-warning" class="schema-warning hidden"></div>
+
           <form class="profile-form" id="profile-form" onsubmit="return false">
 
-            <label class="profile-field">
+            <label class="profile-field" id="field-nickname">
               <span>Никнейм</span>
               <input id="pf-nickname" placeholder="Player" maxlength="30" required>
               <small class="field-hint">От 2 до 30 символов. Должен быть уникальным.</small>
             </label>
 
-            <label class="profile-field">
+            <label class="profile-field" id="field-avatar">
               <span>Ссылка на аватар</span>
               <input id="pf-avatar" placeholder="https://example.com/avatar.png" type="url">
               <small class="field-hint">Вставьте прямую ссылку на изображение (jpg, png, webp).</small>
             </label>
 
-            <div class="profile-field-row">
-              <label class="profile-field">
+            <div class="profile-field-row" id="field-row-city-age">
+              <label class="profile-field" id="field-city">
                 <span>Город</span>
                 <input id="pf-city" placeholder="Москва" maxlength="40">
               </label>
 
-              <label class="profile-field">
+              <label class="profile-field" id="field-age">
                 <span>Возраст</span>
                 <input id="pf-age" type="number" min="1" max="120" placeholder="18">
               </label>
             </div>
 
-            <label class="profile-field">
+            <label class="profile-field" id="field-about">
               <span>О себе</span>
               <textarea id="pf-about" rows="4" maxlength="300" placeholder="Расскажите о себе…"></textarea>
               <small class="field-hint"><span id="pf-about-count">0</span> / 300</small>
