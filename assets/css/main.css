@@ -1,14 +1,19 @@
 *{
 box-sizing:border-box;
-font-family:Arial,sans-serif;
 }
 
 
 body{
 
 margin:0;
-background:#f3f6fa;
-color:#222;
+
+font-family:
+Arial,
+sans-serif;
+
+background:#f2f5f9;
+
+color:#20252d;
 
 }
 
@@ -18,15 +23,18 @@ color:#222;
 
 height:70px;
 
+background:white;
+
 display:flex;
+
 align-items:center;
+
 justify-content:space-between;
 
 padding:0 30px;
 
-background:white;
-
-border-bottom:1px solid #ddd;
+box-shadow:
+0 5px 20px rgba(0,0,0,.08);
 
 }
 
@@ -34,41 +42,57 @@ border-bottom:1px solid #ddd;
 
 .logo{
 
-font-size:22px;
 font-weight:900;
+
+font-size:20px;
 
 }
 
 
 
-nav button,
-.actions button{
+.header-user{
+
+display:flex;
+
+align-items:center;
+
+gap:10px;
+
+}
 
 
-padding:12px 20px;
 
-border-radius:14px;
+button{
 
 border:none;
 
-cursor:pointer;
+padding:10px 18px;
 
-background:#3478f6;
+border-radius:14px;
+
+background:#2563eb;
 
 color:white;
 
-margin-left:10px;
+cursor:pointer;
 
-font-weight:bold;
+font-weight:700;
 
 }
 
 
 
-nav button:hover,
-.actions button:hover{
+button:hover{
 
 opacity:.85;
+
+}
+
+
+
+#logout-button{
+
+background:#dc2626;
 
 }
 
@@ -88,30 +112,14 @@ padding:80px 20px;
 
 font-size:42px;
 
+margin-bottom:10px;
+
 }
 
 
 
 .hero p{
 
-font-size:18px;
-
-color:#666;
-
-}
-
-
-
-.actions{
-
-margin-top:30px;
-
-}
-
-
-
-#content{
-
-padding:20px;
+color:#667085;
 
 }
