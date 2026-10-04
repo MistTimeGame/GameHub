@@ -1,45 +1,505 @@
-.menu-btn{
+*{
+    box-sizing:border-box;
+    font-family:Arial, Helvetica, sans-serif;
+}
 
-background:
-linear-gradient(
-145deg,
-#eeeeee,
-#bcbcbc
-);
 
-color:#222;
+body{
 
-border-radius:16px;
+    margin:0;
 
-box-shadow:
+    background:#ffffff;
 
-inset 0 2px 5px white,
-
-0 6px 12px rgba(0,0,0,.25);
+    color:#222;
 
 }
+
+
+
+/* ОСНОВНАЯ СЕТКА */
+
+.layout{
+
+    display:flex;
+
+    min-height:100vh;
+
+}
+
+
+
+/* ЛЕВАЯ ПАНЕЛЬ */
+
+.sidebar{
+
+    width:260px;
+
+    background:
+    linear-gradient(
+        180deg,
+        #f8f8f8,
+        #e7e7e7
+    );
+
+    border-right:1px solid #ccc;
+
+    padding:20px;
+
+    box-shadow:
+    5px 0 15px rgba(0,0,0,0.15);
+
+}
+
+
+
+
+.logo{
+
+    height:80px;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    font-size:28px;
+
+    font-weight:bold;
+
+    color:#333;
+
+    margin-bottom:30px;
+
+    text-shadow:
+    0 1px 0 white,
+    0 3px 5px rgba(0,0,0,.3);
+
+}
+
+
+
+
+
+
+/* 3D КНОПКИ */
+
+.menu-btn{
+
+
+    width:100%;
+
+    margin:8px 0;
+
+    padding:14px;
+
+
+    border-radius:14px;
+
+
+    border:1px solid #bcbcbc;
+
+
+    background:
+
+    linear-gradient(
+        145deg,
+        #eeeeee,
+        #bcbcbc
+    );
+
+
+    color:#333;
+
+
+    font-size:16px;
+
+    font-weight:bold;
+
+
+    cursor:pointer;
+
+
+
+    box-shadow:
+
+    inset 0 2px 4px rgba(255,255,255,.8),
+
+    0 5px 10px rgba(0,0,0,.25);
+
+
+
+    transition:.25s;
+
+
+}
+
+
 
 
 
 .menu-btn:hover{
 
 
-background:
+    background:
 
-linear-gradient(
-145deg,
-#ffffff,
-#b7cfff
-);
+    linear-gradient(
+        145deg,
+        #ffffff,
+        #9fc9ff
+    );
+
+
+    color:#003b80;
+
+
+    box-shadow:
+
+
+    inset 0 2px 5px white,
+
+
+    0 0 15px rgba(0,120,255,.8),
+
+
+    0 5px 12px rgba(0,0,0,.3);
+
+
+    transform:
+    translateY(-2px);
+
+
+}
 
 
 
-box-shadow:
 
-0 0 20px
-rgba(0,120,255,.8),
 
-inset 0 2px 5px white;
+
+/* ОСНОВНОЕ ОКНО */
+
+
+.content{
+
+
+    flex:1;
+
+
+    padding:30px;
+
+
+    background:#fff;
+
+
+}
+
+
+
+
+
+
+.page{
+
+    display:none;
+
+}
+
+
+
+.page.active{
+
+    display:block;
+
+}
+
+
+
+
+
+h1,h2{
+
+
+    color:#333;
+
+
+    text-shadow:
+    0 1px 1px #aaa;
+
+
+}
+
+
+
+
+
+
+
+
+/* НОВОСТИ */
+
+
+.news-box{
+
+
+    background:white;
+
+
+    min-height:300px;
+
+
+    border-radius:18px;
+
+
+    border:1px solid #ddd;
+
+
+    padding:25px;
+
+
+    box-shadow:
+
+
+    0 5px 20px rgba(0,0,0,.15);
+
+
+
+}
+
+
+
+
+#news{
+
+
+    padding:20px;
+
+
+    font-size:18px;
+
+
+}
+
+
+
+
+
+
+/* ПОЛЯ */
+
+
+input{
+
+
+    display:block;
+
+
+    width:350px;
+
+
+    padding:14px;
+
+
+    margin:12px 0;
+
+
+    border-radius:12px;
+
+
+    border:1px solid #ccc;
+
+
+    font-size:16px;
+
+
+
+    box-shadow:
+
+    inset 0 2px 5px rgba(0,0,0,.15);
+
+
+}
+
+
+
+
+
+/* ПРОФИЛЬ */
+
+
+.profile-card{
+
+
+    background:white;
+
+
+    padding:30px;
+
+
+    border-radius:20px;
+
+
+    box-shadow:
+
+    0 5px 20px rgba(0,0,0,.15);
+
+
+    width:400px;
+
+
+}
+
+
+
+
+#avatar{
+
+
+    width:140px;
+
+
+    height:140px;
+
+
+    border-radius:50%;
+
+
+    object-fit:cover;
+
+
+    display:block;
+
+
+    margin-bottom:20px;
+
+
+    border:4px solid #ddd;
+
+
+}
+
+
+
+
+
+
+
+.white-box{
+
+
+    background:white;
+
+
+    min-height:300px;
+
+
+    border-radius:20px;
+
+
+    padding:30px;
+
+
+    box-shadow:
+
+    0 5px 20px rgba(0,0,0,.15);
+
+
+}
+
+
+
+
+
+
+
+/* ЧАТ */
+
+
+.chat-box{
+
+
+    background:white;
+
+
+    border-radius:20px;
+
+
+    padding:20px;
+
+
+    box-shadow:
+
+    0 5px 20px rgba(0,0,0,.15);
+
+
+}
+
+
+
+#messages{
+
+
+    height:400px;
+
+
+    overflow-y:auto;
+
+
+    border:1px solid #ddd;
+
+
+    padding:15px;
+
+
+    margin-bottom:15px;
+
+
+    border-radius:12px;
+
+
+}
+
+
+
+.message{
+
+
+    background:#eeeeee;
+
+
+    padding:10px;
+
+
+    margin:8px;
+
+
+    border-radius:10px;
+
+
+}
+
+
+
+
+
+
+@media(max-width:800px){
+
+
+.sidebar{
+
+
+    width:180px;
+
+
+}
+
+
+input{
+
+    width:100%;
+
+}
+
 
 
 }
