@@ -1,7 +1,7 @@
-////////////////////////////////////////////////////
+```javascript
+// ===============================
 // SUPABASE CONFIG
-////////////////////////////////////////////////////
-
+// ===============================
 
 const SUPABASE_URL = 
 "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -19,147 +19,69 @@ const supabaseClient = supabase.createClient(
 
 
 
+// ===============================
+// НАВИГАЦИЯ
+// ===============================
 
-////////////////////////////////////////////////////
-// ELEMENTS
-////////////////////////////////////////////////////
-
-
-const pages = document.querySelectorAll(".page");
-
-const menuButtons = document.querySelectorAll(".menu-btn");
+function showSection(id){
 
 
-const openLogin = document.getElementById("open-login");
+    document
+    .querySelectorAll(".page")
+    .forEach(page=>{
 
-const logoutBtn = document.getElementById("logout");
-
-
-
-const emailInput =
-document.getElementById("email");
-
-
-const passwordInput =
-document.getElementById("password");
-
-
-const nicknameInput =
-document.getElementById("nickname");
-
-
-
-const authMessage =
-document.getElementById("auth-message");
-
-
-
-
-
-////////////////////////////////////////////////////
-// PAGE SWITCH
-////////////////////////////////////////////////////
-
-
-menuButtons.forEach(btn => {
-
-
-    btn.addEventListener(
-        "click",
-        ()=>{
-
-
-            pages.forEach(page=>{
-                page.classList.remove("active");
-            });
-
-
-            menuButtons.forEach(b=>{
-                b.classList.remove("active");
-            });
-
-
-
-            const page =
-            document.getElementById(
-                btn.dataset.page
-            );
-
-
-            if(page){
-
-                page.classList.add("active");
-
-            }
-
-
-            btn.classList.add("active");
-
-
-
-        }
-    );
-
-
-});
-
-
-
-
-
-
-////////////////////////////////////////////////////
-// OPEN LOGIN
-////////////////////////////////////////////////////
-
-
-openLogin.onclick = ()=>{
-
-
-    pages.forEach(page=>{
         page.classList.remove("active");
+
     });
 
 
 
-    document
-    .getElementById("auth")
-    .classList.add("active");
-
-};
+    const section =
+    document.getElementById(id);
 
 
+    if(section){
+
+        section.classList.add("active");
+
+    }
+
+
+}
 
 
 
 
-////////////////////////////////////////////////////
-// REGISTER
-////////////////////////////////////////////////////
+// ===============================
+// РЕГИСТРАЦИЯ
+// ===============================
 
 
-document
-.getElementById("register")
-.onclick = async ()=>{
+async function register(){
 
 
     const email =
-    emailInput.value.trim();
+    document.getElementById("email").value;
 
 
     const password =
-    passwordInput.value.trim();
+    document.getElementById("password").value;
 
 
     const nickname =
-    nicknameInput.value.trim();
+    document.getElementById("nickname").value;
 
 
 
-    if(!email || !password){
+    const message =
+    document.getElementById("authMessage");
 
-        authMessage.innerHTML =
-        "Заполните email и пароль";
+
+
+    if(!email || !password || !nickname){
+
+        message.innerHTML =
+        "Заполните все поля";
 
         return;
 
@@ -172,30 +94,17 @@ document
     await supabaseClient.auth.signUp({
 
         email,
-        password,
 
-
-        options:{
-
-            data:{
-
-                nickname:nickname || "Player"
-
-            }
-
-        }
-
+        password
 
     });
-
-
 
 
 
     if(error){
 
 
-        authMessage.innerHTML =
+        message.innerHTML =
         error.message;
 
 
@@ -206,14 +115,83 @@ document
 
 
 
-
-    authMessage.innerHTML =
-    "Аккаунт создан. Проверьте почту.";
-
+    const user =
+    data.user;
 
 
 
-};
+    if(!user){
+
+
+        message.innerHTML =
+        "Пользователь не создан";
+
+
+        return;
+
+    }
+
+
+
+
+    // создание профиля
+
+    const {error:profileError}=
+
+    await supabaseClient
+
+    .from("profiles")
+
+    .insert([
+
+        {
+
+            id:user.id,
+
+            nickname:nickname,
+
+            avatar_url:
+            "https://i.imgur.com/6VBx3io.png",
+
+            city:"",
+
+            age:null,
+
+            vip_level:0
+
+        }
+
+    ]);
+
+
+
+
+
+    if(profileError){
+
+
+        message.innerHTML =
+
+        "Аккаунт создан, но профиль: "
+
+        + profileError.message;
+
+
+        return;
+
+
+    }
+
+
+
+
+
+    message.innerHTML =
+
+    "Регистрация успешна";
+
+
+}
 
 
 
@@ -222,30 +200,37 @@ document
 
 
 
+// ===============================
+// ВХОД
+// ===============================
 
-////////////////////////////////////////////////////
-// LOGIN
-////////////////////////////////////////////////////
 
 
-document
-.getElementById("login")
-.onclick = async ()=>{
+async function login(){
 
 
     const email =
-    emailInput.value.trim();
+
+    document.getElementById("email").value;
 
 
 
     const password =
-    passwordInput.value.trim();
+
+    document.getElementById("password").value;
+
+
+
+    const message =
+
+    document.getElementById("authMessage");
 
 
 
 
 
-    const {data,error} =
+    const {data,error}=
+
     await supabaseClient.auth.signInWithPassword({
 
         email,
@@ -261,96 +246,33 @@ document
     if(error){
 
 
-        authMessage.innerHTML =
+        message.innerHTML =
+
         error.message;
 
 
         return;
 
+
     }
 
 
 
-    authMessage.innerHTML =
+
+
+    message.innerHTML =
+
     "Вход выполнен";
 
 
 
-    await loadProfile();
+    updateMenu();
 
 
-
-};
-
+    loadProfile();
 
 
-
-
-
-
-
-
-////////////////////////////////////////////////////
-// LOGOUT
-////////////////////////////////////////////////////
-
-
-logoutBtn.onclick = async ()=>{
-
-
-    await supabaseClient.auth.signOut();
-
-
-
-    location.reload();
-
-
-};
-
-
-
-
-
-
-
-
-
-////////////////////////////////////////////////////
-// LOAD SESSION
-////////////////////////////////////////////////////
-
-
-async function checkUser(){
-
-
-
-    const {
-
-        data:{
-            session
-
-        }
-
-    } =
-    await supabaseClient.auth.getSession();
-
-
-
-
-
-    if(session){
-
-
-        openLogin.classList.add("hidden");
-
-
-        logoutBtn.classList.remove("hidden");
-
-
-        await loadProfile();
-
-
-    }
+    showSection("profile");
 
 
 
@@ -363,55 +285,139 @@ async function checkUser(){
 
 
 
+// ===============================
+// ВЫХОД
+// ===============================
 
-////////////////////////////////////////////////////
-// LOAD PROFILE
-////////////////////////////////////////////////////
+
+
+async function logout(){
+
+
+    await supabaseClient.auth.signOut();
+
+
+    updateMenu();
+
+
+    showSection("home");
+
+
+}
+
+
+
+
+
+
+
+
+
+// ===============================
+// МЕНЮ ПОЛЬЗОВАТЕЛЯ
+// ===============================
+
+
+async function updateMenu(){
+
+
+    const {
+
+        data:{session}
+
+    } =
+
+    await supabaseClient.auth.getSession();
+
+
+
+
+    const loginBtn =
+
+    document.getElementById("loginBtn");
+
+
+    const logoutBtn =
+
+    document.getElementById("logoutBtn");
+
+
+
+
+
+    if(session){
+
+
+        loginBtn.classList.add("hidden");
+
+
+        logoutBtn.classList.remove("hidden");
+
+
+    }
+
+    else{
+
+
+        loginBtn.classList.remove("hidden");
+
+
+        logoutBtn.classList.add("hidden");
+
+
+    }
+
+
+}
+
+
+
+
+
+
+
+
+
+// ===============================
+// ЗАГРУЗКА ПРОФИЛЯ
+// ===============================
+
 
 
 async function loadProfile(){
 
 
-
     const {
 
-        data:{
-            user
-
-        }
+        data:{user}
 
     } =
+
     await supabaseClient.auth.getUser();
 
 
 
 
-    if(!user)
+    if(!user){
+
         return;
 
+    }
 
 
 
 
+    const {data,error}=
 
-    const {
-
-        data,
-        error
-
-    } = await supabaseClient
+    await supabaseClient
 
     .from("profiles")
 
     .select("*")
 
-    .eq(
-        "id",
-        user.id
-    )
+    .eq("id",user.id)
 
     .single();
-
 
 
 
@@ -430,63 +436,40 @@ async function loadProfile(){
 
 
 
+    document.getElementById("avatar").src =
 
+    data.avatar_url ||
 
-    document
-    .getElementById("mini-name")
-    .innerHTML =
-    data.nickname;
-
-
-
-    document
-    .getElementById("mini-status")
-    .innerHTML =
-    "Онлайн";
+    "https://i.imgur.com/6VBx3io.png";
 
 
 
 
-    document
-    .getElementById("mini-avatar")
-    .src =
-    data.avatar_url;
+    document.getElementById("avatarUrl").value =
+
+    data.avatar_url || "";
 
 
 
 
-    document
-    .getElementById("profile-avatar")
-    .src =
-    data.avatar_url;
+    document.getElementById("profileNickname").value =
+
+    data.nickname || "";
 
 
 
-    document
-    .getElementById("profile-nickname")
-    .value =
-    data.nickname;
 
+    document.getElementById("city").value =
 
-
-    document
-    .getElementById("profile-city")
-    .value =
     data.city || "";
 
 
 
-    document
-    .getElementById("profile-age")
-    .value =
-    data.age || 0;
 
+    document.getElementById("age").value =
 
+    data.age || "";
 
-    document
-    .getElementById("vip-level")
-    .innerHTML =
-    data.vip_level;
 
 
 
@@ -501,37 +484,29 @@ async function loadProfile(){
 
 
 
+// ===============================
+// СОХРАНЕНИЕ ПРОФИЛЯ
+// ===============================
 
-////////////////////////////////////////////////////
-// SAVE PROFILE
-////////////////////////////////////////////////////
 
 
-document
-.getElementById("save-profile")
-.onclick = async ()=>{
-
+async function saveProfile(){
 
 
     const {
 
-        data:{
-            user
-
-        }
+        data:{user}
 
     } =
-    await supabaseClient.auth.getUser();
 
+    await supabaseClient.auth.getUser();
 
 
 
 
     if(!user){
 
-        alert(
-        "Сначала войдите"
-        );
+        alert("Нет авторизации");
 
         return;
 
@@ -541,47 +516,36 @@ document
 
 
 
+
     const avatar =
-    document
-    .getElementById("avatar-url")
-    .value;
 
-
+    document.getElementById("avatarUrl").value;
 
 
 
     const nickname =
-    document
-    .getElementById("profile-nickname")
-    .value;
 
-
+    document.getElementById("profileNickname").value;
 
 
 
     const city =
-    document
-    .getElementById("profile-city")
-    .value;
 
-
+    document.getElementById("city").value;
 
 
 
     const age =
-    Number(
-    document
-    .getElementById("profile-age")
-    .value
-    );
+
+    document.getElementById("age").value;
 
 
 
 
 
 
+    const {error}=
 
-    const {error} =
     await supabaseClient
 
     .from("profiles")
@@ -590,19 +554,16 @@ document
 
         avatar_url:avatar,
 
-        nickname,
+        nickname:nickname,
 
-        city,
+        city:city,
 
-        age
-
+        age:age ? Number(age):null
 
     })
 
-    .eq(
-        "id",
-        user.id
-    );
+    .eq("id",user.id);
+
 
 
 
@@ -610,7 +571,9 @@ document
 
     if(error){
 
+
         alert(error.message);
+
 
         return;
 
@@ -620,19 +583,15 @@ document
 
 
 
-    loadProfile();
+    document.getElementById("avatar").src = avatar;
 
 
 
-    alert(
-    "Профиль сохранён"
-    );
+    alert("Профиль сохранён");
 
 
 
-};
-
-
+}
 
 
 
@@ -641,9 +600,40 @@ document
 
 
 
-////////////////////////////////////////////////////
-// START
-////////////////////////////////////////////////////
+// ===============================
+// СТАРТ
+// ===============================
 
 
-checkUser();
+document.addEventListener(
+
+"DOMContentLoaded",
+
+async()=>{
+
+
+    updateMenu();
+
+
+    const {
+
+        data:{session}
+
+    } =
+
+    await supabaseClient.auth.getSession();
+
+
+
+
+    if(session){
+
+        loadProfile();
+
+    }
+
+
+}
+
+);
+```
