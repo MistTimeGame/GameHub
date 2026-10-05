@@ -285,16 +285,38 @@
 
       <div class="editor-pane editor-pane-import" id="editor-pane-import">
         <div class="import-pane">
-          <div class="import-url-row">
-            <input id="import-url" type="url" placeholder="https://example.com/page" autocomplete="off">
-            <button class="main-button" id="import-load" type="button">🌐 Загрузить</button>
+
+          <div class="import-mode-switch">
+            <button class="import-mode-btn active" data-import-mode="url" type="button">🔗 По ссылке</button>
+            <button class="import-mode-btn" data-import-mode="html" type="button">📋 Вставить HTML вручную</button>
           </div>
-          <div class="import-hint">
-            Скопируйте адрес страницы и вставьте сюда. Загрузим HTML через публичный CORS-прокси,
-            найдём все таблицы и картинки. Выбранное сохранится в текущий документ — и сразу станет редактируемым.
+
+          <div id="import-url-block">
+            <div class="import-url-row">
+              <input id="import-url" type="url" placeholder="https://example.com/page" autocomplete="off">
+              <button class="main-button" id="import-load" type="button">🌐 Загрузить</button>
+            </div>
+            <div class="import-hint">
+              Скопируйте адрес страницы и вставьте сюда. Загрузим HTML через публичный CORS-прокси,
+              найдём все таблицы и картинки. Если сайт блокирует прокси — переключитесь на режим «Вставить HTML вручную».
+            </div>
           </div>
+
+          <div id="import-html-block" class="hidden">
+            <div class="import-url-row">
+              <input id="import-base-url" type="url" placeholder="https://example.com/  (для абсолютных ссылок картинок)" autocomplete="off">
+              <button class="main-button" id="import-parse-btn" type="button">📋 Разобрать HTML</button>
+            </div>
+            <textarea id="import-html" placeholder="Откройте нужную страницу, нажмите Ctrl+U (или Cmd+Option+U), выделите всё (Ctrl+A / Cmd+A), скопируйте (Ctrl+C / Cmd+C) и вставьте сюда…" spellcheck="false"></textarea>
+            <div class="import-hint">
+              Этот режим работает всегда: браузер отдаёт вам HTML, а парсер находит таблицы и картинки локально.
+              В поле URL укажите адрес страницы — это нужно, чтобы относительные ссылки картинок стали абсолютными.
+            </div>
+          </div>
+
           <div id="import-status" class="import-status"></div>
           <div id="import-results" class="import-results"></div>
+
           <div class="import-footer">
             <div class="import-counter" id="import-counter">Выбрано: 0</div>
             <div class="import-footer-actions">
@@ -302,6 +324,7 @@
               <button class="main-button" id="import-insert" type="button" disabled>💾 Сохранить в документ</button>
             </div>
           </div>
+
         </div>
       </div>
     </div>
