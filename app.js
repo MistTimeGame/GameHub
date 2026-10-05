@@ -3,7 +3,7 @@
    Auth + Profile + Chat + Conference + Online
    + Games + Guilds + Templates
    + Визуальный редактор (HTML + Excel/CSV)
-   + Импорт таблиц и картинок с других сайтов
+   + Импорт таблиц и картинок с других сайтов (отдельная вкладка)
 ===================================================== */
 
 const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -56,9 +56,8 @@ let currentEditorKind = "html";
 let currentSheetRows = null;
 let currentSheetName = "Sheet1";
 
-/* Импорт с сайтов */
+/* Импорт */
 let importParsed = { tables: [], images: [] };
-let importLastUrl = "";
 
 /* ============================================================
    ХЕЛПЕРЫ
@@ -192,31 +191,24 @@ function fileExt(name){
 function fileViewerKind(name, type){
     const n = (name || "").toLowerCase();
     const t = (type || "").toLowerCase();
-
     if(t.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|bmp|svg|avif|ico)$/.test(n)) return "image";
     if(t.startsWith("video/") || /\.(mp4|webm|mov|ogv|m4v|mkv)$/.test(n)) return "video";
     if(t.startsWith("audio/") || /\.(mp3|wav|ogg|oga|flac|m4a|aac)$/.test(n)) return "audio";
     if(t === "application/pdf" || /\.pdf$/.test(n)) return "pdf";
-
     if(t.includes("html") || /\.(html|htm|xhtml)$/.test(n)) return "html";
-
     if(/\.(xlsx|xls|ods|csv|tsv)$/.test(n) ||
        t === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
        t === "application/vnd.ms-excel" ||
        t === "application/vnd.oasis.opendocument.spreadsheet" ||
        t === "text/csv" ||
        t === "text/tab-separated-values") return "sheet";
-
     if(t.startsWith("text/") ||
-       /\.(txt|md|markdown|log|json|xml|yml|yaml|css|js|mjs|ts|ini|cfg|conf|env|sh|bat|sql|py|java|cpp|c|h|php|rb|go|rs|toml)$/.test(n)) {
-        return "text";
-    }
-
+       /\.(txt|md|markdown|log|json|xml|yml|yaml|css|js|mjs|ts|ini|cfg|conf|env|sh|bat|sql|py|java|cpp|c|h|php|rb|go|rs|toml)$/.test(n)) return "text";
     return "other";
 }
 
 /* ============================================================
-   ПОДГОТОВКА HTML ДЛЯ ВИЗУАЛЬНОГО РЕДАКТОРА
+   ПОДГОТОВКА HTML ДЛЯ РЕДАКТОРА
 ============================================================ */
 function parseHtmlContent(content){
     const raw = String(content || "");
@@ -225,34 +217,25 @@ function parseHtmlContent(content){
 
     if(!isFullDoc){
         const trimmed = raw.trim();
-        const looksLikeRows = /^<tr[\s>]/i.test(trimmed) ||
-                              /^<thead[\s>]/i.test(trimmed) ||
-                              /^<tbody[\s>]/i.test(trimmed);
-        if(looksLikeRows){
-            return { isFullDoc:false, styles:"", bodyContent:"<table>" + raw + "</table>" };
-        }
+        const looksLikeRows = /^<tr[\s>]/i.test(trimmed) || /^<thead[\s>]/i.test(trimmed) || /^<tbody[\s>]/i.test(trimmed);
+        if(looksLikeRows) return { isFullDoc:false, styles:"", bodyContent:"<table>" + raw + "</table>" };
         return { isFullDoc:false, styles:"", bodyContent:raw };
     }
 
     let styles = "";
     const styleMatches = raw.match(/<style[^>]*>([\s\S]*?)<\/style>/gi) || [];
-    styleMatches.forEach(s => {
-        const inner = s.replace(/<style[^>]*>|<\/style>/gi, "");
-        styles += inner + "\n";
-    });
+    styleMatches.forEach(s => { styles += s.replace(/<style[^>]*>|<\/style>/gi, "") + "\n"; });
 
     let bodyContent = "";
     const bodyMatch = raw.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-    if(bodyMatch){
-        bodyContent = bodyMatch[1];
-    }else{
+    if(bodyMatch) bodyContent = bodyMatch[1];
+    else {
         bodyContent = raw.replace(/<!doctype[^>]*>/i, "")
                          .replace(/<html[^>]*>|<\/html>/gi, "")
                          .replace(/<head[\s\S]*?<\/head>/gi, "")
                          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
                          .replace(/<body[^>]*>|<\/body>/gi, "");
     }
-
     return { isFullDoc:true, styles, bodyContent };
 }
 
@@ -278,15 +261,11 @@ async function detectProfileColumns(userId){
     const wanted = ["id","nickname","avatar_url","vip_level","age","city","about","is_admin"];
     const available = new Set(["id"]);
     const trySel = async (cols) => {
-        const { data, error } = await supabaseClient
-            .from("profiles").select(cols).eq("id", userId).maybeSingle();
+        const { data, error } = await supabaseClient.from("profiles").select(cols).eq("id", userId).maybeSingle();
         return { data, error };
     };
     let result = await trySel(wanted.join(","));
-    if(!result.error){
-        wanted.forEach(c => available.add(c));
-        return { columns: available, row: result.data };
-    }
+    if(!result.error){ wanted.forEach(c => available.add(c)); return { columns: available, row: result.data }; }
     for(const col of wanted){
         if(col === "id") continue;
         const t = await trySel("id," + col);
@@ -315,8 +294,7 @@ function applySchemaVisibility(){
         if(!has("is_admin")) missing.push("is_admin");
         if(missing.length){
             warn.classList.remove("hidden");
-            warn.innerHTML = "⚠️ В <code>profiles</code> отсутствуют колонки: <b>" +
-                missing.join(", ") + "</b>.<br>Функционал ограничен.";
+            warn.innerHTML = "⚠️ В <code>profiles</code> отсутствуют колонки: <b>" + missing.join(", ") + "</b>.<br>Функционал ограничен.";
         } else warn.classList.add("hidden");
     }
 }
@@ -326,7 +304,6 @@ function applySchemaVisibility(){
 ============================================================ */
 document.addEventListener("DOMContentLoaded", () => {
     log("START");
-
     initAuth();
     initNavigation();
     initChat();
@@ -390,16 +367,13 @@ function initAuth(){
         const password = $("register-password").value;
         if(!email || !password){ setAuthMessage("Заполните все поля"); return; }
         try{
-            const r = await supabaseClient.auth.signUp({
-                email, password, options:{ data:{ nickname } }
-            });
+            const r = await supabaseClient.auth.signUp({ email, password, options:{ data:{ nickname } } });
             if(r.error){ setAuthMessage(r.error.message); return; }
             const user = r.data.user;
             if(!user){ setAuthMessage("Проверьте email.", true); return; }
             try{
                 await supabaseClient.from("profiles").insert({
-                    id: user.id, nickname,
-                    avatar_url: DEFAULT_AVATAR, vip_level: 0
+                    id: user.id, nickname, avatar_url: DEFAULT_AVATAR, vip_level: 0
                 });
             }catch(err){ errLog("PROFILE CREATE", err); }
             if(!r.data.session){
@@ -495,9 +469,7 @@ function initNavigation(){
 ============================================================ */
 function initOnlinePresence(){
     if(!currentUser || presenceChannel) return;
-    presenceChannel = supabaseClient.channel("online-users", {
-        config: { presence: { key: currentUser.id } }
-    });
+    presenceChannel = supabaseClient.channel("online-users", { config: { presence: { key: currentUser.id } } });
     presenceChannel
         .on("presence", { event: "sync" }, () => {
             buildOnlineUsers(presenceChannel.presenceState());
@@ -518,9 +490,7 @@ function initOnlinePresence(){
 function buildOnlineUsers(state){
     onlineUsers = {};
     Object.keys(state).forEach(key => {
-        (state[key] || []).forEach(item => {
-            if(item && item.user_id) onlineUsers[item.user_id] = item;
-        });
+        (state[key] || []).forEach(item => { if(item && item.user_id) onlineUsers[item.user_id] = item; });
     });
 }
 function updateOnlineCounters(){
@@ -541,12 +511,11 @@ function renderOnlinePage(){
         const nick = u.nickname || "Player";
         const isMe = u.user_id === currentUser.id;
         const initial = nick[0].toUpperCase();
-        div.innerHTML =
-            "<div class='online-user-avatar'>" +
-                (u.avatar_url ? "<img referrerpolicy='no-referrer' src='" + escapeHtml(u.avatar_url) + "'>" : escapeHtml(initial)) +
+        div.innerHTML = "<div class='online-user-avatar'>" +
+            (u.avatar_url ? "<img referrerpolicy='no-referrer' src='" + escapeHtml(u.avatar_url) + "'>" : escapeHtml(initial)) +
             "</div><div>" +
-                "<div class='online-user-name'>" + escapeHtml(nick) + (isMe ? " (вы)" : "") + "</div>" +
-                "<div class='online-user-meta'>🟢 в сети</div>" +
+            "<div class='online-user-name'>" + escapeHtml(nick) + (isMe ? " (вы)" : "") + "</div>" +
+            "<div class='online-user-meta'>🟢 в сети</div>" +
             "</div>";
         box.appendChild(div);
     });
@@ -566,9 +535,8 @@ async function loadHomeStats(){
 }
 async function loadHomeRecentMessages(){
     const box = $("home-recent-messages"); if(!box) return;
-    const { data, error } = await supabaseClient
-        .from("messages").select("nickname, text, created_at")
-        .order("created_at", { ascending:false }).limit(8);
+    const { data, error } = await supabaseClient.from("messages")
+        .select("nickname, text, created_at").order("created_at", { ascending:false }).limit(8);
     if(error || !data || data.length === 0){
         box.innerHTML = "<div class='dash-recent-empty'>Сообщений пока нет</div>";
         return;
@@ -667,8 +635,7 @@ function previewGameIcon(){
 }
 async function loadGames(){
     const box = $("games-list"); if(!box) return;
-    const { data, error } = await supabaseClient.from("games").select("*")
-        .order("created_at", { ascending: false });
+    const { data, error } = await supabaseClient.from("games").select("*").order("created_at", { ascending: false });
     if(error){
         gamesAvailable = false;
         box.innerHTML = "<div class='dash-recent-empty'>Раздел требует таблицы <code>games</code>.</div>";
@@ -709,11 +676,7 @@ async function loadGames(){
         const guildBtn = document.createElement("button");
         guildBtn.className = "main-button"; guildBtn.type = "button";
         guildBtn.textContent = "⚔ " + (guildCount ? "Гильдии (" + guildCount + ")" : "Создать гильдию");
-        guildBtn.onclick = () => {
-            currentGameFilter = g.id;
-            switchPage("guilds");
-            loadGuilds().catch(e => errLog(e));
-        };
+        guildBtn.onclick = () => { currentGameFilter = g.id; switchPage("guilds"); loadGuilds().catch(e => errLog(e)); };
         actions.appendChild(guildBtn);
 
         if(isAdmin()){
@@ -756,9 +719,8 @@ async function deleteGame(id, name){
     if(!confirm("Удалить игру «" + name + "»?")) return;
     const del = await supabaseClient.from("games").delete().eq("id", id);
     if(del.error){
-        if(/row-level security|policy/i.test(del.error.message || "")){
-            alert("Удаление запрещено политикой безопасности Supabase.");
-        } else alert("Ошибка: " + del.error.message);
+        if(/row-level security|policy/i.test(del.error.message || "")) alert("Удаление запрещено политикой безопасности Supabase.");
+        else alert("Ошибка: " + del.error.message);
         return;
     }
     if(currentGameFilter === id) currentGameFilter = 0;
@@ -792,8 +754,7 @@ function initGuildOverlay(){
     if(back) back.onclick = () => closeGuildOverlay();
     document.addEventListener("keydown", (e) => {
         if(e.key === "Escape"){
-            if($("import-modal") && !$("import-modal").classList.contains("hidden")) closeImportModal();
-            else if($("file-viewer") && !$("file-viewer").classList.contains("hidden")) closeFileViewer();
+            if($("file-viewer") && !$("file-viewer").classList.contains("hidden")) closeFileViewer();
             else if($("template-viewer") && !$("template-viewer").classList.contains("hidden")) closeTemplateViewer();
             else if($("guild-overlay") && !$("guild-overlay").classList.contains("hidden")) closeGuildOverlay();
         }
@@ -871,8 +832,7 @@ async function loadGuilds(){
 
     guildMembersCache = {};
     try{
-        const { data: members } = await supabaseClient
-            .from("guild_members").select("guild_id, user_id, nickname, role, status");
+        const { data: members } = await supabaseClient.from("guild_members").select("guild_id, user_id, nickname, role, status");
         (members || []).forEach(m => {
             if(!guildMembersCache[m.guild_id]) guildMembersCache[m.guild_id] = [];
             guildMembersCache[m.guild_id].push(m);
@@ -895,20 +855,17 @@ async function loadGuilds(){
 
         const card = document.createElement("div");
         card.className = "guild-card";
-        card.innerHTML =
-            "<div class='guild-card-icon'>" +
+        card.innerHTML = "<div class='guild-card-icon'>" +
             (icon ? "<img referrerpolicy='no-referrer' src='" + escapeHtml(icon) + "' onerror=\"this.style.display='none';this.parentNode.textContent='⚔'\">" : "⚔") +
-            "</div>" +
-            "<div class='guild-card-body'>" +
-                "<h3>⚔ " + escapeHtml(g.name) + "</h3>" +
-                "<p>" + escapeHtml(g.description || "Без описания") + "</p>" +
-                "<div class='guild-meta'>" +
-                    (game ? "<span class='guild-game-badge'>🎮 " + escapeHtml(game.name) + "</span>" : "") +
-                    "<span>👥 " + approved.length + "</span>" +
-                    (my && (my.status === "approved" || !my.status) ? "<span class='joined-badge'>Вы в гильдии</span>" : "") +
-                    (my && my.status === "pending" ? "<span class='pending-badge'>Заявка на рассмотрении</span>" : "") +
-                "</div>" +
-            "</div>";
+            "</div><div class='guild-card-body'>" +
+            "<h3>⚔ " + escapeHtml(g.name) + "</h3>" +
+            "<p>" + escapeHtml(g.description || "Без описания") + "</p>" +
+            "<div class='guild-meta'>" +
+                (game ? "<span class='guild-game-badge'>🎮 " + escapeHtml(game.name) + "</span>" : "") +
+                "<span>👥 " + approved.length + "</span>" +
+                (my && (my.status === "approved" || !my.status) ? "<span class='joined-badge'>Вы в гильдии</span>" : "") +
+                (my && my.status === "pending" ? "<span class='pending-badge'>Заявка на рассмотрении</span>" : "") +
+            "</div></div>";
         card.onclick = () => openGuildOverlayFor(g.id);
         box.appendChild(card);
     });
@@ -981,11 +938,8 @@ async function openGuildOverlayFor(guildId){
 
     const heroActions = [];
     if(game){
-        heroActions.push({
-            label: "🌐 Сайт игры",
-            cls: "main-button secondary",
-            onClick: () => window.open(game.url, "_blank", "noopener")
-        });
+        heroActions.push({ label: "🌐 Сайт игры", cls: "main-button secondary",
+            onClick: () => window.open(game.url, "_blank", "noopener") });
     }
     if(!my){
         heroActions.push({ label: "✉️ Запросить вступление", cls: "main-button", onClick: () => requestJoinGuild(guildId) });
@@ -1015,9 +969,7 @@ async function openGuildOverlayFor(guildId){
     body.innerHTML = `
         <div class="guild-hero">
             <div class="guild-hero-icon" id="gd-icon">
-                ${icon
-                    ? `<img referrerpolicy="no-referrer" src="${escapeHtml(icon)}" onerror="this.style.display='none';this.parentNode.textContent='⚔'">`
-                    : "⚔"}
+                ${icon ? `<img referrerpolicy="no-referrer" src="${escapeHtml(icon)}" onerror="this.style.display='none';this.parentNode.textContent='⚔'">` : "⚔"}
                 ${amManager ? `<button class="guild-hero-icon-edit" id="gd-icon-edit" type="button" title="Изменить иконку">✏️</button>` : ""}
                 <input type="file" id="gd-icon-file" accept="image/*" hidden>
             </div>
@@ -1025,10 +977,7 @@ async function openGuildOverlayFor(guildId){
                 <h1>⚔ ${escapeHtml(guild.name)}</h1>
                 <div class="guild-hero-meta">
                     ${game
-                        ? `<span class="guild-game-badge">
-                             <img referrerpolicy="no-referrer" src="${escapeHtml(game.icon_url || faviconFromUrl(game.url))}" onerror="this.style.display='none'">
-                             🎮 ${escapeHtml(game.name)}
-                           </span>`
+                        ? `<span class="guild-game-badge"><img referrerpolicy="no-referrer" src="${escapeHtml(game.icon_url || faviconFromUrl(game.url))}" onerror="this.style.display='none'"> 🎮 ${escapeHtml(game.name)}</span>`
                         : `<span class="guild-game-badge" style="background:#f8fafc;border-color:#e3e9f2;color:#98a2b5">🎮 Игра не привязана</span>`}
                     <span class="guild-game-badge" style="background:#dff5e1;color:#155724">👥 ${approved.length} участников</span>
                 </div>
@@ -1041,15 +990,9 @@ async function openGuildOverlayFor(guildId){
         </div>
 
         <div class="guild-tabs">
-            <button class="guild-tab-btn ${currentGuildTab === "members" ? "active" : ""}" data-tab="members" type="button">
-                👥 Участники (${approved.length})
-            </button>
-            <button class="guild-tab-btn ${currentGuildTab === "materials" ? "active" : ""}" data-tab="materials" type="button">
-                📁 Материалы
-            </button>
-            <button class="guild-tab-btn ${currentGuildTab === "templates" ? "active" : ""}" data-tab="templates" type="button">
-                📄 Шаблоны
-            </button>
+            <button class="guild-tab-btn ${currentGuildTab === "members" ? "active" : ""}" data-tab="members" type="button">👥 Участники (${approved.length})</button>
+            <button class="guild-tab-btn ${currentGuildTab === "materials" ? "active" : ""}" data-tab="materials" type="button">📁 Материалы</button>
+            <button class="guild-tab-btn ${currentGuildTab === "templates" ? "active" : ""}" data-tab="templates" type="button">📄 Шаблоны</button>
         </div>
 
         <div class="guild-tab-panel">
@@ -1110,18 +1053,14 @@ function renderMembersTab(guildId, approved, pending, amManager, amOwner){
             const row = document.createElement("div");
             row.className = "guild-pending-item";
             row.innerHTML = "<div class='guild-pending-name'>" + escapeHtml(p.nickname || "Player") + "</div>";
-
             if(amManager){
                 const approve = document.createElement("button");
                 approve.className = "main-button"; approve.type = "button";
-                approve.textContent = "✓ Принять";
-                approve.onclick = () => approveMember(guildId, p.user_id);
+                approve.textContent = "✓ Принять"; approve.onclick = () => approveMember(guildId, p.user_id);
                 row.appendChild(approve);
-
                 const reject = document.createElement("button");
                 reject.className = "main-button danger"; reject.type = "button";
-                reject.textContent = "× Отклонить";
-                reject.onclick = () => rejectMember(guildId, p.user_id);
+                reject.textContent = "× Отклонить"; reject.onclick = () => rejectMember(guildId, p.user_id);
                 row.appendChild(reject);
             } else {
                 const wait = document.createElement("span");
@@ -1136,18 +1075,14 @@ function renderMembersTab(guildId, approved, pending, amManager, amOwner){
 
     const list = document.createElement("div");
     list.className = "guild-members-list";
-
     const order = { owner: 0, deputy: 1, member: 2 };
     const sorted = approved.slice().sort((a,b) => (order[a.role]??9) - (order[b.role]??9));
 
-    if(sorted.length === 0){
-        list.innerHTML = "<div class='dash-recent-empty'>Пока никого</div>";
-    }
+    if(sorted.length === 0) list.innerHTML = "<div class='dash-recent-empty'>Пока никого</div>";
 
     sorted.forEach(m => {
         const row = document.createElement("div");
         row.className = "guild-member-row";
-
         const initial = (m.nickname || "?")[0].toUpperCase();
         const roleLabel = m.role === "owner" ? "👑 Владелец" :
                           m.role === "deputy" ? "🛡 Заместитель" : "Участник";
@@ -1171,26 +1106,21 @@ function renderMembersTab(guildId, approved, pending, amManager, amOwner){
                 if(amOwner){
                     const promote = document.createElement("button");
                     promote.className = "main-button small"; promote.type = "button";
-                    promote.textContent = "🛡 В замы";
-                    promote.onclick = () => changeRole(guildId, m.user_id, "deputy");
+                    promote.textContent = "🛡 В замы"; promote.onclick = () => changeRole(guildId, m.user_id, "deputy");
                     acts.appendChild(promote);
                 }
                 const kick = document.createElement("button");
                 kick.className = "main-button danger small"; kick.type = "button";
-                kick.textContent = "Кикнуть";
-                kick.onclick = () => kickMember(guildId, m.user_id, m.nickname);
+                kick.textContent = "Кикнуть"; kick.onclick = () => kickMember(guildId, m.user_id, m.nickname);
                 acts.appendChild(kick);
             } else if(m.role === "deputy" && amOwner){
                 const demote = document.createElement("button");
                 demote.className = "main-button secondary small"; demote.type = "button";
-                demote.textContent = "Снять зама";
-                demote.onclick = () => changeRole(guildId, m.user_id, "member");
+                demote.textContent = "Снять зама"; demote.onclick = () => changeRole(guildId, m.user_id, "member");
                 acts.appendChild(demote);
-
                 const kick = document.createElement("button");
                 kick.className = "main-button danger small"; kick.type = "button";
-                kick.textContent = "Кикнуть";
-                kick.onclick = () => kickMember(guildId, m.user_id, m.nickname);
+                kick.textContent = "Кикнуть"; kick.onclick = () => kickMember(guildId, m.user_id, m.nickname);
                 acts.appendChild(kick);
             }
         }
@@ -1198,8 +1128,7 @@ function renderMembersTab(guildId, approved, pending, amManager, amOwner){
         if(amOwner && !isMe && m.role !== "owner"){
             const transfer = document.createElement("button");
             transfer.className = "main-button secondary small"; transfer.type = "button";
-            transfer.textContent = "👑 Передать";
-            transfer.title = "Передать владение";
+            transfer.textContent = "👑 Передать"; transfer.title = "Передать владение";
             transfer.onclick = () => transferOwnership(guildId, m.user_id, m.nickname);
             acts.appendChild(transfer);
         }
@@ -1214,8 +1143,7 @@ async function requestJoinGuild(guildId){
     if(!user) return;
     const ins = await supabaseClient.from("guild_members").insert({
         guild_id: guildId, user_id: user.id,
-        nickname: currentProfile?.nickname || "Player",
-        role: "member", status: "pending"
+        nickname: currentProfile?.nickname || "Player", role: "member", status: "pending"
     });
     if(ins.error){ alert("Ошибка: " + ins.error.message); return; }
     await loadGuilds();
@@ -1261,7 +1189,6 @@ async function transferOwnership(guildId, newOwnerId, nickname){
 
     const up1 = await supabaseClient.from("guilds").update({ owner_id: newOwnerId }).eq("id", guildId);
     if(up1.error){ alert("Ошибка: " + up1.error.message); return; }
-
     await supabaseClient.from("guild_members").update({ role: "owner", status: "approved" }).eq("guild_id", guildId).eq("user_id", newOwnerId);
     await supabaseClient.from("guild_members").update({ role: "deputy" }).eq("guild_id", guildId).eq("user_id", user.id);
 
@@ -1273,7 +1200,6 @@ async function dissolveGuild(guildId){
     const user = await ensureAuth();
     if(!user){ alert("Нет авторизации"); return; }
     if(!isOwner(guildId)){ alert("Распустить гильдию может только её глава."); return; }
-
     const members = guildMembersCache[guildId] || [];
     const approved = members.filter(m => m.status === "approved" || !m.status);
     if(approved.length > 1){ alert("Нельзя распустить гильдию, пока в ней есть другие участники."); return; }
@@ -1362,12 +1288,8 @@ async function renderMaterialsTab(guildId, amManager){
                 <span class="file-text" id="mat-file-text"><b>Выберите файл</b> или перетащите сюда</span>
                 <input type="file" id="mat-file">
             </label>
-            <div class="upload-progress hidden" id="mat-progress">
-                <div class="upload-progress-bar" id="mat-progress-bar"></div>
-            </div>
-            <div class="profile-actions" style="margin-top:12px">
-                <button class="main-button" id="mat-upload-btn" type="button">Загрузить</button>
-            </div>
+            <div class="upload-progress hidden" id="mat-progress"><div class="upload-progress-bar" id="mat-progress-bar"></div></div>
+            <div class="profile-actions" style="margin-top:12px"><button class="main-button" id="mat-upload-btn" type="button">Загрузить</button></div>
             <div class="profile-status" id="mat-status"></div>
         `;
         box.appendChild(form);
@@ -1399,20 +1321,14 @@ async function renderMaterialsTab(guildId, amManager){
     listWrap.innerHTML = "<div class='dash-recent-empty'>Загрузка материалов…</div>";
     box.appendChild(listWrap);
 
-    const { data, error } = await supabaseClient
-        .from("guild_materials").select("*")
-        .eq("guild_id", guildId)
-        .order("created_at", { ascending: false });
+    const { data, error } = await supabaseClient.from("guild_materials").select("*")
+        .eq("guild_id", guildId).order("created_at", { ascending: false });
 
-    if(error){
-        listWrap.innerHTML = "<div class='dash-recent-empty'>Материалов пока нет</div>";
-        return;
-    }
+    if(error){ listWrap.innerHTML = "<div class='dash-recent-empty'>Материалов пока нет</div>"; return; }
     const mats = data || [];
 
     if(mats.length === 0){
-        listWrap.innerHTML = "<div class='dash-recent-empty'>Материалов пока нет" +
-            (amManager ? ". Загрузите первый!" : "") + "</div>";
+        listWrap.innerHTML = "<div class='dash-recent-empty'>Материалов пока нет" + (amManager ? ". Загрузите первый!" : "") + "</div>";
         return;
     }
 
@@ -1438,8 +1354,7 @@ async function renderMaterialsTab(guildId, amManager){
             "<div class='material-btn-body'>" +
                 "<div class='material-btn-title'>" + escapeHtml(m.title || "Без названия") + "</div>" +
                 "<div class='material-btn-meta'>" +
-                    kindLabel + " · " +
-                    escapeHtml(m.file_name || "") +
+                    kindLabel + " · " + escapeHtml(m.file_name || "") +
                     (m.file_size ? " · " + humanFileSize(m.file_size) : "") +
                 "</div>" +
             "</div>";
@@ -1449,8 +1364,7 @@ async function renderMaterialsTab(guildId, amManager){
         if(canDelete){
             const del = document.createElement("span");
             del.className = "material-btn-delete";
-            del.title = "Удалить";
-            del.textContent = "×";
+            del.title = "Удалить"; del.textContent = "×";
             del.onclick = (e) => { e.stopPropagation(); deleteMaterial(guildId, m); };
             btn.appendChild(del);
         }
@@ -1478,7 +1392,6 @@ async function uploadMaterial(guildId){
 
     status.textContent = "Загрузка файла…";
     status.classList.add("loading");
-
     const progressWrap = $("mat-progress");
     const progressBar = $("mat-progress-bar");
     if(progressWrap){ progressWrap.classList.remove("hidden"); progressBar.style.width = "0%"; }
@@ -1489,8 +1402,7 @@ async function uploadMaterial(guildId){
         if(progressBar) progressBar.style.width = p + "%";
     }, 200);
 
-    const up = await supabaseClient.storage
-        .from("guild-files")
+    const up = await supabaseClient.storage.from("guild-files")
         .upload(path, file, { upsert: false, contentType: file.type || undefined });
 
     clearInterval(fake);
@@ -1506,15 +1418,10 @@ async function uploadMaterial(guildId){
     const { data: pub } = supabaseClient.storage.from("guild-files").getPublicUrl(path);
 
     const ins = await supabaseClient.from("guild_materials").insert({
-        guild_id: guildId,
-        uploaded_by: user.id,
-        title,
+        guild_id: guildId, uploaded_by: user.id, title,
         description: description || null,
-        file_url: pub.publicUrl,
-        file_path: path,
-        file_name: file.name,
-        file_size: file.size,
-        file_type: file.type || null
+        file_url: pub.publicUrl, file_path: path,
+        file_name: file.name, file_size: file.size, file_type: file.type || null
     });
 
     if(ins.error){
@@ -1561,7 +1468,7 @@ async function renderTemplatesTab(guildId, amManager){
             <div class="tpl-ai-hint-title">Как создать шаблон</div>
             <div class="tpl-ai-hint-text">
                 Скопируйте промпт, замените данные на свои, отправьте ИИ.
-                Либо используйте кнопку <b>«🌐 Импорт с сайта»</b> внутри редактора, чтобы взять таблицы и картинки с любой страницы.
+                Либо используйте вкладку <b>«🌐 Импорт с сайта»</b> внутри редактора, чтобы взять таблицы и картинки с любой страницы.
             </div>
             <div class="tpl-ai-prompt" id="tpl-ai-prompt-box">Создай HTML-документ для World of Sea Battle: список друзей и врагов. Таблица с колонками: №, Никнейм, Гильдия, Фракция. Фракции выдели цветом и эмодзи-флагом. Заголовки: «🟢 Друзья» — синий, «🔴 Враги» — красный. Стиль — белая 3D-тема, скруглённые углы, тени.</div>
             <button class="main-button small" id="tpl-copy-ai" type="button">📋 Скопировать промпт</button>
@@ -1596,9 +1503,7 @@ async function renderTemplatesTab(guildId, amManager){
                 <textarea id="tpl-content" rows="10" placeholder="&lt;!DOCTYPE html&gt;&#10;&lt;html&gt;...&lt;/html&gt;" style="font-family:Consolas,Monaco,monospace;font-size:12.5px;"></textarea>
                 <small class="field-hint">Можно вставить код из ИИ или использовать импорт с сайта внутри редактора.</small>
             </label>
-            <div class="profile-actions" style="margin-top:12px">
-                <button class="main-button" id="tpl-save-btn" type="button">Загрузить шаблон</button>
-            </div>
+            <div class="profile-actions" style="margin-top:12px"><button class="main-button" id="tpl-save-btn" type="button">Загрузить шаблон</button></div>
             <div class="profile-status" id="tpl-status"></div>
         `;
         box.appendChild(form);
@@ -1610,10 +1515,8 @@ async function renderTemplatesTab(guildId, amManager){
     listWrap.innerHTML = "<div class='dash-recent-empty'>Загрузка шаблонов…</div>";
     box.appendChild(listWrap);
 
-    const { data, error } = await supabaseClient
-        .from("templates").select("*")
-        .eq("guild_id", guildId)
-        .order("created_at", { ascending: false });
+    const { data, error } = await supabaseClient.from("templates").select("*")
+        .eq("guild_id", guildId).order("created_at", { ascending: false });
 
     if(error){
         templatesAvailable = false;
@@ -1624,8 +1527,7 @@ async function renderTemplatesTab(guildId, amManager){
     const list = data || [];
 
     if(list.length === 0){
-        listWrap.innerHTML = "<div class='dash-recent-empty'>Шаблонов пока нет" +
-            (amManager ? ". Загрузите первый!" : "") + "</div>";
+        listWrap.innerHTML = "<div class='dash-recent-empty'>Шаблонов пока нет" + (amManager ? ". Загрузите первый!" : "") + "</div>";
         return;
     }
 
@@ -1655,22 +1557,16 @@ async function renderTemplatesTab(guildId, amManager){
         openBtn.type = "button";
         openBtn.textContent = amManager ? "🎨 Открыть" : "👁 Открыть";
         openBtn.onclick = () => openTemplateEditor({
-            id: t.id,
-            guild_id: guildId,
-            title: t.title,
-            content: t.content || "",
-            created_at: t.created_at,
-            uploaded_by: t.uploaded_by,
-            _source: "template"
+            id: t.id, guild_id: guildId, title: t.title,
+            content: t.content || "", created_at: t.created_at,
+            uploaded_by: t.uploaded_by, _source: "template"
         }, guildId, amManager, "template");
         actions.appendChild(openBtn);
 
         if(canDelete){
             const del = document.createElement("button");
-            del.className = "tpl-delete";
-            del.type = "button";
-            del.title = "Удалить";
-            del.textContent = "×";
+            del.className = "tpl-delete"; del.type = "button";
+            del.title = "Удалить"; del.textContent = "×";
             del.onclick = (e) => { e.stopPropagation(); deleteTemplate(guildId, t); };
             card.appendChild(del);
         }
@@ -1702,12 +1598,9 @@ async function saveTemplate(guildId){
     if(!content || content.length < 5){ setTplStatus("Вставьте HTML-код", "err"); return; }
 
     setTplStatus("Сохранение…", "loading");
-
     const ins = await supabaseClient.from("templates").insert({
-        guild_id: guildId, title,
-        description: description || null,
-        category: "guild", content,
-        uploaded_by: user.id
+        guild_id: guildId, title, description: description || null,
+        category: "guild", content, uploaded_by: user.id
     }).select().single();
 
     if(ins.error){
@@ -1727,14 +1620,13 @@ async function deleteTemplate(guildId, t){
     const amManager = isManager(guildId);
     if(!isOwner && !amManager && !isAdmin()){ alert("Удалить может автор, заместитель или админ."); return; }
     if(!confirm("Удалить шаблон «" + (t.title || "без названия") + "»?")) return;
-
     const del = await supabaseClient.from("templates").delete().eq("id", t.id);
     if(del.error){ alert("Ошибка: " + del.error.message); return; }
     await openGuildOverlayFor(guildId);
 }
 
 /* ============================================================
-   РЕДАКТОР (содержимое + код + импорт с сайтов)
+   РЕДАКТОР
 ============================================================ */
 function initTemplateViewer(){
     const closeBtn = $("tpl-viewer-close");
@@ -1754,6 +1646,26 @@ function initTemplateViewer(){
         btn.onclick = () => switchEditorMode(btn.dataset.mode);
     });
 
+    // Импорт-контролы
+    const importLoad = $("import-load");
+    const importClear = $("import-clear");
+    const importInsert = $("import-insert");
+    const importUrl = $("import-url");
+
+    if(importLoad) importLoad.onclick = () => loadImportPage();
+    if(importUrl) importUrl.addEventListener("keydown", (e) => {
+        if(e.key === "Enter"){ e.preventDefault(); loadImportPage(); }
+    });
+    if(importClear) importClear.onclick = () => {
+        importParsed = { tables: [], images: [] };
+        if(importUrl) importUrl.value = "";
+        const box = $("import-results");
+        if(box) box.innerHTML = "";
+        setImportStatus("", "");
+        updateImportCounter();
+    };
+    if(importInsert) importInsert.onclick = () => insertSelectedImports();
+
     if(codeArea){
         codeArea.addEventListener("keydown", (e) => {
             if(e.key === "Tab" && !e.shiftKey){
@@ -1772,13 +1684,21 @@ function initTemplateViewer(){
 
 function switchEditorMode(mode){
     currentEditorMode = mode;
+
     document.querySelectorAll(".editor-tab-btn").forEach(b => {
         b.classList.toggle("active", b.dataset.mode === mode);
     });
+
     const contentPane = $("editor-pane-content");
     const codePane = $("editor-pane-code");
+    const importPane = $("editor-pane-import");
     if(contentPane) contentPane.classList.toggle("active", mode === "content");
     if(codePane) codePane.classList.toggle("active", mode === "code");
+    if(importPane) importPane.classList.toggle("active", mode === "import");
+
+    // Тулбар: скрыть на вкладке импорта
+    const tb = $("editor-toolbar");
+    if(tb) tb.classList.toggle("hidden", mode === "import");
 
     if(mode === "code"){
         if(currentEditorKind === "html" || currentEditorKind === "template"){
@@ -1786,13 +1706,14 @@ function switchEditorMode(mode){
             const codeArea = $("tpl-viewer-code");
             if(codeArea) codeArea.value = html;
         }
-    } else {
+    } else if(mode === "content"){
         const codeArea = $("tpl-viewer-code");
         if(codeArea && (currentEditorKind === "html" || currentEditorKind === "template")){
             renderVisualFromHtml(codeArea.value);
         }
     }
-    rebuildToolbar();
+
+    if(mode !== "import") rebuildToolbar();
     updateEditorDirtyState();
 }
 
@@ -1817,9 +1738,6 @@ function rebuildToolbar(){
         return;
     }
 
-    // HTML
-    addTbButton(tb, "🌐 Импорт с сайта", "Вставить таблицы или картинки с любого сайта", () => openImportModal(), "tb-primary");
-    addTbSep(tb);
     addTbButton(tb, "Ж", "Жирный", () => execEditorCmd("bold"));
     addTbButton(tb, "К", "Курсив", () => execEditorCmd("italic"));
     addTbButton(tb, "Ч", "Подчёркнутый", () => execEditorCmd("underline"));
@@ -1858,7 +1776,7 @@ function execEditorCmd(cmd, value){
 }
 
 /* ============================================================
-   ОТКРЫТИЕ РЕДАКТОРА
+   ОТКРЫТИЕ / ЗАКРЫТИЕ РЕДАКТОРА
 ============================================================ */
 function openTemplateEditor(t, guildId, canEdit, source){
     currentTemplate = Object.assign({}, t);
@@ -1877,11 +1795,7 @@ function openTemplateEditor(t, guildId, canEdit, source){
     const date = t.created_at
         ? new Date(t.created_at).toLocaleDateString("ru-RU", { day:"2-digit", month:"long", year:"numeric" })
         : "";
-
-    const kindLabel =
-        source === "material" ? "Материал" :
-        source === "sheet" ? "Таблица" : "Шаблон";
-
+    const kindLabel = source === "material" ? "Материал" : source === "sheet" ? "Таблица" : "Шаблон";
     if(subEl) subEl.textContent = kindLabel + (date ? " · " + date : "");
 
     if(modeBadge){
@@ -1905,8 +1819,9 @@ function openTemplateEditor(t, guildId, canEdit, source){
         templateInitialContent = t.content || "";
     }
 
+    // Скрыть вкладку «код» и «импорт» для sheet
     document.querySelectorAll(".editor-tab-btn").forEach(b => {
-        if(currentEditorKind === "sheet" && b.dataset.mode === "code"){
+        if(currentEditorKind === "sheet" && (b.dataset.mode === "code" || b.dataset.mode === "import")){
             b.classList.add("hidden");
         } else {
             b.classList.remove("hidden");
@@ -1919,6 +1834,18 @@ function openTemplateEditor(t, guildId, canEdit, source){
     });
     if($("editor-pane-content")) $("editor-pane-content").classList.add("active");
     if($("editor-pane-code")) $("editor-pane-code").classList.remove("active");
+    if($("editor-pane-import")) $("editor-pane-import").classList.remove("active");
+    const tb = $("editor-toolbar");
+    if(tb) tb.classList.remove("hidden");
+
+    // Очистить импорт-панель
+    importParsed = { tables: [], images: [] };
+    const importUrl = $("import-url");
+    if(importUrl) importUrl.value = "";
+    const importResults = $("import-results");
+    if(importResults) importResults.innerHTML = "";
+    setImportStatus("", "");
+    updateImportCounter();
 
     if(currentEditorKind === "sheet"){
         currentSheetRows = t._sheetData ? t._sheetData.map(r => r.slice()) : [];
@@ -1978,7 +1905,7 @@ function restoreInitialEditorState(){
 }
 
 /* ============================================================
-   РЕНДЕР ВИЗУАЛЬНОГО РЕДАКТОРА — HTML
+   РЕНДЕР — HTML
 ============================================================ */
 function renderVisualFromHtml(content){
     const ed = $("visual-editor"); if(!ed) return;
@@ -1993,14 +1920,11 @@ function renderVisualFromHtml(content){
 
     const tmp = document.createElement("div");
     tmp.innerHTML = parsed.bodyContent;
-    while(tmp.firstChild){
-        ed.appendChild(tmp.firstChild);
-    }
+    while(tmp.firstChild) ed.appendChild(tmp.firstChild);
 
     ed.setAttribute("contenteditable", templateCanEdit ? "true" : "false");
     ed.oninput = () => updateEditorDirtyState();
 }
-
 function collectHtmlFromVisual(){
     const ed = $("visual-editor"); if(!ed) return "";
     const clone = ed.cloneNode(true);
@@ -2009,7 +1933,7 @@ function collectHtmlFromVisual(){
 }
 
 /* ============================================================
-   РЕНДЕР ВИЗУАЛЬНОГО РЕДАКТОРА — SHEET
+   РЕНДЕР — SHEET
 ============================================================ */
 function renderVisualSheet(rows){
     const ed = $("visual-editor"); if(!ed) return;
@@ -2020,10 +1944,7 @@ function renderVisualSheet(rows){
     style.textContent = BASE_EDITOR_STYLES;
     ed.appendChild(style);
 
-    if(!rows || rows.length === 0){
-        rows = [[""]];
-        currentSheetRows = rows;
-    }
+    if(!rows || rows.length === 0){ rows = [[""]]; currentSheetRows = rows; }
 
     const table = document.createElement("table");
     const maxCols = Math.max(...rows.map(r => r.length), 1);
@@ -2043,19 +1964,15 @@ function renderVisualSheet(rows){
 
     ed.appendChild(table);
     ed.setAttribute("contenteditable", "false");
-
     ed.oninput = () => updateEditorDirtyState();
 }
-
 function collectSheetDataFromVisual(){
     const ed = $("visual-editor"); if(!ed) return [];
     const table = ed.querySelector("table"); if(!table) return [];
     const rows = [];
     table.querySelectorAll("tr").forEach(tr => {
         const row = [];
-        tr.querySelectorAll("th,td").forEach(cell => {
-            row.push(cell.textContent);
-        });
+        tr.querySelectorAll("th,td").forEach(cell => { row.push(cell.textContent); });
         rows.push(row);
     });
     return rows;
@@ -2110,9 +2027,7 @@ function tableDelCol(){
     if(rows.length === 0) return;
     const cols = rows[0].children.length;
     if(cols <= 1){ setEditorStatus("Нельзя удалить единственную колонку", "err"); return; }
-    rows.forEach(tr => {
-        if(tr.lastElementChild) tr.removeChild(tr.lastElementChild);
-    });
+    rows.forEach(tr => { if(tr.lastElementChild) tr.removeChild(tr.lastElementChild); });
     updateEditorDirtyState();
 }
 function sheetAddRow(){ tableAddRow(); currentSheetRows = collectSheetDataFromVisual(); }
@@ -2139,11 +2054,8 @@ function isEditorDirty(){
 }
 function updateEditorDirtyState(){
     if(!templateCanEdit) return;
-    if(isEditorDirty()){
-        setEditorStatus("● Есть несохранённые изменения", "dirty");
-    } else {
-        setEditorStatus("", "");
-    }
+    if(isEditorDirty()) setEditorStatus("● Есть несохранённые изменения", "dirty");
+    else setEditorStatus("", "");
 }
 
 /* ============================================================
@@ -2161,9 +2073,7 @@ async function saveEditorChanges(){
         const m = currentTemplate._material;
         if(!m || !m.file_path){ setEditorStatus("Не найден путь к файлу", "err"); return; }
 
-        let blob;
-        let contentType;
-        let newExt = fileExt(m.file_name || "file.html");
+        let blob, contentType, newExt = fileExt(m.file_name || "file.html");
 
         if(currentEditorKind === "sheet"){
             const rows = collectSheetDataFromVisual();
@@ -2194,13 +2104,11 @@ async function saveEditorChanges(){
             newExt = "html";
         }
 
-        // Сохраняем НОВЫЙ файл (upsert:false) — обходим RLS на update
         const newPath = user.id + "/" + currentTemplateGuildId + "/" +
                         Date.now() + "-" + Math.random().toString(36).slice(2,8) + "." + newExt;
 
         try{
-            const up = await supabaseClient.storage
-                .from("guild-files")
+            const up = await supabaseClient.storage.from("guild-files")
                 .upload(newPath, blob, { upsert: false, contentType });
 
             if(up.error){
@@ -2211,15 +2119,12 @@ async function saveEditorChanges(){
 
             const { data: pub } = supabaseClient.storage.from("guild-files").getPublicUrl(newPath);
 
-            const upd = await supabaseClient
-                .from("guild_materials")
-                .update({
-                    file_url: pub.publicUrl,
-                    file_path: newPath,
-                    file_size: blob.size,
-                    file_type: contentType
-                })
-                .eq("id", m.id);
+            const upd = await supabaseClient.from("guild_materials").update({
+                file_url: pub.publicUrl,
+                file_path: newPath,
+                file_size: blob.size,
+                file_type: contentType
+            }).eq("id", m.id);
 
             if(upd.error){
                 errLog("MATERIAL DB UPDATE", upd.error.message);
@@ -2259,13 +2164,8 @@ async function saveEditorChanges(){
     if(!currentTemplateGuildId){ setEditorStatus("Гильдия не найдена", "err"); return; }
 
     const newContent = buildFinalHtml();
-
-    const upd = await supabaseClient
-        .from("templates")
-        .update({ content: newContent })
-        .eq("id", currentTemplate.id)
-        .select()
-        .single();
+    const upd = await supabaseClient.from("templates")
+        .update({ content: newContent }).eq("id", currentTemplate.id).select().single();
 
     if(upd.error){
         errLog("SAVE TEMPLATE", upd.error.message);
@@ -2283,14 +2183,10 @@ function buildFinalHtml(){
         const codeArea = $("tpl-viewer-code");
         return codeArea ? codeArea.value : "";
     }
-
     const body = collectHtmlFromVisual();
     const original = templateInitialContent || "";
     const isFull = /<!doctype/i.test(original) || /<html/i.test(original);
-
-    if(!isFull){
-        return body;
-    }
+    if(!isFull) return body;
 
     const parsed = parseHtmlContent(original);
     const styles = parsed.styles || "";
@@ -2309,7 +2205,7 @@ ${body}
 }
 
 /* ============================================================
-   ИМПОРТ ТАБЛИЦ И КАРТИНОК С САЙТОВ
+   ИМПОРТ С САЙТОВ — ВКЛАДКА В РЕДАКТОРЕ
 ============================================================ */
 
 const CORS_PROXIES = [
@@ -2328,10 +2224,7 @@ async function fetchPageViaProxy(url){
             const text = await res.text();
             if(!text || text.length < 50) throw new Error("Пустой ответ");
             return text;
-        }catch(e){
-            lastErr = e;
-            errLog("PROXY FAIL", e.message);
-        }
+        }catch(e){ lastErr = e; errLog("PROXY FAIL", e.message); }
     }
     throw new Error("Не удалось загрузить страницу. " + (lastErr ? lastErr.message : ""));
 }
@@ -2340,7 +2233,6 @@ function parsePageContent(html, baseUrl){
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
 
-    // Абсолютный URL
     const toAbs = (href) => {
         if(!href) return "";
         try{ return new URL(href, baseUrl).href; }catch(e){ return href; }
@@ -2348,14 +2240,10 @@ function parsePageContent(html, baseUrl){
 
     // ---- Таблицы ----
     const tables = [];
-    const tablesEls = doc.querySelectorAll("table");
-    tablesEls.forEach((tbl, idx) => {
-        // Ограничимся разумным размером
+    doc.querySelectorAll("table").forEach((tbl, idx) => {
         const rows = tbl.querySelectorAll("tr");
-        if(rows.length === 0) return;
-        if(rows.length > 500) return;
+        if(rows.length === 0 || rows.length > 500) return;
 
-        // Конвертируем все href/src внутри
         const clone = tbl.cloneNode(true);
         clone.querySelectorAll("a[href]").forEach(a => {
             const abs = toAbs(a.getAttribute("href"));
@@ -2365,8 +2253,6 @@ function parsePageContent(html, baseUrl){
             const abs = toAbs(img.getAttribute("src"));
             if(abs) img.setAttribute("src", abs);
         });
-
-        // Очистим лишние атрибуты
         clone.querySelectorAll("*").forEach(el => {
             ["width","height","style","class","id","onclick","onmouseover"].forEach(at => {
                 if(el.hasAttribute(at)) el.removeAttribute(at);
@@ -2387,22 +2273,17 @@ function parsePageContent(html, baseUrl){
     // ---- Картинки ----
     const images = [];
     const seen = new Set();
-    doc.querySelectorAll("img").forEach((img, idx) => {
+    doc.querySelectorAll("img").forEach((img) => {
         let src = img.getAttribute("src") || img.getAttribute("data-src") || "";
         src = toAbs(src);
         if(!src || seen.has(src)) return;
-        // Пропускаем data:image (уже inline)
         if(src.startsWith("data:")) return;
-        // Пропускаем трекинг-пиксели
         if(/(1x1|pixel|track)/i.test(src)) return;
-        // Только http(s)
         if(!/^https?:/i.test(src)) return;
         seen.add(src);
         const alt = (img.getAttribute("alt") || "").trim();
         images.push({
-            idx: images.length,
-            src,
-            alt,
+            idx: images.length, src, alt,
             title: alt || ("Картинка #" + (images.length + 1))
         });
     });
@@ -2410,92 +2291,13 @@ function parsePageContent(html, baseUrl){
     return { tables, images };
 }
 
-/* ---------- Модалка импорта ---------- */
-function ensureImportModal(){
-    if($("import-modal")) return;
-
-    const modal = document.createElement("div");
-    modal.id = "import-modal";
-    modal.className = "import-modal hidden";
-
-    modal.innerHTML = `
-        <div class="import-window">
-            <div class="import-header">
-                <div class="import-title">🌐 Импорт с сайта</div>
-                <button class="main-button danger" id="import-close" type="button">Закрыть</button>
-            </div>
-            <div class="import-body">
-                <div class="import-url-row">
-                    <input id="import-url" type="url" placeholder="https://example.com/page" autocomplete="off">
-                    <button class="main-button" id="import-load" type="button">Загрузить</button>
-                </div>
-                <div class="import-hint">
-                    Скопируйте адрес страницы и вставьте сюда. Мы загрузим HTML через публичный CORS-прокси,
-                    найдём все таблицы и картинки. Выбранное вставится прямо в редактор — и сразу станет редактируемым.
-                </div>
-                <div id="import-status" class="import-status"></div>
-                <div id="import-results" class="import-results"></div>
-            </div>
-            <div class="import-footer">
-                <div class="import-counter" id="import-counter"></div>
-                <div class="import-footer-actions">
-                    <button class="main-button secondary" id="import-clear" type="button">Сбросить</button>
-                    <button class="main-button" id="import-insert" type="button" disabled>Вставить выбранное</button>
-                </div>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    $("import-close").onclick = () => closeImportModal();
-    $("import-load").onclick = () => loadImportPage();
-    $("import-url").addEventListener("keydown", (e) => {
-        if(e.key === "Enter"){ e.preventDefault(); loadImportPage(); }
-    });
-    $("import-clear").onclick = () => {
-        importParsed = { tables: [], images: [] };
-        importLastUrl = "";
-        $("import-url").value = "";
-        $("import-results").innerHTML = "";
-        setImportStatus("", "");
-        updateImportCounter();
-    };
-    $("import-insert").onclick = () => insertSelectedImports();
-}
-
-function openImportModal(){
-    if(!templateCanEdit){
-        alert("Редактирование недоступно");
-        return;
-    }
-    ensureImportModal();
-    const modal = $("import-modal");
-    modal.classList.remove("hidden");
-    document.body.style.overflow = "hidden";
-    setTimeout(() => $("import-url")?.focus(), 100);
-}
-
-function closeImportModal(){
-    const modal = $("import-modal");
-    if(!modal) return;
-    modal.classList.add("hidden");
-    if($("template-viewer")?.classList.contains("hidden") !== false){
-        document.body.style.overflow = "";
-    } else {
-        document.body.style.overflow = "hidden";
-    }
-}
-
 function setImportStatus(text, cls){
-    const el = $("import-status");
-    if(!el) return;
+    const el = $("import-status"); if(!el) return;
     el.textContent = text || "";
     el.className = "import-status" + (cls ? " " + cls : "");
 }
 
 async function loadImportPage(){
-    ensureImportModal();
     const urlInput = $("import-url");
     const url = (urlInput.value || "").trim();
     if(!url || !isValidHttpUrl(url)){
@@ -2504,15 +2306,15 @@ async function loadImportPage(){
     }
 
     setImportStatus("Загрузка страницы…", "loading");
-    $("import-results").innerHTML = "";
-    $("import-insert").disabled = true;
+    const results = $("import-results");
+    if(results) results.innerHTML = "";
+    const insertBtn = $("import-insert");
+    if(insertBtn) insertBtn.disabled = true;
     importParsed = { tables: [], images: [] };
-    importLastUrl = url;
 
     try{
         const html = await fetchPageViaProxy(url);
         setImportStatus("Парсинг…", "loading");
-
         const parsed = parsePageContent(html, url);
         importParsed = parsed;
 
@@ -2522,7 +2324,6 @@ async function loadImportPage(){
             return;
         }
         setImportStatus("Найдено: " + parsed.tables.length + " таблиц, " + parsed.images.length + " картинок", "ok");
-
         renderImportResults();
         updateImportCounter();
     }catch(e){
@@ -2570,8 +2371,7 @@ function renderImportResults(){
             card.innerHTML = `
                 <input type="checkbox" class="import-check" data-type="image" data-idx="${img.idx}" checked>
                 <div class="import-card-body">
-                    <img src="${escapeHtml(img.src)}" referrerpolicy="no-referrer"
-                         onerror="this.style.display='none'">
+                    <img src="${escapeHtml(img.src)}" referrerpolicy="no-referrer" onerror="this.style.display='none'">
                     <div class="import-card-title">${escapeHtml(img.title)}</div>
                     <div class="import-card-meta">${escapeHtml(img.src.slice(0, 60))}${img.src.length > 60 ? "…" : ""}</div>
                 </div>
@@ -2597,6 +2397,7 @@ function updateImportCounter(){
     if(btn) btn.disabled = selected === 0;
 }
 
+/* Сохранить выбранное в документ */
 function insertSelectedImports(){
     const ed = $("visual-editor");
     if(!ed){ setImportStatus("Редактор не найден", "err"); return; }
@@ -2620,44 +2421,54 @@ function insertSelectedImports(){
         return;
     }
 
-    // Вставляем в редактор
-    ed.focus();
+    // Сохраняем в визуальный редактор: добавляем в конец контента
     let inserted = 0;
-
     selected.forEach(item => {
         if(item.type === "table"){
-            // Вставляем как HTML
-            const ok = document.execCommand("insertHTML", false, item.html + "<p><br></p>");
-            if(!ok){
-                // fallback — в конец
-                const tmp = document.createElement("div");
-                tmp.innerHTML = item.html;
-                while(tmp.firstChild) ed.appendChild(tmp.firstChild);
-                const br = document.createElement("p");
-                br.innerHTML = "<br>";
-                ed.appendChild(br);
+            const tmp = document.createElement("div");
+            tmp.innerHTML = item.html;
+            // пропускаем уже вставленный style
+            while(tmp.firstChild){
+                const child = tmp.firstChild;
+                if(child.nodeType === 1 && child.tagName === "STYLE"){
+                    tmp.removeChild(child);
+                    continue;
+                }
+                ed.appendChild(child);
             }
+            // отступ
+            const p = document.createElement("p");
+            p.innerHTML = "<br>";
+            ed.appendChild(p);
             inserted++;
         } else if(item.type === "image"){
             const img = document.createElement("img");
             img.src = item.src;
             img.alt = item.alt || "";
             img.referrerPolicy = "no-referrer";
-            const ok = document.execCommand("insertHTML", false, img.outerHTML + "<p><br></p>");
-            if(!ok){
-                ed.appendChild(img);
-                const br = document.createElement("p");
-                br.innerHTML = "<br>";
-                ed.appendChild(br);
-            }
+            ed.appendChild(img);
+            const p = document.createElement("p");
+            p.innerHTML = "<br>";
+            ed.appendChild(p);
             inserted++;
         }
     });
 
+    // Синхронизация в коде
+    const html = collectHtmlFromVisual();
+    const codeArea = $("tpl-viewer-code");
+    if(codeArea) codeArea.value = html;
+
     updateEditorDirtyState();
-    setEditorStatus("✓ Вставлено элементов: " + inserted, "ok");
-    setTimeout(() => setEditorStatus("", ""), 2000);
-    closeImportModal();
+
+    // Переключиться на содержимое, чтобы увидеть результат
+    switchEditorMode("content");
+    setEditorStatus("✓ Сохранено в документ: " + inserted + " элементов", "ok");
+    setTimeout(() => setEditorStatus("", ""), 2500);
+
+    // Скролл к концу
+    const wrap = document.querySelector(".visual-editor-wrap");
+    if(wrap) wrap.scrollTop = wrap.scrollHeight;
 }
 
 /* ============================================================
@@ -2692,7 +2503,6 @@ async function openFileViewer(m){
     if(!wrap || !body) return;
 
     const kind = fileViewerKind(m.file_name, m.file_type);
-
     if(kind === "html"){ await openHtmlEditorFromMaterial(m); return; }
     if(kind === "sheet"){ await openSheetEditorFromMaterial(m); return; }
 
@@ -2702,14 +2512,9 @@ async function openFileViewer(m){
     wrap.classList.remove("hidden");
 
     const showError = (text) => {
-        body.innerHTML = "<div class='viewer-fallback'>" +
-                "<span class='big'>📎</span>" +
-                "<p>" + text + "</p>" +
-            "</div>";
+        body.innerHTML = "<div class='viewer-fallback'><span class='big'>📎</span><p>" + text + "</p></div>";
         const btn = document.createElement("button");
-        btn.className = "main-button";
-        btn.type = "button";
-        btn.textContent = "⬇ Скачать файл";
+        btn.className = "main-button"; btn.type = "button"; btn.textContent = "⬇ Скачать файл";
         btn.onclick = () => downloadFileByUrl(m.file_url, m.file_name);
         body.querySelector(".viewer-fallback")?.appendChild(btn);
     };
@@ -2717,36 +2522,29 @@ async function openFileViewer(m){
     if(kind === "image"){
         body.innerHTML = "";
         const img = document.createElement("img");
-        img.referrerPolicy = "no-referrer";
-        img.src = m.file_url;
-        img.alt = m.title || "";
+        img.referrerPolicy = "no-referrer"; img.src = m.file_url; img.alt = m.title || "";
         img.onerror = () => showError("Не удалось загрузить изображение.");
-        body.appendChild(img);
-        return;
+        body.appendChild(img); return;
     }
     if(kind === "video"){
         body.innerHTML = "";
         const v = document.createElement("video");
         v.src = m.file_url; v.controls = true; v.playsInline = true;
         v.onerror = () => showError("Не удалось загрузить видео.");
-        body.appendChild(v);
-        return;
+        body.appendChild(v); return;
     }
     if(kind === "audio"){
         body.innerHTML = "";
         const a = document.createElement("audio");
         a.src = m.file_url; a.controls = true;
         a.onerror = () => showError("Не удалось загрузить аудио.");
-        body.appendChild(a);
-        return;
+        body.appendChild(a); return;
     }
     if(kind === "pdf"){
         body.innerHTML = "";
         const ifr = document.createElement("iframe");
-        ifr.src = m.file_url;
-        ifr.style.background = "white";
-        body.appendChild(ifr);
-        return;
+        ifr.src = m.file_url; ifr.style.background = "white";
+        body.appendChild(ifr); return;
     }
     if(kind === "text"){
         body.innerHTML = "<div class='viewer-fallback'><span class='big'>⏳</span><p>Загрузка текста…</p></div>";
@@ -2756,20 +2554,12 @@ async function openFileViewer(m){
             const text = await res.text();
             body.innerHTML = "";
             const pre = document.createElement("pre");
-            pre.style.cssText =
-                "width:100%;height:100%;margin:0;padding:22px;" +
-                "background:#0f172a;color:#e2e8f0;" +
-                "font-family:Consolas,Monaco,monospace;" +
-                "font-size:13px;line-height:1.6;" +
-                "border-radius:12px;overflow:auto;" +
-                "white-space:pre-wrap;word-break:break-word;" +
-                "box-shadow:0 20px 60px rgba(0,0,0,.4);";
+            pre.style.cssText = "width:100%;height:100%;margin:0;padding:22px;background:#0f172a;color:#e2e8f0;font-family:Consolas,Monaco,monospace;font-size:13px;line-height:1.6;border-radius:12px;overflow:auto;white-space:pre-wrap;word-break:break-word;box-shadow:0 20px 60px rgba(0,0,0,.4);";
             pre.textContent = text;
             body.appendChild(pre);
         }catch(e){ showError("Не удалось загрузить текст."); }
         return;
     }
-
     showError("Предпросмотр для этого типа файла недоступен.<br>Скачайте файл, чтобы открыть его.");
 }
 async function openHtmlEditorFromMaterial(m){
@@ -2796,21 +2586,16 @@ async function openHtmlEditorFromMaterial(m){
         body.innerHTML = "";
 
         openTemplateEditor({
-            id: m.id,
-            guild_id: guildId,
+            id: m.id, guild_id: guildId,
             title: m.title || m.file_name || "HTML-материал",
-            content: text,
-            created_at: m.created_at,
-            uploaded_by: m.uploaded_by,
-            _source: "material",
-            _material: m
+            content: text, created_at: m.created_at,
+            uploaded_by: m.uploaded_by, _source: "material", _material: m
         }, guildId, canEdit, "material");
     }catch(e){
         errLog("HTML VIEW", e);
         body.innerHTML = "<div class='viewer-fallback'><span class='big'>📎</span><p>Не удалось загрузить HTML: " + escapeHtml(e.message || "") + "</p></div>";
         const btn = document.createElement("button");
-        btn.className = "main-button"; btn.type = "button";
-        btn.textContent = "⬇ Скачать файл";
+        btn.className = "main-button"; btn.type = "button"; btn.textContent = "⬇ Скачать файл";
         btn.onclick = () => downloadFileByUrl(m.file_url, m.file_name);
         body.querySelector(".viewer-fallback")?.appendChild(btn);
     }
@@ -2831,8 +2616,7 @@ async function openSheetEditorFromMaterial(m){
         const arrayBuffer = await res.arrayBuffer();
 
         const ext = fileExt(m.file_name || "");
-        let rows = [];
-        let sheetName = "Sheet1";
+        let rows = [], sheetName = "Sheet1";
 
         if(ext === "csv" || ext === "tsv"){
             const text = new TextDecoder("utf-8").decode(arrayBuffer);
@@ -2858,23 +2642,17 @@ async function openSheetEditorFromMaterial(m){
         body.innerHTML = "";
 
         openTemplateEditor({
-            id: m.id,
-            guild_id: guildId,
+            id: m.id, guild_id: guildId,
             title: m.title || m.file_name || "Таблица",
-            content: "",
-            _sheetData: rows,
-            _sheetName: sheetName,
-            created_at: m.created_at,
-            uploaded_by: m.uploaded_by,
-            _source: "material",
-            _material: m
+            content: "", _sheetData: rows, _sheetName: sheetName,
+            created_at: m.created_at, uploaded_by: m.uploaded_by,
+            _source: "material", _material: m
         }, guildId, canEdit, "sheet");
     }catch(e){
         errLog("SHEET VIEW", e);
         body.innerHTML = "<div class='viewer-fallback'><span class='big'>📎</span><p>Не удалось загрузить таблицу: " + escapeHtml(e.message || "") + "</p></div>";
         const btn = document.createElement("button");
-        btn.className = "main-button"; btn.type = "button";
-        btn.textContent = "⬇ Скачать файл";
+        btn.className = "main-button"; btn.type = "button"; btn.textContent = "⬇ Скачать файл";
         btn.onclick = () => downloadFileByUrl(m.file_url, m.file_name);
         body.querySelector(".viewer-fallback")?.appendChild(btn);
     }
@@ -2896,12 +2674,7 @@ async function loadProfile(){
         const { columns, row } = await detectProfileColumns(user.id);
         availableColumns = columns;
         applySchemaVisibility();
-        if(row){
-            currentProfile = row;
-            applyProfileToUI(row);
-            fillProfileForm(row);
-            return;
-        }
+        if(row){ currentProfile = row; applyProfileToUI(row); fillProfileForm(row); return; }
     }
     const cols = Array.from(availableColumns).join(",");
     let result = await supabaseClient.from("profiles").select(cols).eq("id", user.id).maybeSingle();
@@ -2923,8 +2696,7 @@ async function loadProfile(){
 }
 function applyProfileToUI(p){
     if(!p) return;
-    setText("top-name", p.nickname || "Player");
-    setImage("top-avatar", p.avatar_url);
+    setText("top-name", p.nickname || "Player"); setImage("top-avatar", p.avatar_url);
     setText("profile-name", p.nickname || "Player");
     setText("vip-level", "VIP " + (p.vip_level || 0));
     setImage("profile-avatar", p.avatar_url);
@@ -2943,9 +2715,9 @@ function fillProfileForm(p){
     if(!p) return;
     if($("pf-nickname")) $("pf-nickname").value = p.nickname || "";
     if($("pf-avatar") && availableColumns.has("avatar_url")) $("pf-avatar").value = p.avatar_url || "";
-    if($("pf-city")   && availableColumns.has("city"))       $("pf-city").value = p.city || "";
-    if($("pf-age")    && availableColumns.has("age"))        $("pf-age").value = (p.age == null ? "" : p.age);
-    if($("pf-about")  && availableColumns.has("about"))      $("pf-about").value = p.about || "";
+    if($("pf-city") && availableColumns.has("city")) $("pf-city").value = p.city || "";
+    if($("pf-age") && availableColumns.has("age")) $("pf-age").value = (p.age == null ? "" : p.age);
+    if($("pf-about") && availableColumns.has("about")) $("pf-about").value = p.about || "";
     updateAboutCounter();
 }
 function updateAboutCounter(){
@@ -3013,8 +2785,8 @@ async function saveProfileChanges(){
     if(!currentProfile || nickname !== currentProfile.nickname){
         savingProfile = true;
         setProfileStatus("Проверка никнейма…", "loading");
-        const { data: dup } = await supabaseClient
-            .from("profiles").select("id").eq("nickname", nickname).neq("id", user.id).maybeSingle();
+        const { data: dup } = await supabaseClient.from("profiles")
+            .select("id").eq("nickname", nickname).neq("id", user.id).maybeSingle();
         if(dup && dup.id){ savingProfile = false; setProfileStatus("Никнейм занят", "err"); return; }
         savingProfile = false;
     }
@@ -3026,9 +2798,9 @@ async function saveProfileChanges(){
 
     const payload = { nickname };
     if(availableColumns.has("avatar_url")) payload.avatar_url = avatarUrl || null;
-    if(availableColumns.has("city"))       payload.city = city || null;
-    if(availableColumns.has("age"))        payload.age = age;
-    if(availableColumns.has("about"))      payload.about = about || null;
+    if(availableColumns.has("city")) payload.city = city || null;
+    if(availableColumns.has("age")) payload.age = age;
+    if(availableColumns.has("about")) payload.about = about || null;
 
     savingProfile = true;
     setProfileStatus("Сохранение…", "loading");
@@ -3055,7 +2827,6 @@ async function saveProfileChanges(){
             savingProfile = false;
             return;
         }
-
         currentProfile = update.data || Object.assign({}, currentProfile, payload);
         applyProfileToUI(currentProfile);
 
@@ -3073,9 +2844,8 @@ async function saveProfileChanges(){
         setProfileStatus("Сохранено ✓");
         setTimeout(() => setProfileStatus(""), 2200);
         loadGames().catch(e => errLog(e));
-    }catch(err){
-        setProfileStatus("Ошибка: " + err.message, "err");
-    }finally{ savingProfile = false; }
+    }catch(err){ setProfileStatus("Ошибка: " + err.message, "err"); }
+    finally{ savingProfile = false; }
 }
 
 /* ============================================================
@@ -3084,9 +2854,7 @@ async function saveProfileChanges(){
 async function loadNews(){
     const boxHome = $("news-list");
     const boxPage = $("news-page-list");
-    const { data, error } = await supabaseClient
-        .from("news").select("*").order("created_at", { ascending: false });
-
+    const { data, error } = await supabaseClient.from("news").select("*").order("created_at", { ascending: false });
     const empty = "<p style='color:#888'>Новостей пока нет</p>";
     if(error || !data || data.length === 0){
         if(boxHome) boxHome.innerHTML = empty;
@@ -3098,8 +2866,7 @@ async function loadNews(){
         (limit ? list.slice(0, limit) : list).forEach(item => {
             const div = document.createElement("div");
             div.className = "news-item";
-            div.innerHTML = "<h3>" + escapeHtml(item.title || "") + "</h3>" +
-                "<p>" + escapeHtml(item.text || "") + "</p>";
+            div.innerHTML = "<h3>" + escapeHtml(item.title || "") + "</h3><p>" + escapeHtml(item.text || "") + "</p>";
             frag.appendChild(div);
         });
         return frag;
@@ -3126,7 +2893,6 @@ async function sendMessage(){
     if(!user){ alert("Нет авторизации"); return; }
     const input = $("message-text"); if(!input) return;
     const text = input.value.trim(); if(!text) return;
-
     const nickname = (currentProfile && currentProfile.nickname) || "Player";
     const result = await supabaseClient.from("messages").insert({ user_id: user.id, nickname, text });
     if(result.error){ errLog("MSG INSERT", result.error.message); alert("Ошибка: " + result.error.message); return; }
@@ -3135,12 +2901,9 @@ async function sendMessage(){
 }
 async function loadMessages(){
     const box = $("messages"); if(!box) return;
-    const { data, error } = await supabaseClient
-        .from("messages").select("*").order("created_at", { ascending: true }).limit(300);
-
+    const { data, error } = await supabaseClient.from("messages").select("*").order("created_at", { ascending: true }).limit(300);
     if(error){
-        box.innerHTML = "<div class='chat-message'><div class='chat-body'>Ошибка: " +
-            escapeHtml(error.message) + "</div></div>";
+        box.innerHTML = "<div class='chat-message'><div class='chat-body'>Ошибка: " + escapeHtml(error.message) + "</div></div>";
         return;
     }
     const userIds = Array.from(new Set((data || []).map(m => m.user_id).filter(Boolean)));
@@ -3158,33 +2921,20 @@ function appendMessage(m, profile){
     const isOwn = currentUser && m.user_id === currentUser.id;
     const nick = (profile && profile.nickname) || m.nickname || "Гость";
     const avatar = (profile && profile.avatar_url) || DEFAULT_AVATAR;
-
     const div = document.createElement("div");
     div.className = "chat-message" + (isOwn ? " own" : "");
     div.dataset.id = m.id;
-
-    const time = m.created_at
-        ? new Date(m.created_at).toLocaleTimeString("ru-RU", { hour:"2-digit", minute:"2-digit" })
-        : "";
+    const time = m.created_at ? new Date(m.created_at).toLocaleTimeString("ru-RU", { hour:"2-digit", minute:"2-digit" }) : "";
     const initial = nick[0].toUpperCase();
-
-    div.innerHTML =
-        "<div class='chat-avatar'>" +
-            "<img referrerpolicy='no-referrer' src='" + escapeHtml(avatar) +
-            "' onerror=\"this.style.display='none';this.parentNode.textContent='" +
-            escapeHtml(initial) + "'\">" +
-        "</div>" +
-        "<div class='chat-body'>" +
-            "<div class='chat-head'><b>" + escapeHtml(nick) + "</b>" +
-                "<span class='msg-time'>" + escapeHtml(time) + "</span></div>" +
-            "<div class='chat-text'>" + escapeHtml(m.text || "") + "</div>" +
-        "</div>";
-
+    div.innerHTML = "<div class='chat-avatar'>" +
+        "<img referrerpolicy='no-referrer' src='" + escapeHtml(avatar) +
+        "' onerror=\"this.style.display='none';this.parentNode.textContent='" + escapeHtml(initial) + "'\"></div>" +
+        "<div class='chat-body'><div class='chat-head'><b>" + escapeHtml(nick) + "</b>" +
+        "<span class='msg-time'>" + escapeHtml(time) + "</span></div>" +
+        "<div class='chat-text'>" + escapeHtml(m.text || "") + "</div></div>";
     if(isOwn){
         const del = document.createElement("button");
-        del.className = "chat-delete";
-        del.title = "Удалить";
-        del.textContent = "×";
+        del.className = "chat-delete"; del.title = "Удалить"; del.textContent = "×";
         del.onclick = () => deleteMessage(m.id);
         div.appendChild(del);
     }
@@ -3202,20 +2952,16 @@ function startChatRealtime(){
     if(chatChannel) return;
     chatChannel = supabaseClient
         .channel("public-messages")
-        .on("postgres_changes",
-            { event: "INSERT", schema: "public", table: "messages" },
-            async (payload) => {
-                const m = payload.new;
-                const pRes = await supabaseClient.from("profiles").select("nickname, avatar_url").eq("id", m.user_id).maybeSingle();
-                appendMessage(m, pRes.data);
-                loadHomeRecentMessages().catch(e => errLog(e));
-            })
-        .on("postgres_changes",
-            { event: "DELETE", schema: "public", table: "messages" },
-            (payload) => {
-                const el = document.querySelector(".chat-message[data-id='" + payload.old.id + "']");
-                if(el) el.remove();
-            })
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, async (payload) => {
+            const m = payload.new;
+            const pRes = await supabaseClient.from("profiles").select("nickname, avatar_url").eq("id", m.user_id).maybeSingle();
+            appendMessage(m, pRes.data);
+            loadHomeRecentMessages().catch(e => errLog(e));
+        })
+        .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" }, (payload) => {
+            const el = document.querySelector(".chat-message[data-id='" + payload.old.id + "']");
+            if(el) el.remove();
+        })
         .subscribe();
 }
 
@@ -3234,7 +2980,6 @@ async function createRoom(){
     const name = $("room-name-input").value.trim();
     const description = $("room-desc-input").value.trim();
     if(!name){ alert("Введите название"); return; }
-
     setRoomStatus("Создание…");
     const result = await supabaseClient.from("conference_rooms").insert({ name, description: description || null }).select().single();
     if(result.error){ setRoomStatus("Ошибка: " + result.error.message, "err"); return; }
@@ -3249,7 +2994,6 @@ async function loadRooms(){
     const roomsRes = await supabaseClient.from("conference_rooms").select("*").order("id");
     if(roomsRes.error){ box.innerHTML = "<p style='color:#888'>Ошибка загрузки</p>"; return; }
     const rooms = roomsRes.data || [];
-
     const usersRes = await supabaseClient.from("conference_users").select("room_id");
     const counts = {};
     (usersRes.data || []).forEach(u => { counts[u.room_id] = (counts[u.room_id] || 0) + 1; });
@@ -3278,35 +3022,22 @@ async function joinRoom(room){
         if(!user){ setRoomStatus("Требуется вход", "err"); return; }
         await supabaseClient.from("conference_users").delete().eq("user_id", user.id);
         const nickname = currentProfile?.nickname || "Player";
-        const ins = await supabaseClient.from("conference_users").insert({
-            room_id: room.id, user_id: user.id, nickname
-        });
+        const ins = await supabaseClient.from("conference_users").insert({ room_id: room.id, user_id: user.id, nickname });
         if(ins.error) errLog("ROOM USER INSERT", ins.error.message);
         currentRoom = room;
-
         const miroRoomId = "gp-" + room.id;
-        const miroUrl = MIROTALK_BASE + "/join/?" +
-            "room=" + encodeURIComponent(miroRoomId) +
-            "&name=" + encodeURIComponent(nickname) +
-            "&audio=1&video=1&screen=1&chat=1&notify=1";
+        const miroUrl = MIROTALK_BASE + "/join/?room=" + encodeURIComponent(miroRoomId) +
+            "&name=" + encodeURIComponent(nickname) + "&audio=1&video=1&screen=1&chat=1&notify=1";
         const container = $("mirotalk-container");
-        container.innerHTML =
-            '<iframe src="' + miroUrl + '" ' +
-            'allow="camera; microphone; speaker-selection; display-capture; fullscreen; clipboard-read; clipboard-write; web-share; autoplay; picture-in-picture" ' +
-            'allowfullscreen style="width:100%;height:100%;border:0;"></iframe>';
+        container.innerHTML = '<iframe src="' + miroUrl + '" allow="camera; microphone; speaker-selection; display-capture; fullscreen; clipboard-read; clipboard-write; web-share; autoplay; picture-in-picture" allowfullscreen style="width:100%;height:100%;border:0;"></iframe>';
         setText("current-room-title", "🎙 " + (room.name || "Комната"));
         setRoomStatus("Подключено к MiroTalk P2P", "ok");
-    }catch(err){
-        errLog("JOIN EXC", err);
-        setRoomStatus("Ошибка: " + err.message, "err");
-    }finally{ joiningRoom = false; }
+    }catch(err){ errLog("JOIN EXC", err); setRoomStatus("Ошибка: " + err.message, "err"); }
+    finally{ joiningRoom = false; }
 }
 function closeMiroTalkRoom(){
     const c = $("mirotalk-container"); if(!c) return;
-    c.innerHTML = "<div class='mirotalk-placeholder'>" +
-        "<div class='mirotalk-placeholder-icon'>🎥</div>" +
-        "<p>Выберите комнату из списка слева, чтобы начать конференцию</p>" +
-        "</div>";
+    c.innerHTML = "<div class='mirotalk-placeholder'><div class='mirotalk-placeholder-icon'>🎥</div><p>Выберите комнату из списка слева, чтобы начать конференцию</p></div>";
 }
 async function leaveRoom(){
     const user = await ensureAuth();
@@ -3321,15 +3052,10 @@ async function leaveRoom(){
     await loadRooms();
 }
 
-/* ============================================================
-   BEFORE UNLOAD
-============================================================ */
 window.addEventListener("beforeunload", () => {
     if(currentRoom && currentUser){
-        try{
-            supabaseClient.from("conference_users").delete()
-                .eq("user_id", currentUser.id).eq("room_id", currentRoom.id);
-        }catch(e){}
+        try{ supabaseClient.from("conference_users").delete().eq("user_id", currentUser.id).eq("room_id", currentRoom.id); }
+        catch(e){}
     }
     if(presenceChannel){ try{ presenceChannel.untrack(); }catch(e){} }
 });
