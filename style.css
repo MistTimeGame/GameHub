@@ -6,12 +6,11 @@
 body{ background:#ffffff; color:#20242a; min-height:100vh; }
 .hidden{ display:none!important; }
 
-/* ============ AUTH ============ */
+/* AUTH */
 .auth-screen{ width:100%; height:100vh; display:flex; justify-content:center; align-items:center;
     background:radial-gradient(circle at top, #d9ecff, transparent 45%), #f5f6f8; }
 .auth-card{ width:420px; padding:40px; background:white; border-radius:30px;
     box-shadow:0 20px 50px rgba(0,0,0,.18); text-align:center; }
-
 .logo{
     width:110px; height:110px; margin:auto;
     display:flex; align-items:center; justify-content:center;
@@ -81,38 +80,27 @@ input:focus, textarea:focus, select:focus{
 .main-button:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
 .main-button.small{ height:38px; padding:0 14px; font-size:13px; border-radius:12px; }
 
-/* ============ TOPBAR ============ */
 .topbar{ height:92px; display:flex; justify-content:space-between; align-items:center;
     padding:0 28px; background:linear-gradient(180deg,#ffffff 0%,#fbfdff 100%);
     border-bottom:1px solid #e6eaf1;
     box-shadow:0 1px 0 rgba(255,255,255,1) inset, 0 4px 20px rgba(40,70,120,.08); }
 
-/* ============ ЛОГОТИП (PlayStation-style) ============ */
 .brand{ display:flex; align-items:center; gap:16px;
     padding:4px 20px 4px 6px; border-radius:18px;
     background:linear-gradient(135deg,#ffffff 0%,#f4f8ff 100%);
-    box-shadow:
-        inset 0 1px 0 #fff,
-        0 6px 22px rgba(0,0,0,.10),
-        0 0 0 1px rgba(0,0,0,.05);
+    box-shadow:inset 0 1px 0 #fff, 0 6px 22px rgba(0,0,0,.10), 0 0 0 1px rgba(0,0,0,.05);
     border:1px solid #eaeef6;
     position:relative;
     transition:transform .2s ease, box-shadow .25s ease; }
 .brand:hover{ transform:translateY(-1px);
-    box-shadow:
-        inset 0 1px 0 #fff,
-        0 10px 28px rgba(0,0,0,.15),
-        0 0 0 1px rgba(0,0,0,.08); }
+    box-shadow:inset 0 1px 0 #fff, 0 10px 28px rgba(0,0,0,.15), 0 0 0 1px rgba(0,0,0,.08); }
 
 .brand-logo{
     position:relative;
-    width:68px;
-    height:68px;
+    width:68px; height:68px;
     border-radius:16px;
     background:#000;
-    display:flex;
-    align-items:center;
-    justify-content:center;
+    display:flex; align-items:center; justify-content:center;
     overflow:hidden;
     box-shadow:
         0 0 0 1px rgba(255,255,255,.9),
@@ -131,8 +119,7 @@ input:focus, textarea:focus, select:focus{
 }
 .brand-logo svg{ width:88%; height:88%; display:block; }
 
-.brand-text{ display:flex; flex-direction:column; justify-content:center;
-    line-height:1; min-width:0; }
+.brand-text{ display:flex; flex-direction:column; justify-content:center; line-height:1; min-width:0; }
 .brand-name{ display:flex; align-items:baseline; gap:6px;
     margin:0 0 6px 0; font-size:23px; font-weight:900;
     letter-spacing:1.2px; text-transform:uppercase;
@@ -164,7 +151,6 @@ input:focus, textarea:focus, select:focus{
 .top-profile img{ width:55px; height:55px; border-radius:50%; object-fit:cover;
     border:3px solid white; box-shadow:0 5px 15px rgba(0,0,0,.3); background:#eef2f8; }
 
-/* ============ LAYOUT ============ */
 .layout{ display:flex; min-height:calc(100vh - 92px); }
 .sidebar{ width:270px; background:linear-gradient(180deg,#f1f3f6,#d8dce2);
     padding:20px; box-shadow:5px 0 25px rgba(0,0,0,.15); }
@@ -281,7 +267,6 @@ input:focus, textarea:focus, select:focus{
 .room-controls{ display:flex; gap:10px; flex-wrap:wrap; margin-top:15px; }
 .room-controls .main-button{ height:44px; font-size:14px; padding:0 18px; }
 
-/* GAMES */
 .add-game-panel{ background:white; border:1px solid #eee; border-radius:25px;
     padding:28px; margin-bottom:24px; box-shadow:0 10px 35px rgba(0,0,0,.15); }
 .add-game-panel h2{ font-size:18px; margin-bottom:14px; color:#1a2332; }
@@ -324,7 +309,6 @@ input:focus, textarea:focus, select:focus{
 .game-card:hover .game-delete{ display:flex; }
 .game-delete:hover{ background:#fde8e8; }
 
-/* GUILDS */
 .guilds-game-filter{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
 .guild-filter-chip{ padding:8px 16px; border-radius:20px; cursor:pointer;
     background:white; border:1px solid #dde6f3; color:#4a5568;
@@ -454,7 +438,6 @@ input:focus, textarea:focus, select:focus{
 .guild-member-actions{ display:flex; gap:6px; flex-wrap:wrap; }
 .guild-member-actions .main-button{ height:34px; font-size:12px; padding:0 12px; border-radius:10px; }
 
-/* MATERIALS */
 .material-upload-form{ padding:18px; background:#f8faff;
     border:1px solid #eaf0f9; border-radius:16px; margin-bottom:18px; }
 .material-upload-form h3{ font-size:14px; margin-bottom:12px; color:#1a2332; }
@@ -511,7 +494,6 @@ input:focus, textarea:focus, select:focus{
 .material-btn:hover .material-btn-delete{ display:flex; }
 .material-btn-delete:hover{ background:#fde8e8; }
 
-/* TEMPLATES */
 .tpl-ai-hint{ display:flex; gap:16px;
     padding:16px 18px;
     background:linear-gradient(135deg,#f0f7ff 0%,#e8f3ff 100%);
@@ -774,7 +756,6 @@ input:focus, textarea:focus, select:focus{
 .editor-pane-code textarea:focus{ background:#fff; }
 .editor-pane-code textarea[readonly]{ background:#f4f6f8; color:#4a5568; cursor:not-allowed; }
 
-/* IMPORT */
 .editor-pane-import.active{
     display:flex;
     flex-direction:column;
@@ -1121,7 +1102,6 @@ input:focus, textarea:focus, select:focus{
 .profile-status.err{ color:#c33; }
 .profile-status.loading{ color:#7a849a; }
 
-/* RIGHT BAR */
 .rightbar{ width:300px; padding:25px; background:#fafafa; border-left:1px solid #ddd; }
 .side-profile{ text-align:center; background:white; padding:25px;
     border-radius:25px; box-shadow:0 10px 25px rgba(0,0,0,.12); }
@@ -1148,9 +1128,7 @@ input:focus, textarea:focus, select:focus{
 .online-user-name{ font-weight:700; color:#1a2332; font-size:14px; }
 .online-user-meta{ font-size:11.5px; color:#8a94a8; margin-top:2px; }
 
-/* ============================================================
-   ПРАВИЛА — ОТДЕЛЬНЫЙ ПОЛНОЭКРАННЫЙ OVERLAY
-============================================================ */
+/* ПРАВИЛА */
 .rules-screen{
     position:fixed; inset:0; z-index:1500;
     background:linear-gradient(180deg,#f4f7fb,#e9eef6);
@@ -1296,7 +1274,280 @@ input:focus, textarea:focus, select:focus{
     line-height:1.8;
 }
 
-/* PRINT */
+/* ============================================================
+   GUILD BUTTONS — кастомные разделы гильдии
+============================================================ */
+
+.guild-buttons-layout{
+    display:grid;
+    grid-template-columns:220px 1fr;
+    gap:18px;
+    align-items:start;
+    min-height:400px;
+}
+
+.guild-buttons-list{
+    background:#f8faff;
+    border:1px solid #eaf0f9;
+    border-radius:16px;
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    max-height:600px;
+    overflow-y:auto;
+}
+
+.guild-buttons-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:4px 8px 10px;
+    border-bottom:1px solid #eef2f8;
+    margin-bottom:6px;
+}
+.guild-buttons-header-title{
+    font-size:11.5px; font-weight:800;
+    color:#8a94a8; letter-spacing:.6px; text-transform:uppercase;
+}
+.guild-buttons-count{
+    font-size:11px; font-weight:800; color:#1b4aa8;
+    background:#eef4ff; border:1px solid #cfdff9;
+    padding:2px 8px; border-radius:10px;
+}
+
+.guild-button-item{
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px;
+    border-radius:12px;
+    cursor:pointer;
+    background:white;
+    border:1px solid #e8edf5;
+    transition:.15s;
+    text-align:left;
+    font-family:inherit;
+    color:#2a3446;
+    font-size:13.5px;
+    font-weight:700;
+    position:relative;
+    min-width:0;
+}
+.guild-button-item:hover{
+    border-color:#a9d6ff;
+    transform:translateX(2px);
+    box-shadow:0 4px 12px rgba(60,120,220,.12);
+}
+.guild-button-item.active{
+    border-color:#2f7cff;
+    background:linear-gradient(135deg,#f0f6ff,#e0eeff);
+    color:#1b4aa8;
+    box-shadow:0 6px 16px rgba(60,120,220,.18);
+}
+.guild-button-item-icon{
+    width:26px; height:26px; border-radius:8px;
+    background:linear-gradient(145deg,#eaf2ff,#dfeaff);
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; flex-shrink:0;
+    border:1px solid #cfdff9;
+}
+.guild-button-item.active .guild-button-item-icon{
+    background:linear-gradient(145deg,#ffffff,#c9dcff);
+    border-color:#9dccff;
+}
+.guild-button-item-title{
+    flex:1; min-width:0;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+.guild-buttons-empty{
+    padding:26px 16px;
+    text-align:center;
+    color:#98a2b5;
+    font-size:12.5px;
+    line-height:1.5;
+}
+
+.guild-buttons-add-btn{
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    padding:10px;
+    border:1px dashed #a9d6ff;
+    background:white;
+    border-radius:12px;
+    color:#1b4aa8;
+    font-weight:800;
+    font-size:13px;
+    cursor:pointer;
+    transition:.2s;
+    margin-top:4px;
+}
+.guild-buttons-add-btn:hover{
+    background:#f0f6ff;
+    border-color:#2f7cff;
+    transform:translateY(-1px);
+    box-shadow:0 6px 14px rgba(60,120,220,.15);
+}
+.guild-buttons-add-btn:disabled{
+    opacity:.5; cursor:not-allowed; transform:none;
+}
+
+.guild-buttons-view{
+    background:white;
+    border:1px solid #eaf0f9;
+    border-radius:16px;
+    overflow:hidden;
+    min-height:400px;
+    display:flex;
+    flex-direction:column;
+}
+
+.guild-buttons-view-header{
+    padding:14px 20px;
+    background:linear-gradient(180deg,#fbfdff,#f0f5fb);
+    border-bottom:1px solid #e6eaf1;
+    display:flex; align-items:center; gap:12px;
+    flex-wrap:wrap;
+}
+.guild-buttons-view-title{
+    flex:1; min-width:0;
+    font-weight:800; color:#1a2332; font-size:16px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.guild-buttons-view-actions{ display:flex; gap:6px; flex-wrap:wrap; }
+.guild-buttons-view-actions .main-button{
+    height:36px; padding:0 12px; font-size:12.5px; border-radius:10px;
+}
+
+.guild-buttons-view-body{
+    flex:1;
+    padding:0;
+    overflow:auto;
+    background:#f4f6fa;
+}
+
+.guild-buttons-view-frame{
+    width:100%;
+    min-height:480px;
+    border:0;
+    background:white;
+    display:block;
+}
+
+.guild-buttons-view-empty{
+    padding:60px 30px;
+    text-align:center;
+    color:#98a2b5;
+    font-size:13px;
+}
+.guild-buttons-view-empty .big{
+    font-size:56px;
+    margin-bottom:14px;
+    display:block;
+    opacity:.5;
+}
+
+.gb-modal{
+    position:fixed; inset:0; z-index:1300;
+    background:rgba(15,25,45,.72);
+    backdrop-filter:blur(6px);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+    animation:fade-in .2s ease;
+}
+.gb-modal-window{
+    width:100%; max-width:560px;
+    max-height:90vh;
+    background:white;
+    border-radius:20px;
+    box-shadow:0 30px 80px rgba(0,0,0,.4);
+    display:flex; flex-direction:column;
+    overflow:hidden;
+}
+.gb-modal-header{
+    padding:16px 22px;
+    border-bottom:1px solid #e6eaf1;
+    display:flex; align-items:center; gap:12px;
+    background:linear-gradient(180deg,#ffffff,#fbfdff);
+}
+.gb-modal-title{
+    flex:1; font-weight:800; color:#1a2332; font-size:16px;
+}
+.gb-modal-body{
+    flex:1; overflow-y:auto;
+    padding:20px 22px;
+    display:flex; flex-direction:column; gap:14px;
+}
+.gb-modal-body .profile-field{ gap:6px; }
+
+.gb-type-switch{
+    display:flex; gap:6px; padding:5px;
+    background:#eef2f8; border-radius:12px;
+}
+.gb-type-btn{
+    flex:1; height:42px;
+    border:none; border-radius:9px;
+    background:transparent;
+    color:#5a6577; font-weight:700; font-size:13px;
+    cursor:pointer; transition:.15s;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+}
+.gb-type-btn:hover{ color:#1b4aa8; background:#f5f9ff; }
+.gb-type-btn.active{
+    background:white; color:#1b4aa8;
+    box-shadow:0 2px 8px rgba(60,120,220,.15);
+}
+
+.gb-pane{ display:none; flex-direction:column; gap:10px; }
+.gb-pane.active{ display:flex; }
+
+.gb-dropzone{
+    padding:18px 20px;
+    border:2px dashed #a9d6ff;
+    background:#f8fcff;
+    border-radius:14px;
+    text-align:center;
+    cursor:pointer;
+    transition:.2s;
+    font-size:13px;
+    color:#4a648f;
+}
+.gb-dropzone:hover{ background:#eaf4ff; border-color:#2f7cff; }
+.gb-dropzone b{ color:#1b4aa8; }
+.gb-dropzone .gb-drop-icon{
+    font-size:38px; display:block; margin-bottom:8px; opacity:.75;
+}
+.gb-dropzone .gb-drop-hint{
+    font-size:11.5px; color:#98a2b5; margin-top:6px; display:block;
+}
+.gb-dropzone input[type="file"]{ display:none; }
+
+.gb-file-info{
+    padding:10px 14px;
+    background:#f0f6ff;
+    border:1px solid #cfdff9;
+    border-radius:10px;
+    font-size:12.5px;
+    color:#1b4aa8;
+    font-weight:700;
+    display:flex; align-items:center; gap:8px;
+}
+.gb-file-info.ok{ background:#e6f7ec; border-color:#a7e2ad; color:#155724; }
+.gb-file-info.err{ background:#fdecec; border-color:#f0c0c0; color:#8a1717; }
+
+.gb-modal-footer{
+    padding:14px 22px;
+    border-top:1px solid #e6eaf1;
+    display:flex; gap:10px;
+    background:#fbfdff;
+}
+.gb-modal-footer .main-button{ flex:1; height:44px; font-size:14px; }
+.gb-modal-status{
+    min-height:18px;
+    padding:0 22px 12px;
+    font-size:12.5px;
+    color:#1e8f4a;
+    font-weight:600;
+}
+.gb-modal-status.err{ color:#c33; }
+.gb-modal-status.loading{ color:#7a849a; }
+
 @media print{
     .sidebar, .rightbar, .topbar, .rules-toc, .rules-meta .main-button,
     .rules-screen-header, .brand, .top-profile{ display:none !important; }
@@ -1310,7 +1561,6 @@ input:focus, textarea:focus, select:focus{
     body{ background:white; }
 }
 
-/* MOBILE */
 @media(max-width:1000px){
     .layout{ flex-direction:column; }
     .sidebar, .rightbar{ width:100%; }
@@ -1347,6 +1597,9 @@ input:focus, textarea:focus, select:focus{
     .rules-body{ padding:22px 20px; font-size:14px; }
     .rules-h1{ font-size:19px; }
     .rules-h2{ font-size:15px; }
+
+    .guild-buttons-layout{ grid-template-columns:1fr; }
+    .guild-buttons-list{ max-height:220px; }
 }
 
 @media(max-width:700px){
