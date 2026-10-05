@@ -8,6 +8,9 @@
 </head>
 <body>
 
+<!-- ============================================================
+     ЭКРАН АВТОРИЗАЦИИ
+============================================================ -->
 <section id="auth-screen" class="auth-screen">
   <div class="auth-card">
     <div class="logo">GP</div>
@@ -36,8 +39,12 @@
   </div>
 </section>
 
+<!-- ============================================================
+     ОСНОВНОЕ ПРИЛОЖЕНИЕ
+============================================================ -->
 <div id="app" class="hidden">
 
+  <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
   <header class="topbar">
     <div class="brand">
       <div class="brand-logo">GP</div>
@@ -57,6 +64,7 @@
 
   <div class="layout">
 
+    <!-- ЛЕВОЕ МЕНЮ -->
     <aside class="sidebar">
       <div class="menu-title">PLATFORM</div>
       <button class="menu-button active" data-page="home" type="button">🏠 Главная</button>
@@ -73,8 +81,10 @@
       <button id="logout" class="menu-button logout" type="button">Выход</button>
     </aside>
 
+    <!-- ЦЕНТР -->
     <main class="content">
 
+      <!-- ==================== ГЛАВНАЯ ==================== -->
       <section id="home" class="page active">
         <h1>Главная</h1>
         <div class="dash-stats">
@@ -111,6 +121,7 @@
         </div>
       </section>
 
+      <!-- ==================== ИГРЫ ==================== -->
       <section id="games" class="page">
         <div class="view-head">
           <h1>🎮 Игры</h1>
@@ -158,6 +169,7 @@
         </div>
       </section>
 
+      <!-- ==================== ГИЛЬДИИ ==================== -->
       <section id="guilds" class="page">
         <div class="view-head">
           <h1>⚔ Гильдии</h1>
@@ -194,6 +206,7 @@
         </div>
       </section>
 
+      <!-- ==================== НОВОСТИ ==================== -->
       <section id="news" class="page">
         <h1>📰 Новости</h1>
         <div class="news-panel">
@@ -201,6 +214,7 @@
         </div>
       </section>
 
+      <!-- ==================== ОНЛАЙН ==================== -->
       <section id="online" class="page">
         <div class="view-head">
           <h1>🟢 Онлайн</h1>
@@ -211,6 +225,7 @@
         </div>
       </section>
 
+      <!-- ==================== ЧАТ ==================== -->
       <section id="chat" class="page">
         <h1>💬 Общий чат</h1>
         <div class="chat-box">
@@ -222,6 +237,7 @@
         </div>
       </section>
 
+      <!-- ==================== КОНФЕРЕНЦИИ ==================== -->
       <section id="conference" class="page">
         <h1>🎙 Видеоконференции</h1>
         <div class="conference-layout">
@@ -250,6 +266,7 @@
         </div>
       </section>
 
+      <!-- ==================== ПРОФИЛЬ ==================== -->
       <section id="profile" class="page">
         <h1>👤 Профиль</h1>
         <div class="profile-card">
@@ -301,6 +318,7 @@
 
     </main>
 
+    <!-- ПРАВАЯ ПАНЕЛЬ -->
     <aside class="rightbar">
       <h3>PROFILE</h3>
       <div class="side-profile">
@@ -330,7 +348,7 @@
 </div>
 
 <!-- ============================================================
-     ПРОСМОТР ФАЙЛА
+     ПРОСМОТР ФАЙЛА (для материалов)
 ============================================================ -->
 <div id="file-viewer" class="file-viewer hidden">
   <div class="file-viewer-header">
@@ -344,24 +362,49 @@
 </div>
 
 <!-- ============================================================
-     ПРОСМОТР ШАБЛОНА (HTML-страница)
+     РЕДАКТОР ШАБЛОНА (HTML + LIVE PREVIEW)
 ============================================================ -->
 <div id="template-viewer" class="template-viewer hidden">
-  <div class="template-viewer-header">
-    <div class="template-viewer-title">
-      <div class="template-viewer-title-main" id="tpl-viewer-title">Шаблон</div>
-      <div class="template-viewer-title-sub" id="tpl-viewer-sub">—</div>
+  <div class="template-viewer-window">
+
+    <div class="template-viewer-header">
+      <div class="template-viewer-title">
+        <div class="template-viewer-title-main" id="tpl-viewer-title">Шаблон</div>
+        <div class="template-viewer-title-sub" id="tpl-viewer-sub">—</div>
+      </div>
+      <div class="template-viewer-actions">
+        <span class="tpl-mode-badge" id="tpl-mode-badge">🔒 Только просмотр</span>
+        <button id="tpl-viewer-reset" class="main-button secondary hidden" type="button">↺ Отменить</button>
+        <button id="tpl-viewer-save" class="main-button hidden" type="button">💾 Сохранить</button>
+        <button id="tpl-viewer-close" class="main-button danger" type="button">Закрыть</button>
+      </div>
     </div>
-    <div class="template-viewer-actions">
-      <span class="tpl-nodl">🔒 Скачивание отключено</span>
-      <button id="tpl-viewer-close" class="main-button danger" type="button">Закрыть</button>
+
+    <div class="template-viewer-body">
+      <div class="tpl-split">
+
+        <div class="tpl-split-editor">
+          <div class="tpl-split-label">
+            <span>📝 HTML-код</span>
+            <span class="tpl-split-hint" id="tpl-editor-hint"></span>
+          </div>
+          <textarea id="tpl-viewer-code" spellcheck="false" autocomplete="off"></textarea>
+        </div>
+
+        <div class="tpl-split-preview">
+          <div class="tpl-split-label">
+            <span>👁 Просмотр</span>
+            <span class="tpl-split-hint">обновляется автоматически</span>
+          </div>
+          <iframe id="tpl-viewer-frame"
+                  sandbox=""
+                  referrerpolicy="no-referrer"
+                  title="Просмотр шаблона"></iframe>
+        </div>
+
+      </div>
     </div>
-  </div>
-  <div class="template-viewer-body">
-    <iframe id="tpl-viewer-frame"
-            sandbox=""
-            referrerpolicy="no-referrer"
-            title="Просмотр шаблона"></iframe>
+
   </div>
 </div>
 
