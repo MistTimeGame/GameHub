@@ -1078,3 +1078,105 @@ input:focus, textarea:focus, select:focus{
     .import-footer{ flex-direction:column; align-items:stretch; }
     .import-footer-actions .main-button{ flex:1; }
 }
+/* ============================================================
+   GAMEHUB ONLINE — РЕБРЕНДИНГ ЛОГОТИПА
+============================================================ */
+
+/* Логотип на экране авторизации */
+.logo{
+    position:relative;
+    background:linear-gradient(145deg,#2f7cff 0%,#1b4aa8 60%,#0f3c8a 100%) !important;
+    color:#fff !important;
+    letter-spacing:2px;
+    font-size:34px;
+    text-shadow:
+        0 1px 0 rgba(255,255,255,.35),
+        0 3px 10px rgba(0,0,0,.25);
+    box-shadow:
+        inset 0 3px 8px rgba(255,255,255,.35),
+        inset 0 -4px 12px rgba(0,0,0,.20),
+        0 14px 32px rgba(47,124,255,.30),
+        0 0 0 1px rgba(255,255,255,.5) !important;
+    animation:logoPulse 3.6s ease-in-out infinite;
+}
+.logo::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:inherit;
+    background:linear-gradient(180deg, rgba(255,255,255,.35), transparent 55%);
+    pointer-events:none;
+}
+@keyframes logoPulse{
+    0%,100%{ box-shadow: inset 0 3px 8px rgba(255,255,255,.35), inset 0 -4px 12px rgba(0,0,0,.20), 0 14px 32px rgba(47,124,255,.30), 0 0 0 1px rgba(255,255,255,.5); }
+    50%    { box-shadow: inset 0 3px 8px rgba(255,255,255,.35), inset 0 -4px 12px rgba(0,0,0,.20), 0 18px 42px rgba(47,124,255,.50), 0 0 0 1px rgba(255,255,255,.7); }
+}
+
+/* Заголовок на экране авторизации */
+.auth-card h1{
+    letter-spacing:1px;
+    background:linear-gradient(135deg,#1a2332 0%,#1b4aa8 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    -webkit-text-fill-color:transparent;
+}
+
+/* Логотип в топбаре */
+.brand-logo{
+    background:linear-gradient(145deg,#2f7cff 0%,#1b4aa8 100%) !important;
+    color:#fff !important;
+    font-size:22px !important;
+    letter-spacing:1px;
+    text-shadow:0 1px 2px rgba(0,0,0,.25);
+    box-shadow:
+        inset 0 2px 6px rgba(255,255,255,.35),
+        inset 0 -3px 8px rgba(0,0,0,.20),
+        0 8px 18px rgba(47,124,255,.35),
+        0 0 0 1px rgba(255,255,255,.4) !important;
+    position:relative;
+    overflow:hidden;
+}
+.brand-logo::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(180deg, rgba(255,255,255,.4), transparent 55%);
+    pointer-events:none;
+}
+
+/* Название бренда в топбаре */
+.brand h2,
+.brand-name{
+    font-weight:900 !important;
+    letter-spacing:1.5px;
+    color:#1a2332 !important;
+    font-size:19px !important;
+    margin-bottom:2px;
+    line-height:1.1;
+}
+.brand-name span{
+    background:linear-gradient(135deg,#2f7cff 0%,#1b4aa8 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    -webkit-text-fill-color:transparent;
+    font-weight:900;
+}
+
+/* Подпись бренда */
+.brand-sub{
+    font-size:10.5px !important;
+    color:#7a849a;
+    font-weight:800;
+    letter-spacing:2.5px;
+    text-transform:uppercase;
+}
+
+/* Лёгкий акцент на топбаре */
+.topbar{
+    border-bottom:1px solid #e6eaf1 !important;
+    background:
+        linear-gradient(180deg,#ffffff 0%,#fbfdff 100%) !important;
+    box-shadow:
+        0 1px 0 rgba(255,255,255,1) inset,
+        0 4px 20px rgba(40,70,120,.08) !important;
+}
