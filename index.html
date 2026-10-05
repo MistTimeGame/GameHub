@@ -78,36 +78,14 @@
       <section id="home" class="page active">
         <h1>Главная</h1>
         <div class="dash-stats">
-          <div class="dash-stat">
-            <div class="dash-stat-icon">🟢</div>
-            <div class="dash-stat-value" id="dash-online">—</div>
-            <div class="dash-stat-label">Сейчас онлайн</div>
-          </div>
-          <div class="dash-stat">
-            <div class="dash-stat-icon">🎙</div>
-            <div class="dash-stat-value" id="dash-rooms">—</div>
-            <div class="dash-stat-label">Активных комнат</div>
-          </div>
-          <div class="dash-stat">
-            <div class="dash-stat-icon">💬</div>
-            <div class="dash-stat-value" id="dash-messages">—</div>
-            <div class="dash-stat-label">Сообщений в чате</div>
-          </div>
-          <div class="dash-stat">
-            <div class="dash-stat-icon">📄</div>
-            <div class="dash-stat-value" id="dash-templates">—</div>
-            <div class="dash-stat-label">Шаблонов</div>
-          </div>
+          <div class="dash-stat"><div class="dash-stat-icon">🟢</div><div class="dash-stat-value" id="dash-online">—</div><div class="dash-stat-label">Сейчас онлайн</div></div>
+          <div class="dash-stat"><div class="dash-stat-icon">🎙</div><div class="dash-stat-value" id="dash-rooms">—</div><div class="dash-stat-label">Активных комнат</div></div>
+          <div class="dash-stat"><div class="dash-stat-icon">💬</div><div class="dash-stat-value" id="dash-messages">—</div><div class="dash-stat-label">Сообщений в чате</div></div>
+          <div class="dash-stat"><div class="dash-stat-icon">📄</div><div class="dash-stat-value" id="dash-templates">—</div><div class="dash-stat-label">Шаблонов</div></div>
         </div>
         <div class="dash-grid">
-          <div class="news-panel">
-            <h2>Последние новости</h2>
-            <div id="news-list">Загрузка новостей…</div>
-          </div>
-          <div class="dash-recent">
-            <h2>Последние сообщения</h2>
-            <div id="home-recent-messages" class="dash-recent-list">Загрузка…</div>
-          </div>
+          <div class="news-panel"><h2>Последние новости</h2><div id="news-list">Загрузка новостей…</div></div>
+          <div class="dash-recent"><h2>Последние сообщения</h2><div id="home-recent-messages" class="dash-recent-list">Загрузка…</div></div>
         </div>
       </section>
 
@@ -120,30 +98,13 @@
         <div id="add-game-panel" class="add-game-panel hidden">
           <h2>Новая игра</h2>
           <form id="add-game-form" onsubmit="return false">
-            <label class="profile-field">
-              <span>Название игры</span>
-              <input id="game-name-input" placeholder="Counter-Strike 2" maxlength="60" required>
-            </label>
-            <label class="profile-field">
-              <span>Ссылка на официальный сайт</span>
-              <input id="game-url-input" type="url" placeholder="https://www.counter-strike.net" required>
-              <small class="field-hint" id="game-url-hint">Иконка автоматически подтянется с сайта</small>
-            </label>
-            <label class="profile-field">
-              <span>Описание</span>
-              <textarea id="game-desc-input" rows="2" maxlength="200" placeholder="Краткое описание"></textarea>
-            </label>
-            <label class="profile-field">
-              <span>Своя иконка (необязательно)</span>
-              <input id="game-icon-input" type="url" placeholder="Оставьте пустым — подтянем с сайта">
-            </label>
+            <label class="profile-field"><span>Название игры</span><input id="game-name-input" placeholder="Counter-Strike 2" maxlength="60" required></label>
+            <label class="profile-field"><span>Ссылка на официальный сайт</span><input id="game-url-input" type="url" placeholder="https://www.counter-strike.net" required><small class="field-hint" id="game-url-hint">Иконка автоматически подтянется с сайта</small></label>
+            <label class="profile-field"><span>Описание</span><textarea id="game-desc-input" rows="2" maxlength="200" placeholder="Краткое описание"></textarea></label>
+            <label class="profile-field"><span>Своя иконка (необязательно)</span><input id="game-icon-input" type="url" placeholder="Оставьте пустым — подтянем с сайта"></label>
             <div class="game-icon-preview">
-              <div class="game-icon-preview-img-wrap" id="game-icon-preview-wrap">
-                <span id="game-icon-preview-fallback">🎮</span>
-              </div>
-              <span class="game-icon-preview-text" id="game-icon-preview-text">
-                Превью иконки появится здесь
-              </span>
+              <div class="game-icon-preview-img-wrap" id="game-icon-preview-wrap"><span id="game-icon-preview-fallback">🎮</span></div>
+              <span class="game-icon-preview-text" id="game-icon-preview-text">Превью иконки появится здесь</span>
             </div>
             <div class="profile-actions">
               <button id="save-game-btn" class="main-button" type="button">Добавить игру</button>
@@ -153,9 +114,7 @@
           </form>
         </div>
 
-        <div id="games-list" class="games-grid">
-          <div class="dash-recent-empty">Загрузка игр…</div>
-        </div>
+        <div id="games-list" class="games-grid"><div class="dash-recent-empty">Загрузка игр…</div></div>
       </section>
 
       <section id="guilds" class="page">
@@ -167,20 +126,9 @@
         <div id="guild-create-panel" class="add-game-panel hidden">
           <h2>Новая гильдия</h2>
           <form id="guild-create-form" onsubmit="return false">
-            <label class="profile-field">
-              <span>Игра</span>
-              <select id="guild-game-select" required>
-                <option value="">— Выберите игру —</option>
-              </select>
-            </label>
-            <label class="profile-field">
-              <span>Название гильдии</span>
-              <input id="guild-name-input" placeholder="Название" maxlength="40" required>
-            </label>
-            <label class="profile-field">
-              <span>Описание</span>
-              <textarea id="guild-desc-input" rows="2" maxlength="200" placeholder="Кратко о гильдии"></textarea>
-            </label>
+            <label class="profile-field"><span>Игра</span><select id="guild-game-select" required><option value="">— Выберите игру —</option></select></label>
+            <label class="profile-field"><span>Название гильдии</span><input id="guild-name-input" placeholder="Название" maxlength="40" required></label>
+            <label class="profile-field"><span>Описание</span><textarea id="guild-desc-input" rows="2" maxlength="200" placeholder="Кратко о гильдии"></textarea></label>
             <div class="profile-actions">
               <button id="guild-create-btn" class="main-button" type="button">Создать</button>
               <button id="guild-create-cancel" class="main-button secondary" type="button">Отмена</button>
@@ -189,26 +137,14 @@
         </div>
 
         <div class="guilds-game-filter" id="guilds-game-filter"></div>
-        <div id="guilds-list" class="guilds-grid">
-          <div class="dash-recent-empty">Загрузка…</div>
-        </div>
+        <div id="guilds-list" class="guilds-grid"><div class="dash-recent-empty">Загрузка…</div></div>
       </section>
 
-      <section id="news" class="page">
-        <h1>📰 Новости</h1>
-        <div class="news-panel">
-          <div id="news-page-list">Загрузка…</div>
-        </div>
-      </section>
+      <section id="news" class="page"><h1>📰 Новости</h1><div class="news-panel"><div id="news-page-list">Загрузка…</div></div></section>
 
       <section id="online" class="page">
-        <div class="view-head">
-          <h1>🟢 Онлайн</h1>
-          <span class="online-count-badge" id="online-page-count">0</span>
-        </div>
-        <div id="online-list-page" class="online-list-page">
-          <div class="dash-recent-empty">Никого нет онлайн</div>
-        </div>
+        <div class="view-head"><h1>🟢 Онлайн</h1><span class="online-count-badge" id="online-page-count">0</span></div>
+        <div id="online-list-page" class="online-list-page"><div class="dash-recent-empty">Никого нет онлайн</div></div>
       </section>
 
       <section id="chat" class="page">
@@ -243,9 +179,7 @@
                 <p>Выберите комнату из списка слева, чтобы начать конференцию</p>
               </div>
             </div>
-            <div class="room-controls">
-              <button id="leave-room" class="main-button" type="button">Покинуть комнату</button>
-            </div>
+            <div class="room-controls"><button id="leave-room" class="main-button" type="button">Покинуть комнату</button></div>
           </div>
         </div>
       </section>
@@ -253,43 +187,20 @@
       <section id="profile" class="page">
         <h1>👤 Профиль</h1>
         <div class="profile-card">
-          <div class="profile-avatar-wrap">
-            <img id="profile-avatar" referrerpolicy="no-referrer" src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png" alt="">
-          </div>
+          <div class="profile-avatar-wrap"><img id="profile-avatar" referrerpolicy="no-referrer" src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png" alt=""></div>
           <h2 id="profile-name">Player</h2>
           <div id="vip-level">VIP 0</div>
           <div id="admin-badge" class="admin-badge hidden">👑 Администратор</div>
-          <div class="profile-id">
-            <span>ID профиля</span>
-            <code id="profile-id">—</code>
-          </div>
+          <div class="profile-id"><span>ID профиля</span><code id="profile-id">—</code></div>
           <div id="schema-warning" class="schema-warning hidden"></div>
           <form class="profile-form" id="profile-form" onsubmit="return false">
-            <label class="profile-field" id="field-nickname">
-              <span>Никнейм</span>
-              <input id="pf-nickname" placeholder="Player" maxlength="30" required>
-              <small class="field-hint">От 2 до 30 символов.</small>
-            </label>
-            <label class="profile-field" id="field-avatar">
-              <span>Ссылка на аватар</span>
-              <input id="pf-avatar" placeholder="https://i.imgur.com/xxxxx.jpg" type="url">
-              <small class="field-hint" id="pf-avatar-hint">Прямая ссылка на картинку.</small>
-            </label>
+            <label class="profile-field" id="field-nickname"><span>Никнейм</span><input id="pf-nickname" placeholder="Player" maxlength="30" required><small class="field-hint">От 2 до 30 символов.</small></label>
+            <label class="profile-field" id="field-avatar"><span>Ссылка на аватар</span><input id="pf-avatar" placeholder="https://i.imgur.com/xxxxx.jpg" type="url"><small class="field-hint" id="pf-avatar-hint">Прямая ссылка на картинку.</small></label>
             <div class="profile-field-row" id="field-row-city-age">
-              <label class="profile-field" id="field-city">
-                <span>Город</span>
-                <input id="pf-city" placeholder="Москва" maxlength="40">
-              </label>
-              <label class="profile-field" id="field-age">
-                <span>Возраст</span>
-                <input id="pf-age" type="number" min="1" max="120" placeholder="18">
-              </label>
+              <label class="profile-field" id="field-city"><span>Город</span><input id="pf-city" placeholder="Москва" maxlength="40"></label>
+              <label class="profile-field" id="field-age"><span>Возраст</span><input id="pf-age" type="number" min="1" max="120" placeholder="18"></label>
             </div>
-            <label class="profile-field" id="field-about">
-              <span>О себе</span>
-              <textarea id="pf-about" rows="4" maxlength="300" placeholder="Расскажите о себе…"></textarea>
-              <small class="field-hint"><span id="pf-about-count">0</span> / 300</small>
-            </label>
+            <label class="profile-field" id="field-about"><span>О себе</span><textarea id="pf-about" rows="4" maxlength="300" placeholder="Расскажите о себе…"></textarea><small class="field-hint"><span id="pf-about-count">0</span> / 300</small></label>
             <div class="profile-actions">
               <button id="save-profile" class="main-button" type="button">Сохранить</button>
               <button id="reset-profile" class="main-button secondary" type="button">Сбросить</button>
@@ -308,10 +219,7 @@
         <h2 id="side-name">Player</h2>
         <div id="side-vip">VIP 0</div>
       </div>
-      <div class="online-box">
-        <span class="online-dot"></span>
-        Онлайн: <strong id="online-count">0</strong>
-      </div>
+      <div class="online-box"><span class="online-dot"></span>Онлайн: <strong id="online-count">0</strong></div>
     </aside>
 
   </div>
@@ -338,7 +246,7 @@
 </div>
 
 <!-- ============================================================
-     РЕДАКТОР СОДЕРЖИМОГО
+     РЕДАКТОР
 ============================================================ -->
 <div id="template-viewer" class="template-viewer hidden">
   <div class="template-viewer-window">
@@ -359,6 +267,7 @@
     <div class="editor-tabs">
       <button class="editor-tab-btn active" data-mode="content" type="button">🎨 Содержимое</button>
       <button class="editor-tab-btn" data-mode="code" type="button">&lt;/&gt; HTML-код</button>
+      <button class="editor-tab-btn" data-mode="import" type="button">🌐 Импорт с сайта</button>
     </div>
 
     <div class="editor-toolbar" id="editor-toolbar"></div>
@@ -369,8 +278,31 @@
           <div id="visual-editor" class="visual-editor" contenteditable="false"></div>
         </div>
       </div>
+
       <div class="editor-pane editor-pane-code" id="editor-pane-code">
         <textarea id="tpl-viewer-code" spellcheck="false" autocomplete="off"></textarea>
+      </div>
+
+      <div class="editor-pane editor-pane-import" id="editor-pane-import">
+        <div class="import-pane">
+          <div class="import-url-row">
+            <input id="import-url" type="url" placeholder="https://example.com/page" autocomplete="off">
+            <button class="main-button" id="import-load" type="button">🌐 Загрузить</button>
+          </div>
+          <div class="import-hint">
+            Скопируйте адрес страницы и вставьте сюда. Загрузим HTML через публичный CORS-прокси,
+            найдём все таблицы и картинки. Выбранное сохранится в текущий документ — и сразу станет редактируемым.
+          </div>
+          <div id="import-status" class="import-status"></div>
+          <div id="import-results" class="import-results"></div>
+          <div class="import-footer">
+            <div class="import-counter" id="import-counter">Выбрано: 0</div>
+            <div class="import-footer-actions">
+              <button class="main-button secondary" id="import-clear" type="button">Сбросить</button>
+              <button class="main-button" id="import-insert" type="button" disabled>💾 Сохранить в документ</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
