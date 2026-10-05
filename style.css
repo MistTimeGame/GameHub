@@ -6,7 +6,7 @@
 body{ background:#ffffff; color:#20242a; min-height:100vh; }
 .hidden{ display:none!important; }
 
-/* AUTH */
+/* ============ AUTH ============ */
 .auth-screen{
     width:100%; height:100vh;
     display:flex; justify-content:center; align-items:center;
@@ -40,6 +40,7 @@ input:focus, textarea:focus, select:focus{
     outline:none; border-color:#369cff; box-shadow:0 0 12px rgba(0,140,255,.45);
 }
 
+/* ============ BUTTONS ============ */
 .main-button{
     height:50px; padding:0 25px; border-radius:16px;
     border:1px solid #999; cursor:pointer;
@@ -63,6 +64,7 @@ input:focus, textarea:focus, select:focus{
 .main-button:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
 .main-button.small{ height:38px; padding:0 14px; font-size:13px; border-radius:12px; }
 
+/* ============ TOPBAR ============ */
 .topbar{
     height:85px; display:flex; justify-content:space-between; align-items:center;
     padding:0 30px; background:white; border-bottom:1px solid #ddd;
@@ -78,6 +80,7 @@ input:focus, textarea:focus, select:focus{
 .top-profile img{ width:55px; height:55px; border-radius:50%; object-fit:cover;
     border:3px solid white; box-shadow:0 5px 15px rgba(0,0,0,.3); background:#eef2f8; }
 
+/* ============ LAYOUT ============ */
 .layout{ display:flex; min-height:calc(100vh - 85px); }
 .sidebar{ width:270px; background:linear-gradient(180deg,#f1f3f6,#d8dce2);
     padding:20px; box-shadow:5px 0 25px rgba(0,0,0,.15); }
@@ -113,6 +116,7 @@ input:focus, textarea:focus, select:focus{
     background:linear-gradient(145deg,#dff5e1,#a7e2ad);
     color:#155724; font-size:14px; }
 
+/* ============ DASHBOARD ============ */
 .dash-stats{ display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
     gap:14px; margin-bottom:24px; }
 .dash-stat{ background:white; border:1px solid #eee; border-radius:20px;
@@ -136,11 +140,13 @@ input:focus, textarea:focus, select:focus{
 .dash-recent-empty{ padding:30px; text-align:center; color:#98a2b5; font-size:13px;
     background:#fafcff; border:1px dashed #dfe7f2; border-radius:14px; }
 
+/* ============ NEWS ============ */
 .news-item{ padding:18px; border-left:4px solid #369cff;
     background:#f8faff; border-radius:12px; margin-bottom:14px; }
 .news-item h3{ font-size:17px; margin-bottom:8px; color:#1a2332; }
 .news-item p{ color:#5a6577; font-size:14px; line-height:1.5; }
 
+/* ============ CHAT ============ */
 .messages{ height:460px; overflow-y:auto; background:#f4f6f8;
     border-radius:20px; padding:18px;
     display:flex; flex-direction:column; gap:10px; }
@@ -170,6 +176,7 @@ input:focus, textarea:focus, select:focus{
 .chat-controls{ display:flex; gap:10px; margin-top:15px; }
 .chat-controls input{ flex:1; margin:0; }
 
+/* ============ CONFERENCE ============ */
 .conference-layout{ display:flex; gap:25px; align-items:flex-start; }
 .rooms-panel{ width:340px; flex-shrink:0; }
 .video-panel{ flex:1; min-width:0; }
@@ -199,7 +206,7 @@ input:focus, textarea:focus, select:focus{
 .room-controls{ display:flex; gap:10px; flex-wrap:wrap; margin-top:15px; }
 .room-controls .main-button{ height:44px; font-size:14px; padding:0 18px; }
 
-/* GAMES */
+/* ============ GAMES ============ */
 .add-game-panel{ background:white; border:1px solid #eee; border-radius:25px;
     padding:28px; margin-bottom:24px; box-shadow:0 10px 35px rgba(0,0,0,.15); }
 .add-game-panel h2{ font-size:18px; margin-bottom:14px; color:#1a2332; }
@@ -242,7 +249,7 @@ input:focus, textarea:focus, select:focus{
 .game-card:hover .game-delete{ display:flex; }
 .game-delete:hover{ background:#fde8e8; }
 
-/* GUILDS */
+/* ============ GUILDS ============ */
 .guilds-game-filter{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
 .guild-filter-chip{ padding:8px 16px; border-radius:20px; cursor:pointer;
     background:white; border:1px solid #dde6f3; color:#4a5568;
@@ -281,7 +288,7 @@ input:focus, textarea:focus, select:focus{
     background:#eef4ff; color:#1b4aa8; font-size:11px; font-weight:800; }
 .guild-game-badge img{ width:14px; height:14px; border-radius:3px; object-fit:cover; }
 
-/* ===== GUILD OVERLAY ===== */
+/* ============ GUILD OVERLAY ============ */
 .guild-overlay{
     position:fixed; inset:0; z-index:900;
     background:linear-gradient(180deg,#f4f7fb,#e9eef6);
@@ -477,7 +484,7 @@ input:focus, textarea:focus, select:focus{
 .material-btn:hover .material-btn-delete{ display:flex; }
 .material-btn-delete:hover{ background:#fde8e8; }
 
-/* ============ TEMPLATES (внутри гильдии) ============ */
+/* ============ TEMPLATES ============ */
 .tpl-ai-hint{
     display:flex; gap:16px;
     padding:16px 18px;
@@ -701,7 +708,7 @@ input:focus, textarea:focus, select:focus{
     display:block;
 }
 
-/* FILE VIEWER (для материалов) */
+/* ============ FILE VIEWER ============ */
 .file-viewer{
     position:fixed; inset:0; z-index:1050;
     background:rgba(15,25,45,.85);
@@ -735,7 +742,7 @@ input:focus, textarea:focus, select:focus{
 .file-viewer-body .viewer-fallback .big{ font-size:72px; margin-bottom:16px; display:block; }
 .file-viewer-body .viewer-fallback p{ color:#cbd5e1; margin-bottom:20px; }
 
-/* PROFILE */
+/* ============ PROFILE ============ */
 .profile-card{ max-width:520px; text-align:center; }
 .profile-avatar-wrap{ position:relative; width:150px; height:150px; margin:0 auto; }
 .profile-card img#profile-avatar{
@@ -789,6 +796,7 @@ input:focus, textarea:focus, select:focus{
 .profile-status.err{ color:#c33; }
 .profile-status.loading{ color:#7a849a; }
 
+/* ============ RIGHT BAR ============ */
 .rightbar{ width:300px; padding:25px; background:#fafafa; border-left:1px solid #ddd; }
 .side-profile{ text-align:center; background:white; padding:25px;
     border-radius:25px; box-shadow:0 10px 25px rgba(0,0,0,.12); }
@@ -800,6 +808,7 @@ input:focus, textarea:focus, select:focus{
 .online-dot{ display:inline-block; width:12px; height:12px;
     background:#00d000; border-radius:50%; margin-right:6px; vertical-align:middle; }
 
+/* ============ ONLINE PAGE ============ */
 .online-list-page{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px; }
 .online-user-card{ background:white; border:1px solid #e8edf5; border-radius:16px;
     padding:14px; display:flex; align-items:center; gap:12px;
@@ -815,6 +824,7 @@ input:focus, textarea:focus, select:focus{
 .online-user-name{ font-weight:700; color:#1a2332; font-size:14px; }
 .online-user-meta{ font-size:11.5px; color:#8a94a8; margin-top:2px; }
 
+/* ============ MOBILE ============ */
 @media(max-width:1000px){
     .layout{ flex-direction:column; }
     .sidebar, .rightbar{ width:100%; }
