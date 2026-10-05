@@ -3223,7 +3223,7 @@ async function joinRoom(room){
         const miroUrl = MIROTALK_BASE + "/join/?room=" + encodeURIComponent(miroRoomId) +
             "&name=" + encodeURIComponent(nickname) + "&audio=1&video=1&screen=1&chat=1&notify=1";
         const container = $("mirotalk-container");
-        container.innerHTML = '<iframe src="' + miroUrl + '" allow="camera; microphone; speaker-selection; display-capture; fullscreen; clipboard-read; clipboard-write; web-share; autoplay; picture-in-picture" allowfullscreen style="width:100%;height:100%;border:0;"></iframe>';
+        container.innerHTML = '<iframe src="' + miroUrl + '" allow="camera; microphone; display-capture; fullscreen; clipboard-read; clipboard-write; web-share; autoplay; picture-in-picture" style="width:100%;height:100%;border:0;"></iframe>';
         setText("current-room-title", "🎙 " + (room.name || "Комната"));
         setRoomStatus("Подключено к MiroTalk P2P", "ok");
     }catch(err){ errLog("JOIN EXC", err); setRoomStatus("Ошибка: " + err.message, "err"); }
