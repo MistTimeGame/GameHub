@@ -1,8 +1,8 @@
 /* =====================================================
    GAME PLATFORM — app.js (FULL)
    Auth + Profile + Chat + Conference + Online
-   + Games + Guilds (overlay, roles, materials, templates)
-   + HTML editor for materials & templates
+   + Games + Guilds + Templates
+   + Визуальный редактор содержимого (HTML + Excel/CSV)
 ===================================================== */
 
 const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -45,12 +45,15 @@ let gameIconTimer = null;
 
 let templatesAvailable = true;
 
-/* Редактор шаблонов и HTML-материалов */
-let currentTemplate = null;
+/* Редактор */
+let currentTemplate = null;         // { id, guild_id, title, content, _source, _material }
 let currentTemplateGuildId = null;
-let templatePreviewTimer = null;
-let templateInitialContent = "";
+let templateInitialContent = "";    // исходный HTML-код
 let templateCanEdit = false;
+let currentEditorMode = "content";  // "content" | "code"
+let currentEditorKind = "html";     // "html" | "sheet" | "template"
+let currentSheetRows = null;        // для sheet
+let currentSheetName = "Sheet1";
 
 /* ============================================================
    ХЕЛПЕРЫ
@@ -90,6 +93,10 @@ function setGameStatus(t, cls){
 function setTplStatus(t, cls){
     const el = $("tpl-status"); if(!el) return;
     el.textContent = t || ""; el.className = "profile-status" + (cls ? " " + cls : "");
+}
+function setEditorStatus(t, cls){
+    const el = $("editor-status-bar"); if(!el) return;
+    el.innerHTML = '<span class="' + (cls || "") + '">' + escapeHtml(t || "") + '</span>';
 }
 function switchPage(pageName){
     document.querySelectorAll(".menu-button").forEach(b => {
@@ -138,10 +145,8 @@ function normalizeImageUrl(url){
     return s;
 }
 function faviconFromUrl(url){
-    try{
-        const u = new URL(url);
-        return "https://www.google.com/s2/favicons?domain=" + u.hostname + "&sz=128";
-    }catch(e){ return ""; }
+    try{ const u = new URL(url); return "https://www.google.com/s2/favicons?domain=" + u.hostname + "&sz=128"; }
+    catch(e){ return ""; }
 }
 function testImageUrl(url){
     return new Promise((resolve) => {
@@ -149,8 +154,7 @@ function testImageUrl(url){
         const img = new Image();
         img.referrerPolicy = "no-referrer";
         let settled = false;
-        const finish = (ok) => { if(settled) return; settled = true;
-            img.onload = null; img.onerror = null; resolve(ok); };
+        const finish = (ok) => { if(settled) return; settled = true; img.onload = null; img.onerror = null; resolve(ok); };
         const timer = setTimeout(() => finish(false), IMG_LOAD_TIMEOUT);
         img.onload = () => { clearTimeout(timer); finish(img.naturalWidth > 0); };
         img.onerror = () => { clearTimeout(timer); finish(false); };
@@ -180,20 +184,10 @@ function fileExt(name){
     const m = n.match(/\.([a-z0-9]+)$/i);
     return m ? m[1].toLowerCase() : "bin";
 }
-function fileIconByName(name, type){
-    const n = (name || "").toLowerCase();
-    const t = (type || "").toLowerCase();
-    if(t.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|bmp|svg|avif)$/.test(n)) return "🖼";
-    if(t.startsWith("video/") || /\.(mp4|webm|mov|avi|mkv)$/.test(n)) return "🎬";
-    if(t.startsWith("audio/") || /\.(mp3|wav|ogg|flac|m4a)$/.test(n)) return "🎵";
-    if(t.includes("html") || /\.(html|htm)$/.test(n)) return "🌐";
-    if(/\.(zip|rar|7z|tar|gz)$/.test(n)) return "🗜";
-    if(/\.(pdf)$/.test(n)) return "📕";
-    if(/\.(doc|docx)$/.test(n)) return "📄";
-    if(/\.(xls|xlsx|csv)$/.test(n)) return "📊";
-    if(t.startsWith("text/") || /\.(txt|md|log|json|xml|yml|yaml|css|js|ts)$/.test(n)) return "📝";
-    return "📎";
-}
+
+/* ============================================================
+   Тип файла
+============================================================ */
 function fileViewerKind(name, type){
     const n = (name || "").toLowerCase();
     const t = (type || "").toLowerCase();
@@ -203,10 +197,20 @@ function fileViewerKind(name, type){
     if(t.startsWith("audio/") || /\.(mp3|wav|ogg|oga|flac|m4a|aac)$/.test(n)) return "audio";
     if(t === "application/pdf" || /\.pdf$/.test(n)) return "pdf";
 
+    // HTML — редактируется
     if(t.includes("html") || /\.(html|htm|xhtml)$/.test(n)) return "html";
 
+    // Excel / CSV / ODS — редактируется как таблица
+    if(/\.(xlsx|xls|ods|csv|tsv)$/.test(n) ||
+       t === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+       t === "application/vnd.ms-excel" ||
+       t === "application/vnd.oasis.opendocument.spreadsheet" ||
+       t === "text/csv" ||
+       t === "text/tab-separated-values") return "sheet";
+
+    // Просто текстовые форматы
     if(t.startsWith("text/") ||
-       /\.(txt|md|markdown|log|json|xml|yml|yaml|css|js|mjs|ts|csv|tsv|ini|cfg|conf|env|sh|bat|sql|py|java|cpp|c|h|php|rb|go|rs|toml)$/.test(n)) {
+       /\.(txt|md|markdown|log|json|xml|yml|yaml|css|js|mjs|ts|ini|cfg|conf|env|sh|bat|sql|py|java|cpp|c|h|php|rb|go|rs|toml)$/.test(n)) {
         return "text";
     }
 
@@ -214,46 +218,63 @@ function fileViewerKind(name, type){
 }
 
 /* ============================================================
-   ПОДГОТОВКА HTML ДЛЯ ПРЕВЬЮ
-   Фрагменты оборачиваем в <table> с базовыми стилями.
+   ПОДГОТОВКА HTML ДЛЯ ВИЗУАЛЬНОГО РЕДАКТОРА
+   Возвращает { isFullDoc, styles, bodyContent }
 ============================================================ */
-function preparePreviewHtml(content){
-    if(!content || !content.trim()){
-        return "<!DOCTYPE html><html><head><meta charset='utf-8'></head>" +
-               "<body style='margin:0;padding:40px;font-family:Segoe UI,Arial,sans-serif;color:#98a2b5;text-align:center'>" +
-               "Пустой шаблон</body></html>";
-    }
-
-    const lower = content.toLowerCase();
+function parseHtmlContent(content){
+    const raw = String(content || "");
+    const lower = raw.toLowerCase();
     const isFullDoc = lower.indexOf("<!doctype") !== -1 || lower.indexOf("<html") !== -1;
 
-    if(isFullDoc) return content;
-
-    let body = content;
-    const trimmed = content.trim();
-    const looksLikeRows = /^<tr[\s>]/i.test(trimmed) || /^<thead[\s>]/i.test(trimmed) || /^<tbody[\s>]/i.test(trimmed);
-
-    const baseStyles =
-        "body{margin:0;padding:20px;font-family:'Segoe UI',Arial,sans-serif;color:#1a2332;background:#fff;line-height:1.4}" +
-        "table{border-collapse:collapse;width:100%;font-size:14px}" +
-        "th,td{border:1px solid #d8e0ee;padding:8px 10px;text-align:left}" +
-        "th{background:#2f7cff;color:#fff;font-weight:700}" +
-        "tr:nth-child(even) td{background:#f8faff}" +
-        ".num{width:30px;text-align:center;color:#98a2b5;font-weight:700}" +
-        ".nick{font-weight:700}" +
-        ".guild{color:#4a5568}" +
-        ".faction-cell{color:#fff;font-weight:700;text-align:center;padding:6px 10px;white-space:nowrap}" +
-        ".f-england{background:#a31c1c}.f-france{background:#1c3fa3}.f-spain{background:#a37212}" +
-        ".f-holland{background:#a35712}.f-portugal{background:#12663a}.f-pirates{background:#2a2a2a}";
-
-    if(looksLikeRows){
-        body = "<table>" + content + "</table>";
+    if(!isFullDoc){
+        // Фрагмент: если начинается с <tr>, оборачиваем в table
+        const trimmed = raw.trim();
+        const looksLikeRows = /^<tr[\s>]/i.test(trimmed) ||
+                              /^<thead[\s>]/i.test(trimmed) ||
+                              /^<tbody[\s>]/i.test(trimmed);
+        if(looksLikeRows){
+            return { isFullDoc:false, styles:"", bodyContent:"<table>" + raw + "</table>" };
+        }
+        return { isFullDoc:false, styles:"", bodyContent:raw };
     }
 
-    return "<!DOCTYPE html><html><head><meta charset='utf-8'>" +
-           "<style>" + baseStyles + "</style></head>" +
-           "<body>" + body + "</body></html>";
+    // Полный документ: извлекаем <style> и body
+    let styles = "";
+    const styleMatches = raw.match(/<style[^>]*>([\s\S]*?)<\/style>/gi) || [];
+    styleMatches.forEach(s => {
+        const inner = s.replace(/<style[^>]*>|<\/style>/gi, "");
+        styles += inner + "\n";
+    });
+
+    let bodyContent = "";
+    const bodyMatch = raw.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    if(bodyMatch){
+        bodyContent = bodyMatch[1];
+    }else{
+        // без body — берём всё между <html>...</html> минус head/style
+        bodyContent = raw.replace(/<!doctype[^>]*>/i, "")
+                         .replace(/<html[^>]*>|<\/html>/gi, "")
+                         .replace(/<head[\s\S]*?<\/head>/gi, "")
+                         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+                         .replace(/<body[^>]*>|<\/body>/gi, "");
+    }
+
+    return { isFullDoc:true, styles, bodyContent };
 }
+
+const BASE_EDITOR_STYLES =
+    "body{margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif;color:#1a2332;background:#fff;line-height:1.4}" +
+    "table{border-collapse:collapse;width:100%;font-size:14px;margin:6px 0}" +
+    "th,td{border:1px solid #d8e0ee;padding:8px 10px;text-align:left;vertical-align:top;min-width:60px}" +
+    "th{background:#2f7cff;color:#fff;font-weight:700}" +
+    "tr:nth-child(even) td{background:#f8faff}" +
+    ".num{width:30px;text-align:center;color:#98a2b5;font-weight:700}" +
+    ".nick{font-weight:700}" +
+    ".guild{color:#4a5568}" +
+    ".faction-cell{color:#fff;font-weight:700;text-align:center;padding:6px 10px;white-space:nowrap}" +
+    ".f-england{background:#a31c1c}.f-france{background:#1c3fa3}.f-spain{background:#a37212}" +
+    ".f-holland{background:#a35712}.f-portugal{background:#12663a}.f-pirates{background:#2a2a2a}" +
+    "h1,h2,h3{margin:12px 0 8px} p{margin:8px 0} ul,ol{margin:8px 0 8px 22px}";
 
 /* ============================================================
    СХЕМА profiles
@@ -352,76 +373,62 @@ function initAuth(){
     };
 
     const loginForm = $("login-form");
-    if(loginForm){
-        loginForm.addEventListener("submit", async (e) => {
-            e.preventDefault(); e.stopPropagation();
-            setAuthMessage("Вход…", true);
-            const email = $("login-email").value.trim();
-            const password = $("login-password").value;
-            if(!email || !password){ setAuthMessage("Заполните email и пароль"); return; }
-            try{
-                const r = await supabaseClient.auth.signInWithPassword({ email, password });
-                if(r.error){ errLog("LOGIN", r.error.message); setAuthMessage(r.error.message); return; }
-                currentUser = r.data.user;
-                setAuthMessage("");
-                openApp();
-            }catch(err){
-                errLog("LOGIN EXC", err);
-                setAuthMessage("Ошибка: " + err.message);
-            }
-        });
-    }
+    if(loginForm) loginForm.addEventListener("submit", async (e) => {
+        e.preventDefault(); e.stopPropagation();
+        setAuthMessage("Вход…", true);
+        const email = $("login-email").value.trim();
+        const password = $("login-password").value;
+        if(!email || !password){ setAuthMessage("Заполните email и пароль"); return; }
+        try{
+            const r = await supabaseClient.auth.signInWithPassword({ email, password });
+            if(r.error){ errLog("LOGIN", r.error.message); setAuthMessage(r.error.message); return; }
+            currentUser = r.data.user; setAuthMessage(""); openApp();
+        }catch(err){ errLog("LOGIN EXC", err); setAuthMessage("Ошибка: " + err.message); }
+    });
 
     const registerForm = $("register-form");
-    if(registerForm){
-        registerForm.addEventListener("submit", async (e) => {
-            e.preventDefault(); e.stopPropagation();
-            setAuthMessage("Регистрация…", true);
-            const nickname = $("register-nickname").value.trim() || "Player";
-            const email = $("register-email").value.trim();
-            const password = $("register-password").value;
-            if(!email || !password){ setAuthMessage("Заполните все поля"); return; }
+    if(registerForm) registerForm.addEventListener("submit", async (e) => {
+        e.preventDefault(); e.stopPropagation();
+        setAuthMessage("Регистрация…", true);
+        const nickname = $("register-nickname").value.trim() || "Player";
+        const email = $("register-email").value.trim();
+        const password = $("register-password").value;
+        if(!email || !password){ setAuthMessage("Заполните все поля"); return; }
+        try{
+            const r = await supabaseClient.auth.signUp({
+                email, password, options:{ data:{ nickname } }
+            });
+            if(r.error){ setAuthMessage(r.error.message); return; }
+            const user = r.data.user;
+            if(!user){ setAuthMessage("Проверьте email.", true); return; }
             try{
-                const r = await supabaseClient.auth.signUp({
-                    email, password, options:{ data:{ nickname } }
+                await supabaseClient.from("profiles").insert({
+                    id: user.id, nickname,
+                    avatar_url: DEFAULT_AVATAR, vip_level: 0
                 });
-                if(r.error){ setAuthMessage(r.error.message); return; }
-                const user = r.data.user;
-                if(!user){ setAuthMessage("Проверьте email.", true); return; }
-                try{
-                    await supabaseClient.from("profiles").insert({
-                        id: user.id, nickname,
-                        avatar_url: DEFAULT_AVATAR, vip_level: 0
-                    });
-                }catch(err){ errLog("PROFILE CREATE", err); }
-                if(!r.data.session){
-                    setAuthMessage("Регистрация успешна. Подтвердите email.", true);
-                    if(loginTab) loginTab.click();
-                    return;
-                }
-                currentUser = user; setAuthMessage(""); openApp();
-            }catch(err){
-                errLog("REGISTER EXC", err);
-                setAuthMessage("Ошибка: " + err.message);
+            }catch(err){ errLog("PROFILE CREATE", err); }
+            if(!r.data.session){
+                setAuthMessage("Регистрация успешна. Подтвердите email.", true);
+                if(loginTab) loginTab.click();
+                return;
             }
-        });
-    }
+            currentUser = user; setAuthMessage(""); openApp();
+        }catch(err){ errLog("REGISTER EXC", err); setAuthMessage("Ошибка: " + err.message); }
+    });
 
     const logout = $("logout");
-    if(logout){
-        logout.onclick = async () => {
-            try{
-                if(presenceChannel){
-                    try{ await presenceChannel.untrack(); }catch(e){}
-                    try{ supabaseClient.removeChannel(presenceChannel); }catch(e){}
-                    presenceChannel = null;
-                }
-                closeMiroTalkRoom();
-                await supabaseClient.auth.signOut();
-                location.reload();
-            }catch(e){ location.reload(); }
-        };
-    }
+    if(logout) logout.onclick = async () => {
+        try{
+            if(presenceChannel){
+                try{ await presenceChannel.untrack(); }catch(e){}
+                try{ supabaseClient.removeChannel(presenceChannel); }catch(e){}
+                presenceChannel = null;
+            }
+            closeMiroTalkRoom();
+            await supabaseClient.auth.signOut();
+            location.reload();
+        }catch(e){ location.reload(); }
+    };
 }
 
 async function checkSession(){
@@ -442,9 +449,7 @@ async function openApp(){
     $("app").classList.remove("hidden");
 
     if(currentUser){
-        try{
-            await supabaseClient.from("conference_users").delete().eq("user_id", currentUser.id);
-        }catch(e){}
+        try{ await supabaseClient.from("conference_users").delete().eq("user_id", currentUser.id); }catch(e){}
     }
 
     await safeRun(loadProfile);
@@ -532,10 +537,7 @@ function renderOnlinePage(){
     const box = $("online-list-page"); if(!box) return;
     const list = Object.values(onlineUsers);
     setText("online-page-count", String(list.length));
-    if(list.length === 0){
-        box.innerHTML = "<div class='dash-recent-empty'>Никого нет онлайн</div>";
-        return;
-    }
+    if(list.length === 0){ box.innerHTML = "<div class='dash-recent-empty'>Никого нет онлайн</div>"; return; }
     box.innerHTML = "";
     list.sort((a,b) => (a.nickname||"").localeCompare(b.nickname||""));
     list.forEach(u => {
@@ -560,18 +562,12 @@ function renderOnlinePage(){
 ============================================================ */
 async function loadHomeStats(){
     updateOnlineCounters();
-    try{
-        const { data } = await supabaseClient.from("conference_rooms").select("id");
-        setText("dash-rooms", String((data || []).length));
-    }catch(e){ setText("dash-rooms", "—"); }
-    try{
-        const { count } = await supabaseClient.from("messages").select("*", { count:"exact", head:true });
-        setText("dash-messages", String(count || 0));
-    }catch(e){ setText("dash-messages", "—"); }
-    try{
-        const { count } = await supabaseClient.from("templates").select("*", { count:"exact", head:true });
-        setText("dash-templates", String(count || 0));
-    }catch(e){ setText("dash-templates", "—"); }
+    try{ const { data } = await supabaseClient.from("conference_rooms").select("id");
+        setText("dash-rooms", String((data || []).length)); }catch(e){ setText("dash-rooms", "—"); }
+    try{ const { count } = await supabaseClient.from("messages").select("*", { count:"exact", head:true });
+        setText("dash-messages", String(count || 0)); }catch(e){ setText("dash-messages", "—"); }
+    try{ const { count } = await supabaseClient.from("templates").select("*", { count:"exact", head:true });
+        setText("dash-templates", String(count || 0)); }catch(e){ setText("dash-templates", "—"); }
 }
 async function loadHomeRecentMessages(){
     const box = $("home-recent-messages"); if(!box) return;
@@ -761,18 +757,13 @@ async function saveNewGame(){
     renderGuildGameFilter();
 }
 async function deleteGame(id, name){
-    if(!isAdmin()){
-        alert("Удалять игры может только администратор сайта.");
-        return;
-    }
+    if(!isAdmin()){ alert("Удалять игры может только администратор сайта."); return; }
     if(!confirm("Удалить игру «" + name + "»?")) return;
     const del = await supabaseClient.from("games").delete().eq("id", id);
     if(del.error){
         if(/row-level security|policy/i.test(del.error.message || "")){
             alert("Удаление запрещено политикой безопасности Supabase.");
-        } else {
-            alert("Ошибка: " + del.error.message);
-        }
+        } else alert("Ошибка: " + del.error.message);
         return;
     }
     if(currentGameFilter === id) currentGameFilter = 0;
@@ -931,10 +922,7 @@ async function createGuild(){
     const user = await ensureAuth();
     if(!user){ alert("Нет авторизации"); return; }
     if(!guildsAvailable){ alert("Таблицы гильдий не созданы"); return; }
-    if(!guildsGameIdAvailable){
-        alert("Колонка guilds.game_id отсутствует. Выполните SQL в Supabase.");
-        return;
-    }
+    if(!guildsGameIdAvailable){ alert("Колонка guilds.game_id отсутствует."); return; }
     const gameId = parseInt($("guild-game-select").value, 10);
     const name = $("guild-name-input").value.trim();
     const description = $("guild-desc-input").value.trim();
@@ -947,11 +935,9 @@ async function createGuild(){
     if(ins.error){ alert("Ошибка: " + ins.error.message); return; }
 
     await supabaseClient.from("guild_members").insert({
-        guild_id: ins.data.id,
-        user_id: user.id,
+        guild_id: ins.data.id, user_id: user.id,
         nickname: currentProfile?.nickname || "Player",
-        role: "owner",
-        status: "approved"
+        role: "owner", status: "approved"
     });
 
     $("guild-name-input").value = "";
@@ -1006,35 +992,14 @@ async function openGuildOverlayFor(guildId){
         });
     }
     if(!my){
-        heroActions.push({
-            label: "✉️ Запросить вступление",
-            cls: "main-button",
-            onClick: () => requestJoinGuild(guildId)
-        });
+        heroActions.push({ label: "✉️ Запросить вступление", cls: "main-button", onClick: () => requestJoinGuild(guildId) });
     } else if(my.status === "pending"){
-        heroActions.push({
-            label: "⏳ Заявка на рассмотрении",
-            cls: "main-button secondary",
-            disabled: true,
-            onClick: () => {}
-        });
-        heroActions.push({
-            label: "Отменить заявку",
-            cls: "main-button danger",
-            onClick: () => cancelJoinRequest(guildId)
-        });
+        heroActions.push({ label: "⏳ Заявка на рассмотрении", cls: "main-button secondary", disabled: true, onClick: () => {} });
+        heroActions.push({ label: "Отменить заявку", cls: "main-button danger", onClick: () => cancelJoinRequest(guildId) });
     } else if(amOwner){
-        heroActions.push({
-            label: "🗑 Распустить гильдию",
-            cls: "main-button danger",
-            onClick: () => dissolveGuild(guildId)
-        });
+        heroActions.push({ label: "🗑 Распустить гильдию", cls: "main-button danger", onClick: () => dissolveGuild(guildId) });
     } else {
-        heroActions.push({
-            label: "Покинуть гильдию",
-            cls: "main-button secondary",
-            onClick: () => leaveGuild(guildId)
-        });
+        heroActions.push({ label: "Покинуть гильдию", cls: "main-button secondary", onClick: () => leaveGuild(guildId) });
     }
 
     let ownerNick = "—";
@@ -1042,8 +1007,7 @@ async function openGuildOverlayFor(guildId){
         const ownerMember = members.find(m => m.user_id === guild.owner_id);
         if(ownerMember) ownerNick = ownerMember.nickname || "—";
         else {
-            const p = await supabaseClient.from("profiles").select("nickname")
-                .eq("id", guild.owner_id).maybeSingle();
+            const p = await supabaseClient.from("profiles").select("nickname").eq("id", guild.owner_id).maybeSingle();
             if(p.data) ownerNick = p.data.nickname || "—";
         }
     }
@@ -1125,10 +1089,8 @@ async function openGuildOverlayFor(guildId){
         btn.onclick = () => {
             const t = btn.dataset.tab;
             currentGuildTab = t;
-            body.querySelectorAll(".guild-tab-btn").forEach(b =>
-                b.classList.toggle("active", b.dataset.tab === t));
-            body.querySelectorAll(".guild-tab-content").forEach(c =>
-                c.classList.remove("active"));
+            body.querySelectorAll(".guild-tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === t));
+            body.querySelectorAll(".guild-tab-content").forEach(c => c.classList.remove("active"));
             const target = $("guild-tab-" + t);
             if(target) target.classList.add("active");
         };
@@ -1192,8 +1154,7 @@ function renderMembersTab(guildId, approved, pending, amManager, amOwner){
 
         const initial = (m.nickname || "?")[0].toUpperCase();
         const roleLabel = m.role === "owner" ? "👑 Владелец" :
-                          m.role === "deputy" ? "🛡 Заместитель" :
-                          "Участник";
+                          m.role === "deputy" ? "🛡 Заместитель" : "Участник";
         const roleCls = m.role === "owner" ? "owner" :
                         m.role === "deputy" ? "deputy" : "member";
 
@@ -1267,39 +1228,32 @@ async function requestJoinGuild(guildId){
 async function cancelJoinRequest(guildId){
     const user = await ensureAuth();
     if(!user) return;
-    await supabaseClient.from("guild_members").delete()
-        .eq("guild_id", guildId).eq("user_id", user.id);
+    await supabaseClient.from("guild_members").delete().eq("guild_id", guildId).eq("user_id", user.id);
     await loadGuilds();
     await openGuildOverlayFor(guildId);
 }
 async function approveMember(guildId, userId){
-    const up = await supabaseClient.from("guild_members")
-        .update({ status: "approved" })
-        .eq("guild_id", guildId).eq("user_id", userId);
+    const up = await supabaseClient.from("guild_members").update({ status: "approved" }).eq("guild_id", guildId).eq("user_id", userId);
     if(up.error){ alert("Ошибка: " + up.error.message); return; }
     await loadGuilds();
     await openGuildOverlayFor(guildId);
 }
 async function rejectMember(guildId, userId){
     if(!confirm("Отклонить заявку?")) return;
-    const del = await supabaseClient.from("guild_members").delete()
-        .eq("guild_id", guildId).eq("user_id", userId);
+    const del = await supabaseClient.from("guild_members").delete().eq("guild_id", guildId).eq("user_id", userId);
     if(del.error){ alert("Ошибка: " + del.error.message); return; }
     await loadGuilds();
     await openGuildOverlayFor(guildId);
 }
 async function kickMember(guildId, userId, nickname){
     if(!confirm("Кикнуть " + (nickname || "участника") + "?")) return;
-    const del = await supabaseClient.from("guild_members").delete()
-        .eq("guild_id", guildId).eq("user_id", userId);
+    const del = await supabaseClient.from("guild_members").delete().eq("guild_id", guildId).eq("user_id", userId);
     if(del.error){ alert("Ошибка: " + del.error.message); return; }
     await loadGuilds();
     await openGuildOverlayFor(guildId);
 }
 async function changeRole(guildId, userId, newRole){
-    const up = await supabaseClient.from("guild_members")
-        .update({ role: newRole })
-        .eq("guild_id", guildId).eq("user_id", userId);
+    const up = await supabaseClient.from("guild_members").update({ role: newRole }).eq("guild_id", guildId).eq("user_id", userId);
     if(up.error){ alert("Ошибка: " + up.error.message); return; }
     await loadGuilds();
     await openGuildOverlayFor(guildId);
@@ -1309,17 +1263,11 @@ async function transferOwnership(guildId, newOwnerId, nickname){
     const user = await ensureAuth();
     if(!user) return;
 
-    const up1 = await supabaseClient.from("guilds")
-        .update({ owner_id: newOwnerId }).eq("id", guildId);
+    const up1 = await supabaseClient.from("guilds").update({ owner_id: newOwnerId }).eq("id", guildId);
     if(up1.error){ alert("Ошибка: " + up1.error.message); return; }
 
-    await supabaseClient.from("guild_members")
-        .update({ role: "owner", status: "approved" })
-        .eq("guild_id", guildId).eq("user_id", newOwnerId);
-
-    await supabaseClient.from("guild_members")
-        .update({ role: "deputy" })
-        .eq("guild_id", guildId).eq("user_id", user.id);
+    await supabaseClient.from("guild_members").update({ role: "owner", status: "approved" }).eq("guild_id", guildId).eq("user_id", newOwnerId);
+    await supabaseClient.from("guild_members").update({ role: "deputy" }).eq("guild_id", guildId).eq("user_id", user.id);
 
     await loadGuilds();
     await openGuildOverlayFor(guildId);
@@ -1328,16 +1276,11 @@ async function transferOwnership(guildId, newOwnerId, nickname){
 async function dissolveGuild(guildId){
     const user = await ensureAuth();
     if(!user){ alert("Нет авторизации"); return; }
-    if(!isOwner(guildId)){
-        alert("Распустить гильдию может только её глава.");
-        return;
-    }
+    if(!isOwner(guildId)){ alert("Распустить гильдию может только её глава."); return; }
+
     const members = guildMembersCache[guildId] || [];
     const approved = members.filter(m => m.status === "approved" || !m.status);
-    if(approved.length > 1){
-        alert("Нельзя распустить гильдию, пока в ней есть другие участники.");
-        return;
-    }
+    if(approved.length > 1){ alert("Нельзя распустить гильдию, пока в ней есть другие участники."); return; }
     if(!confirm("Распустить гильдию со всеми материалами и шаблонами? Действие необратимо.")) return;
 
     try{
@@ -1360,13 +1303,9 @@ async function dissolveGuild(guildId){
 async function leaveGuild(guildId){
     const user = await ensureAuth();
     if(!user) return;
-    if(isOwner(guildId)){
-        alert("Вы глава гильдии. Используйте «Распустить гильдию» или передайте владение.");
-        return;
-    }
+    if(isOwner(guildId)){ alert("Вы глава гильдии."); return; }
     if(!confirm("Покинуть гильдию?")) return;
-    const del = await supabaseClient.from("guild_members").delete()
-        .eq("guild_id", guildId).eq("user_id", user.id);
+    const del = await supabaseClient.from("guild_members").delete().eq("guild_id", guildId).eq("user_id", user.id);
     if(del.error){ alert("Ошибка: " + del.error.message); return; }
     closeGuildOverlay();
     await loadGuilds();
@@ -1392,8 +1331,7 @@ async function uploadGuildIcon(guildId, file){
         reader.readAsDataURL(file);
     }
 
-    const up = await supabaseClient.storage
-        .from("guild-icons").upload(path, file, { upsert: false, cacheControl: "3600" });
+    const up = await supabaseClient.storage.from("guild-icons").upload(path, file, { upsert: false, cacheControl: "3600" });
     if(up.error){ alert("Ошибка загрузки: " + up.error.message); return; }
 
     const { data: pub } = supabaseClient.storage.from("guild-icons").getPublicUrl(path);
@@ -1416,6 +1354,10 @@ async function renderMaterialsTab(guildId, amManager){
         form.className = "material-upload-form";
         form.innerHTML = `
             <h3>📤 Загрузить материал</h3>
+            <p style="font-size:12px;color:#7a849a;margin-bottom:10px">
+                Поддерживаются: HTML, Excel (xlsx/xls), CSV, изображения, видео, аудио, PDF, текстовые файлы.
+                HTML и таблицы открываются в визуальном редакторе содержимого.
+            </p>
             <div class="material-form-row">
                 <input id="mat-title" placeholder="Название (будет на кнопке)" maxlength="80">
                 <input id="mat-desc" placeholder="Краткое описание (необязательно)" maxlength="200">
@@ -1486,11 +1428,21 @@ async function renderMaterialsTab(guildId, amManager){
         btn.dataset.id = m.id;
 
         const canDelete = amManager || (m.uploaded_by === currentUser.id);
+        const kind = fileViewerKind(m.file_name, m.file_type);
+        const kindLabel =
+            kind === "html"  ? "🌐 HTML · редактируемый" :
+            kind === "sheet" ? "📊 Таблица · редактируемая" :
+            kind === "image" ? "🖼 Изображение" :
+            kind === "video" ? "🎬 Видео" :
+            kind === "audio" ? "🎵 Аудио" :
+            kind === "pdf"   ? "📕 PDF" :
+            kind === "text"  ? "📝 Текст" : "📎 Файл";
 
         btn.innerHTML =
             "<div class='material-btn-body'>" +
                 "<div class='material-btn-title'>" + escapeHtml(m.title || "Без названия") + "</div>" +
                 "<div class='material-btn-meta'>" +
+                    kindLabel + " · " +
                     escapeHtml(m.file_name || "") +
                     (m.file_size ? " · " + humanFileSize(m.file_size) : "") +
                 "</div>" +
@@ -1523,11 +1475,7 @@ async function uploadMaterial(guildId){
     status.className = "profile-status";
     if(!title){ status.textContent = "Укажите название"; status.classList.add("err"); return; }
     if(!file){ status.textContent = "Выберите файл"; status.classList.add("err"); return; }
-    if(file.size > 100 * 1024 * 1024){
-        status.textContent = "Файл больше 100 МБ";
-        status.classList.add("err");
-        return;
-    }
+    if(file.size > 100 * 1024 * 1024){ status.textContent = "Файл больше 100 МБ"; status.classList.add("err"); return; }
 
     const ext = fileExt(file.name);
     const path = user.id + "/" + guildId + "/" + Date.now() + "-" + Math.random().toString(36).slice(2,8) + "." + ext;
@@ -1555,8 +1503,7 @@ async function uploadMaterial(guildId){
     if(up.error){
         errLog("FILE UPLOAD", up.error.message);
         status.textContent = "Ошибка загрузки: " + up.error.message;
-        status.classList.remove("loading");
-        status.classList.add("err");
+        status.classList.remove("loading"); status.classList.add("err");
         return;
     }
 
@@ -1576,8 +1523,7 @@ async function uploadMaterial(guildId){
 
     if(ins.error){
         status.textContent = "Ошибка: " + ins.error.message;
-        status.classList.remove("loading");
-        status.classList.add("err");
+        status.classList.remove("loading"); status.classList.add("err");
         return;
     }
 
@@ -1605,7 +1551,7 @@ async function deleteMaterial(guildId, mat){
 }
 
 /* ============================================================
-   ШАБЛОНЫ (список)
+   ШАБЛОНЫ
 ============================================================ */
 async function renderTemplatesTab(guildId, amManager){
     const box = $("guild-tab-templates"); if(!box) return;
@@ -1618,9 +1564,8 @@ async function renderTemplatesTab(guildId, amManager){
         <div class="tpl-ai-hint-body">
             <div class="tpl-ai-hint-title">Как запросить шаблон у ИИ</div>
             <div class="tpl-ai-hint-text">
-                Скопируйте промпт, замените данные на свои, отправьте ИИ (ChatGPT, Claude и т.д.).
-                ИИ вернёт готовый HTML-код — вставьте его в поле «HTML-код». Менеджеры гильдии могут
-                редактировать код прямо в редакторе шаблона.
+                Скопируйте промпт, замените данные на свои, отправьте ИИ.
+                ИИ вернёт HTML-код — вставьте его в поле ниже. Открывать шаблон можно в визуальном редакторе.
             </div>
             <div class="tpl-ai-prompt" id="tpl-ai-prompt-box">Создай HTML-документ для World of Sea Battle: список друзей и врагов. Таблица с колонками: №, Никнейм, Гильдия, Фракция. Фракции выдели цветом и эмодзи-флагом. Заголовки: «🟢 Друзья» — синий, «🔴 Враги» — красный. Стиль — белая 3D-тема, скруглённые углы, тени.</div>
             <button class="main-button small" id="tpl-copy-ai" type="button">📋 Скопировать промпт</button>
@@ -1653,7 +1598,7 @@ async function renderTemplatesTab(guildId, amManager){
             <label class="profile-field" style="margin-bottom:10px">
                 <span>HTML-код шаблона</span>
                 <textarea id="tpl-content" rows="10" placeholder="&lt;!DOCTYPE html&gt;&#10;&lt;html&gt;...&lt;/html&gt;" style="font-family:Consolas,Monaco,monospace;font-size:12.5px;"></textarea>
-                <small class="field-hint">Вставьте полный HTML-код. Скрипты при просмотре не выполняются.</small>
+                <small class="field-hint">Вставьте полный HTML-код или фрагмент таблицы.</small>
             </label>
             <div class="profile-actions" style="margin-top:12px">
                 <button class="main-button" id="tpl-save-btn" type="button">Загрузить шаблон</button>
@@ -1692,11 +1637,9 @@ async function renderTemplatesTab(guildId, amManager){
     list.forEach(t => {
         const card = document.createElement("div");
         card.className = "tpl-card";
-
         const date = t.created_at
             ? new Date(t.created_at).toLocaleDateString("ru-RU", { day:"2-digit", month:"short", year:"numeric" })
             : "";
-
         const preview = (t.content || "").slice(0, 120).replace(/\s+/g, " ");
         const isOwner = t.uploaded_by === currentUser.id;
         const canDelete = amManager || isOwner || isAdmin();
@@ -1714,8 +1657,16 @@ async function renderTemplatesTab(guildId, amManager){
         const openBtn = document.createElement("button");
         openBtn.className = "main-button";
         openBtn.type = "button";
-        openBtn.textContent = amManager ? "✏️ Открыть и править" : "👁 Открыть";
-        openBtn.onclick = () => openTemplateEditor(t, guildId, amManager, "template");
+        openBtn.textContent = amManager ? "🎨 Открыть" : "👁 Открыть";
+        openBtn.onclick = () => openTemplateEditor({
+            id: t.id,
+            guild_id: guildId,
+            title: t.title,
+            content: t.content || "",
+            created_at: t.created_at,
+            uploaded_by: t.uploaded_by,
+            _source: "template"
+        }, guildId, amManager, "template");
         actions.appendChild(openBtn);
 
         if(canDelete){
@@ -1727,7 +1678,6 @@ async function renderTemplatesTab(guildId, amManager){
             del.onclick = (e) => { e.stopPropagation(); deleteTemplate(guildId, t); };
             card.appendChild(del);
         }
-
         listWrap.appendChild(card);
     });
 }
@@ -1753,17 +1703,14 @@ async function saveTemplate(guildId){
     const content = ($("tpl-content").value || "").trim();
 
     if(!title || title.length < 2){ setTplStatus("Название: минимум 2 символа", "err"); return; }
-    if(!content || content.length < 20){ setTplStatus("Вставьте HTML-код шаблона", "err"); return; }
-    if(content.length > 500000){ setTplStatus("Шаблон слишком большой", "err"); return; }
+    if(!content || content.length < 5){ setTplStatus("Вставьте HTML-код", "err"); return; }
 
     setTplStatus("Сохранение…", "loading");
 
     const ins = await supabaseClient.from("templates").insert({
-        guild_id: guildId,
-        title,
+        guild_id: guildId, title,
         description: description || null,
-        category: "guild",
-        content,
+        category: "guild", content,
         uploaded_by: user.id
     }).select().single();
 
@@ -1772,7 +1719,6 @@ async function saveTemplate(guildId){
         setTplStatus("Ошибка: " + ins.error.message, "err");
         return;
     }
-
     setTplStatus("Шаблон загружен ✓");
     setTimeout(() => setTplStatus(""), 1500);
     await openGuildOverlayFor(guildId);
@@ -1781,13 +1727,9 @@ async function saveTemplate(guildId){
 async function deleteTemplate(guildId, t){
     const user = await ensureAuth();
     if(!user) return;
-
     const isOwner = t.uploaded_by === user.id;
     const amManager = isManager(guildId);
-    if(!isOwner && !amManager && !isAdmin()){
-        alert("Удалить шаблон может автор, заместитель или администратор.");
-        return;
-    }
+    if(!isOwner && !amManager && !isAdmin()){ alert("Удалить может автор, заместитель или админ."); return; }
     if(!confirm("Удалить шаблон «" + (t.title || "без названия") + "»?")) return;
 
     const del = await supabaseClient.from("templates").delete().eq("id", t.id);
@@ -1796,7 +1738,7 @@ async function deleteTemplate(guildId, t){
 }
 
 /* ============================================================
-   РЕДАКТОР ШАБЛОНОВ / HTML-МАТЕРИАЛОВ
+   РЕДАКТОР СОДЕРЖИМОГО / КОДА
 ============================================================ */
 function initTemplateViewer(){
     const closeBtn = $("tpl-viewer-close");
@@ -1805,23 +1747,20 @@ function initTemplateViewer(){
     const codeArea = $("tpl-viewer-code");
 
     if(closeBtn) closeBtn.onclick = () => closeTemplateViewer();
-    if(saveBtn) saveBtn.onclick = saveTemplateEdits;
+    if(saveBtn) saveBtn.onclick = () => saveEditorChanges();
     if(resetBtn) resetBtn.onclick = () => {
         if(!templateCanEdit) return;
-        if(!codeArea) return;
-        if(!confirm("Отменить все изменения и вернуть исходный код?")) return;
-        codeArea.value = templateInitialContent;
-        updateTemplatePreview();
-        setTemplateHint("Изменения отменены", "");
+        if(!confirm("Отменить все изменения и вернуть исходные данные?")) return;
+        restoreInitialEditorState();
     };
 
-    if(codeArea){
-        codeArea.addEventListener("input", () => {
-            if(templatePreviewTimer) clearTimeout(templatePreviewTimer);
-            templatePreviewTimer = setTimeout(updateTemplatePreview, 400);
-            updateTemplateDirtyHint();
-        });
+    // Переключение табов
+    document.querySelectorAll(".editor-tab-btn").forEach(btn => {
+        btn.onclick = () => switchEditorMode(btn.dataset.mode);
+    });
 
+    // Tab в textarea = 2 пробела
+    if(codeArea){
         codeArea.addEventListener("keydown", (e) => {
             if(e.key === "Tab" && !e.shiftKey){
                 e.preventDefault();
@@ -1833,72 +1772,131 @@ function initTemplateViewer(){
                 codeArea.dispatchEvent(new Event("input"));
             }
         });
+        codeArea.addEventListener("input", () => {
+            updateEditorDirtyState();
+        });
     }
 }
 
-function setTemplateHint(text, cls){
-    const el = $("tpl-editor-hint");
-    if(!el) return;
-    el.textContent = text || "";
-    el.className = "tpl-split-hint" + (cls ? " " + cls : "");
-}
+function switchEditorMode(mode){
+    currentEditorMode = mode;
+    document.querySelectorAll(".editor-tab-btn").forEach(b => {
+        b.classList.toggle("active", b.dataset.mode === mode);
+    });
+    const contentPane = $("editor-pane-content");
+    const codePane = $("editor-pane-code");
+    if(contentPane) contentPane.classList.toggle("active", mode === "content");
+    if(codePane) codePane.classList.toggle("active", mode === "code");
 
-function updateTemplateDirtyHint(){
-    const code = $("tpl-viewer-code");
-    if(!code) return;
-    const isDirty = code.value !== templateInitialContent;
-    if(isDirty){
-        setTemplateHint("● не сохранено", "dirty");
+    // Синхронизация
+    if(mode === "code"){
+        // Из визуального → в код
+        if(currentEditorKind === "html" || currentEditorKind === "template"){
+            const html = collectHtmlFromVisual();
+            const codeArea = $("tpl-viewer-code");
+            if(codeArea) codeArea.value = html;
+        }
     } else {
-        setTemplateHint("", "");
+        // Из кода → в визуальный
+        const codeArea = $("tpl-viewer-code");
+        if(codeArea && (currentEditorKind === "html" || currentEditorKind === "template")){
+            renderVisualFromHtml(codeArea.value);
+        }
     }
+    rebuildToolbar();
+    updateEditorDirtyState();
 }
 
-function updateTemplatePreview(){
-    const frame = $("tpl-viewer-frame");
-    const code = $("tpl-viewer-code");
-    if(!frame || !code) return;
+/* ============================================================
+   TOOLBAR
+============================================================ */
+function rebuildToolbar(){
+    const tb = $("editor-toolbar"); if(!tb) return;
+    tb.innerHTML = "";
 
-    const html = preparePreviewHtml(code.value);
-    frame.srcdoc = html;
+    if(!templateCanEdit){
+        tb.innerHTML = '<span style="font-size:12.5px;color:#98a2b5;font-weight:600;padding:0 4px">🔒 Только просмотр</span>';
+        return;
+    }
+
+    if(currentEditorKind === "sheet"){
+        // Только кнопки таблицы
+        addTbButton(tb, "➕ Строка", "Добавить строку", () => sheetAddRow(), "tb-primary");
+        addTbButton(tb, "➕ Колонка", "Добавить колонку", () => sheetAddCol(), "tb-primary");
+        addTbSep(tb);
+        addTbButton(tb, "➖ Строка", "Удалить последнюю строку", () => sheetDelRow(), "tb-danger");
+        addTbButton(tb, "➖ Колонка", "Удалить последнюю колонку", () => sheetDelCol(), "tb-danger");
+        return;
+    }
+
+    // HTML: текстовые команды + таблицы
+    addTbButton(tb, "Ж", "Жирный", () => execEditorCmd("bold"));
+    addTbButton(tb, "К", "Курсив", () => execEditorCmd("italic"));
+    addTbButton(tb, "Ч", "Подчёркнутый", () => execEditorCmd("underline"));
+    addTbSep(tb);
+    addTbButton(tb, "H2", "Заголовок", () => execEditorCmd("formatBlock", "<h2>"));
+    addTbButton(tb, "P", "Обычный текст", () => execEditorCmd("formatBlock", "<p>"));
+    addTbSep(tb);
+    addTbButton(tb, "➕ Строка", "Добавить строку в таблицу", () => tableAddRow(), "tb-primary");
+    addTbButton(tb, "➕ Колонка", "Добавить колонку в таблицу", () => tableAddCol(), "tb-primary");
+    addTbSep(tb);
+    addTbButton(tb, "➖ Строка", "Удалить последнюю строку", () => tableDelRow(), "tb-danger");
+    addTbButton(tb, "➖ Колонка", "Удалить последнюю колонку", () => tableDelCol(), "tb-danger");
+    addTbSep(tb);
+    addTbButton(tb, "🧹 Очистить", "Очистить форматирование", () => execEditorCmd("removeFormat"));
+}
+function addTbButton(tb, label, title, onClick, cls){
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "tb-btn" + (cls ? " " + cls : "");
+    b.title = title;
+    b.textContent = label;
+    b.onclick = onClick;
+    tb.appendChild(b);
+}
+function addTbSep(tb){
+    const s = document.createElement("span");
+    s.className = "tb-sep";
+    tb.appendChild(s);
+}
+function execEditorCmd(cmd, value){
+    if(!templateCanEdit) return;
+    const ed = $("visual-editor");
+    if(ed) ed.focus();
+    try{ document.execCommand(cmd, false, value || null); }catch(e){ errLog("execCmd", e); }
+    updateEditorDirtyState();
 }
 
+/* ============================================================
+   ОТКРЫТИЕ РЕДАКТОРА
+============================================================ */
 function openTemplateEditor(t, guildId, canEdit, source){
     currentTemplate = Object.assign({}, t);
     currentTemplate._source = source || "template";
     currentTemplateGuildId = guildId;
     templateCanEdit = !!canEdit;
-    templateInitialContent = t.content || "";
 
     const titleEl = $("tpl-viewer-title");
     const subEl = $("tpl-viewer-sub");
-    const codeArea = $("tpl-viewer-code");
     const saveBtn = $("tpl-viewer-save");
     const resetBtn = $("tpl-viewer-reset");
     const modeBadge = $("tpl-mode-badge");
 
-    const isMaterial = currentTemplate._source === "material";
-
-    if(titleEl){
-        titleEl.textContent = (isMaterial ? "🌐 " : "📄 ") + (t.title || "Шаблон");
-    }
+    if(titleEl) titleEl.textContent = "🎨 " + (t.title || "Редактор");
 
     const date = t.created_at
         ? new Date(t.created_at).toLocaleDateString("ru-RU", { day:"2-digit", month:"long", year:"numeric" })
         : "";
-    if(subEl){
-        subEl.textContent = (isMaterial ? "HTML-материал" : "Шаблон гильдии") +
-            (date ? " · " + date : "");
-    }
 
-    if(codeArea){
-        codeArea.value = t.content || "";
-        codeArea.readOnly = !templateCanEdit;
-    }
+    const kindLabel =
+        source === "material" ? "Материал" :
+        source === "sheet" ? "Таблица" : "Шаблон";
+
+    if(subEl) subEl.textContent = kindLabel + (date ? " · " + date : "");
 
     if(modeBadge){
         if(templateCanEdit){
-            modeBadge.textContent = "✏️ Режим редактирования";
+            modeBadge.textContent = "✏️ Редактирование";
             modeBadge.classList.add("editing");
         } else {
             modeBadge.textContent = "🔒 Только просмотр";
@@ -1909,111 +1907,378 @@ function openTemplateEditor(t, guildId, canEdit, source){
     if(saveBtn) saveBtn.classList.toggle("hidden", !templateCanEdit);
     if(resetBtn) resetBtn.classList.toggle("hidden", !templateCanEdit);
 
-    setTemplateHint("", "");
+    // Режим: html или sheet
+    currentEditorKind = source === "sheet" ? "sheet" : "html";
 
-    updateTemplatePreview();
+    // Исходники
+    if(currentEditorKind === "sheet"){
+        templateInitialContent = JSON.stringify(t._sheetData || []);
+    } else {
+        templateInitialContent = t.content || "";
+    }
+
+    // Табы
+    document.querySelectorAll(".editor-tab-btn").forEach(b => {
+        // У sheet нет таба с кодом
+        if(currentEditorKind === "sheet" && b.dataset.mode === "code"){
+            b.classList.add("hidden");
+        } else {
+            b.classList.remove("hidden");
+        }
+    });
+
+    // Открываем на «Содержимое»
+    currentEditorMode = "content";
+    document.querySelectorAll(".editor-tab-btn").forEach(b => {
+        b.classList.toggle("active", b.dataset.mode === "content");
+    });
+    if($("editor-pane-content")) $("editor-pane-content").classList.add("active");
+    if($("editor-pane-code")) $("editor-pane-code").classList.remove("active");
+
+    // Рендер содержимого
+    if(currentEditorKind === "sheet"){
+        currentSheetRows = t._sheetData ? t._sheetData.map(r => r.slice()) : [];
+        currentSheetName = t._sheetName || "Sheet1";
+        renderVisualSheet(currentSheetRows);
+    } else {
+        const codeArea = $("tpl-viewer-code");
+        if(codeArea) codeArea.value = t.content || "";
+        renderVisualFromHtml(t.content || "");
+    }
+
+    rebuildToolbar();
+    updateEditorDirtyState();
 
     const wrap = $("template-viewer");
     if(wrap) wrap.classList.remove("hidden");
     document.body.style.overflow = "hidden";
+
+    setEditorStatus(templateCanEdit ? "Редактирование доступно" : "Только просмотр", "");
 }
 
 function closeTemplateViewer(){
-    const codeArea = $("tpl-viewer-code");
-    if(templateCanEdit && codeArea && codeArea.value !== templateInitialContent){
+    if(templateCanEdit && isEditorDirty()){
         if(!confirm("Есть несохранённые изменения. Закрыть без сохранения?")) return;
     }
 
     const wrap = $("template-viewer");
     if(wrap) wrap.classList.add("hidden");
-    const frame = $("tpl-viewer-frame");
-    if(frame) frame.srcdoc = "";
+
+    const ed = $("visual-editor");
+    if(ed){ ed.innerHTML = ""; ed.setAttribute("contenteditable", "false"); }
+
+    const codeArea = $("tpl-viewer-code");
     if(codeArea) codeArea.value = "";
 
     currentTemplate = null;
     currentTemplateGuildId = null;
     templateInitialContent = "";
     templateCanEdit = false;
+    currentEditorKind = "html";
+    currentSheetRows = null;
     document.body.style.overflow = "";
-    setTemplateHint("", "");
+    setEditorStatus("", "");
 }
 
-async function saveTemplateEdits(){
+function restoreInitialEditorState(){
+    if(currentEditorKind === "sheet"){
+        try{ currentSheetRows = JSON.parse(templateInitialContent || "[]"); }catch(e){ currentSheetRows = []; }
+        renderVisualSheet(currentSheetRows);
+    } else {
+        const codeArea = $("tpl-viewer-code");
+        if(codeArea) codeArea.value = templateInitialContent;
+        renderVisualFromHtml(templateInitialContent);
+    }
+    updateEditorDirtyState();
+    setEditorStatus("Изменения отменены", "");
+}
+
+/* ============================================================
+   РЕНДЕР ВИЗУАЛЬНОГО РЕДАКТОРА — HTML
+============================================================ */
+function renderVisualFromHtml(content){
+    const ed = $("visual-editor"); if(!ed) return;
+
+    const parsed = parseHtmlContent(content);
+    ed.innerHTML = "";
+
+    // Стили
+    const style = document.createElement("style");
+    style.dataset.editor = "1";
+    style.textContent = (parsed.styles ? parsed.styles + "\n" : "") + BASE_EDITOR_STYLES;
+    ed.appendChild(style);
+
+    // Контент
+    const tmp = document.createElement("div");
+    tmp.innerHTML = parsed.bodyContent;
+    while(tmp.firstChild){
+        ed.appendChild(tmp.firstChild);
+    }
+
+    ed.setAttribute("contenteditable", templateCanEdit ? "true" : "false");
+    ed.oninput = () => updateEditorDirtyState();
+}
+
+/* Собрать HTML из визуального редактора */
+function collectHtmlFromVisual(){
+    const ed = $("visual-editor"); if(!ed) return "";
+    const clone = ed.cloneNode(true);
+    clone.querySelectorAll('style[data-editor="1"]').forEach(s => s.remove());
+    return clone.innerHTML.trim();
+}
+
+/* ============================================================
+   РЕНДЕР ВИЗУАЛЬНОГО РЕДАКТОРА — SHEET
+============================================================ */
+function renderVisualSheet(rows){
+    const ed = $("visual-editor"); if(!ed) return;
+    ed.innerHTML = "";
+
+    const style = document.createElement("style");
+    style.dataset.editor = "1";
+    style.textContent = BASE_EDITOR_STYLES;
+    ed.appendChild(style);
+
+    if(!rows || rows.length === 0){
+        rows = [[""]];
+        currentSheetRows = rows;
+    }
+
+    const table = document.createElement("table");
+    const maxCols = Math.max(...rows.map(r => r.length), 1);
+
+    // Первая строка — как заголовок
+    rows.forEach((row, ri) => {
+        const tr = document.createElement("tr");
+        for(let ci = 0; ci < maxCols; ci++){
+            const cell = document.createElement(ri === 0 ? "th" : "td");
+            cell.textContent = row[ci] == null ? "" : String(row[ci]);
+            cell.contentEditable = templateCanEdit ? "true" : "false";
+            cell.dataset.row = String(ri);
+            cell.dataset.col = String(ci);
+            tr.appendChild(cell);
+        }
+        table.appendChild(tr);
+    });
+
+    ed.appendChild(table);
+    ed.setAttribute("contenteditable", "false"); // Редактируем ячейки, не div
+
+    ed.oninput = () => updateEditorDirtyState();
+}
+
+/* Собрать данные из таблицы sheet */
+function collectSheetDataFromVisual(){
+    const ed = $("visual-editor"); if(!ed) return [];
+    const table = ed.querySelector("table"); if(!table) return [];
+    const rows = [];
+    table.querySelectorAll("tr").forEach(tr => {
+        const row = [];
+        tr.querySelectorAll("th,td").forEach(cell => {
+            row.push(cell.textContent);
+        });
+        rows.push(row);
+    });
+    return rows;
+}
+
+/* ============================================================
+   КНОПКИ ТАБЛИЦЫ (для HTML и sheet)
+============================================================ */
+function getEditableTable(){
+    const ed = $("visual-editor"); if(!ed) return null;
+    return ed.querySelector("table");
+}
+
+function tableAddRow(){
+    const table = getEditableTable();
+    if(!table){ setEditorStatus("Таблица не найдена", "err"); return; }
+    const firstRow = table.querySelector("tr");
+    const cols = firstRow ? firstRow.children.length : 3;
+    const tr = document.createElement("tr");
+    for(let i=0;i<cols;i++){
+        const td = document.createElement("td");
+        td.textContent = "";
+        td.contentEditable = templateCanEdit ? "true" : "false";
+        tr.appendChild(td);
+    }
+    table.appendChild(tr);
+    updateEditorDirtyState();
+}
+
+function tableDelRow(){
+    const table = getEditableTable();
+    if(!table) return;
+    const rows = table.querySelectorAll("tr");
+    if(rows.length <= 1){ setEditorStatus("Нельзя удалить единственную строку", "err"); return; }
+    table.removeChild(rows[rows.length - 1]);
+    updateEditorDirtyState();
+}
+
+function tableAddCol(){
+    const table = getEditableTable();
+    if(!table) return;
+    const isFirstHead = !!table.querySelector("thead");
+    const rows = table.querySelectorAll("tr");
+    rows.forEach((tr, idx) => {
+        const cell = document.createElement(isFirstHead ? (idx === 0 ? "th" : "td") : (idx === 0 ? "th" : "td"));
+        cell.textContent = "";
+        cell.contentEditable = templateCanEdit ? "true" : "false";
+        tr.appendChild(cell);
+    });
+    updateEditorDirtyState();
+}
+
+function tableDelCol(){
+    const table = getEditableTable();
+    if(!table) return;
+    const rows = table.querySelectorAll("tr");
+    if(rows.length === 0) return;
+    const cols = rows[0].children.length;
+    if(cols <= 1){ setEditorStatus("Нельзя удалить единственную колонку", "err"); return; }
+    rows.forEach(tr => {
+        if(tr.lastElementChild) tr.removeChild(tr.lastElementChild);
+    });
+    updateEditorDirtyState();
+}
+
+/* Действия для sheet-режима — используют те же функции, но результат сохраняем в currentSheetRows */
+function sheetAddRow(){
+    tableAddRow();
+    currentSheetRows = collectSheetDataFromVisual();
+}
+function sheetAddCol(){
+    tableAddCol();
+    currentSheetRows = collectSheetDataFromVisual();
+}
+function sheetDelRow(){
+    tableDelRow();
+    currentSheetRows = collectSheetDataFromVisual();
+}
+function sheetDelCol(){
+    tableDelCol();
+    currentSheetRows = collectSheetDataFromVisual();
+}
+
+/* ============================================================
+   DIRTY / STATUS
+============================================================ */
+function isEditorDirty(){
+    if(currentEditorKind === "sheet"){
+        const cur = JSON.stringify(collectSheetDataFromVisual());
+        return cur !== templateInitialContent;
+    }
+    // html/template
+    let cur;
+    if(currentEditorMode === "code"){
+        const codeArea = $("tpl-viewer-code");
+        cur = codeArea ? codeArea.value : "";
+    } else {
+        cur = collectHtmlFromVisual();
+    }
+    return cur.trim() !== (templateInitialContent || "").trim();
+}
+
+function updateEditorDirtyState(){
+    if(!templateCanEdit) return;
+    if(isEditorDirty()){
+        setEditorStatus("● Есть несохранённые изменения", "dirty");
+    } else {
+        setEditorStatus("", "");
+    }
+}
+
+/* ============================================================
+   СОХРАНЕНИЕ РЕДАКТОРА
+============================================================ */
+async function saveEditorChanges(){
     const user = await ensureAuth();
-    if(!user){ setTemplateHint("Нет авторизации", "err"); return; }
-    if(!currentTemplate){ setTemplateHint("Файл не найден", "err"); return; }
-    if(!templateCanEdit){ setTemplateHint("Нет прав на редактирование", "err"); return; }
+    if(!user){ setEditorStatus("Нет авторизации", "err"); return; }
+    if(!currentTemplate){ setEditorStatus("Файл не найден", "err"); return; }
+    if(!templateCanEdit){ setEditorStatus("Нет прав на редактирование", "err"); return; }
 
-    const codeArea = $("tpl-viewer-code");
-    if(!codeArea) return;
-    const newContent = codeArea.value;
-    if(!newContent || newContent.trim().length < 3){
-        setTemplateHint("Код слишком короткий", "err");
-        return;
-    }
-    if(newContent.length > 500000){
-        setTemplateHint("Слишком большой файл (макс 500 000 символов)", "err");
-        return;
-    }
+    setEditorStatus("Сохранение…", "");
 
-    setTemplateHint("Сохранение…", "");
-
-    /* ---- HTML-материал: перезаписываем файл в Storage ---- */
+    /* ---- Материал ---- */
     if(currentTemplate._source === "material"){
         const m = currentTemplate._material;
-        if(!m || !m.file_path){
-            setTemplateHint("Не найден путь к файлу", "err");
-            return;
+        if(!m || !m.file_path){ setEditorStatus("Не найден путь к файлу", "err"); return; }
+
+        let blob;
+        let contentType;
+
+        if(currentEditorKind === "sheet"){
+            const rows = collectSheetDataFromVisual();
+            const ext = fileExt(m.file_name || "");
+            if(ext === "csv" || ext === "tsv"){
+                const sep = ext === "tsv" ? "\t" : ",";
+                const text = rows.map(r => r.map(c => {
+                    const s = String(c == null ? "" : c);
+                    return (s.includes('"') || s.includes(sep) || s.includes("\n"))
+                        ? '"' + s.replace(/"/g, '""') + '"' : s;
+                }).join(sep)).join("\n");
+                blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+                contentType = "text/csv;charset=utf-8";
+            } else {
+                // XLSX
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(rows);
+                XLSX.utils.book_append_sheet(wb, ws, currentSheetName || "Sheet1");
+                const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+                blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+                contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            }
+        } else {
+            // HTML или template как материал .html
+            const newContent = buildFinalHtml();
+            blob = new Blob([newContent], { type: "text/html;charset=utf-8" });
+            contentType = "text/html;charset=utf-8";
         }
 
         try{
-            const blob = new Blob([newContent], { type: m.file_type || "text/html;charset=utf-8" });
-
             const up = await supabaseClient.storage
                 .from("guild-files")
-                .upload(m.file_path, blob, { upsert: true, contentType: "text/html;charset=utf-8" });
+                .upload(m.file_path, blob, { upsert: true, contentType });
 
             if(up.error){
                 errLog("MATERIAL SAVE", up.error.message);
-                setTemplateHint("Ошибка сохранения: " + up.error.message, "err");
+                setEditorStatus("Ошибка: " + up.error.message, "err");
                 return;
             }
 
             const { data: pub } = supabaseClient.storage.from("guild-files").getPublicUrl(m.file_path);
             const newUrl = pub.publicUrl + "?t=" + Date.now();
 
-            const upd = await supabaseClient
-                .from("guild_materials")
+            await supabaseClient.from("guild_materials")
                 .update({ file_url: newUrl, file_size: blob.size })
-                .eq("id", m.id)
-                .select()
-                .single();
-
-            if(upd.error){
-                errLog("MATERIAL DB UPDATE", upd.error.message);
-            }
+                .eq("id", m.id);
 
             m.file_url = newUrl;
             m.file_size = blob.size;
 
-            templateInitialContent = newContent;
-            setTemplateHint("✓ Сохранено", "saved");
-            setTimeout(() => setTemplateHint("", ""), 2200);
+            if(currentEditorKind === "sheet"){
+                templateInitialContent = JSON.stringify(collectSheetDataFromVisual());
+            } else {
+                templateInitialContent = buildFinalHtml();
+            }
+
+            setEditorStatus("✓ Сохранено", "ok");
+            setTimeout(() => setEditorStatus("", ""), 2200);
 
             if(currentGuildId){
-                setTimeout(() => {
-                    openGuildOverlayFor(currentGuildId).catch(e => errLog(e));
-                }, 400);
+                setTimeout(() => openGuildOverlayFor(currentGuildId).catch(e => errLog(e)), 400);
             }
         }catch(e){
             errLog("MATERIAL SAVE EXC", e);
-            setTemplateHint("Ошибка: " + (e.message || ""), "err");
+            setEditorStatus("Ошибка: " + (e.message || ""), "err");
         }
         return;
     }
 
     /* ---- Обычный шаблон ---- */
-    if(!currentTemplateGuildId){ setTemplateHint("Гильдия не найдена", "err"); return; }
+    if(!currentTemplateGuildId){ setEditorStatus("Гильдия не найдена", "err"); return; }
+
+    const newContent = buildFinalHtml();
 
     const upd = await supabaseClient
         .from("templates")
@@ -2023,20 +2288,53 @@ async function saveTemplateEdits(){
         .single();
 
     if(upd.error){
-        errLog("SAVE TEMPLATE EDITS", upd.error.message);
-        setTemplateHint("Ошибка: " + upd.error.message, "err");
+        errLog("SAVE TEMPLATE", upd.error.message);
+        setEditorStatus("Ошибка: " + upd.error.message, "err");
         return;
     }
 
-    currentTemplate = Object.assign({}, currentTemplate, upd.data || { content: newContent });
     templateInitialContent = newContent;
+    setEditorStatus("✓ Сохранено", "ok");
+    setTimeout(() => setEditorStatus("", ""), 2200);
+}
 
-    setTemplateHint("✓ Сохранено", "saved");
-    setTimeout(() => setTemplateHint("", ""), 2200);
+/* Собираем финальный HTML для сохранения */
+function buildFinalHtml(){
+    // Если в режиме «Код» — берём textarea
+    if(currentEditorMode === "code"){
+        const codeArea = $("tpl-viewer-code");
+        return codeArea ? codeArea.value : "";
+    }
+
+    // Иначе из визуального
+    const body = collectHtmlFromVisual();
+
+    // Попытаемся сохранить как полный документ, если исходник был полным
+    const original = templateInitialContent || "";
+    const isFull = /<!doctype/i.test(original) || /<html/i.test(original);
+
+    if(!isFull){
+        return body;
+    }
+
+    const parsed = parseHtmlContent(original);
+    const styles = parsed.styles || "";
+    return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+${styles}
+</style>
+</head>
+<body>
+${body}
+</body>
+</html>`;
 }
 
 /* ============================================================
-   FILE VIEWER
+   FILE VIEWER — для НЕ-html и НЕ-sheet файлов
 ============================================================ */
 function initFileViewer(){
     const close = $("file-viewer-close");
@@ -2070,29 +2368,27 @@ async function openFileViewer(m){
 
     const kind = fileViewerKind(m.file_name, m.file_type);
 
-    /* ---- HTML-файлы открываем в редакторе ---- */
+    /* ---- HTML → редактор содержимого ---- */
     if(kind === "html"){
-        openHtmlEditorFromMaterial(m);
+        await openHtmlEditorFromMaterial(m);
         return;
     }
 
+    /* ---- Таблицы → редактор содержимого ---- */
+    if(kind === "sheet"){
+        await openSheetEditorFromMaterial(m);
+        return;
+    }
+
+    /* ---- Остальное — как раньше ---- */
     title.textContent = m.title || m.file_name || "Файл";
     dl.dataset.url = m.file_url;
     dl.dataset.name = m.file_name || "";
 
     wrap.classList.remove("hidden");
 
-    const showLoading = (text) => {
-        body.innerHTML =
-            "<div class='viewer-fallback'>" +
-                "<span class='big'>⏳</span>" +
-                "<p>" + escapeHtml(text) + "</p>" +
-            "</div>";
-    };
-
     const showError = (text) => {
-        body.innerHTML =
-            "<div class='viewer-fallback'>" +
+        body.innerHTML = "<div class='viewer-fallback'>" +
                 "<span class='big'>📎</span>" +
                 "<p>" + text + "</p>" +
             "</div>";
@@ -2101,8 +2397,7 @@ async function openFileViewer(m){
         btn.type = "button";
         btn.textContent = "⬇ Скачать файл";
         btn.onclick = () => downloadFileByUrl(m.file_url, m.file_name);
-        const wrapEl = body.querySelector(".viewer-fallback");
-        if(wrapEl) wrapEl.appendChild(btn);
+        body.querySelector(".viewer-fallback")?.appendChild(btn);
     };
 
     if(kind === "image"){
@@ -2119,9 +2414,7 @@ async function openFileViewer(m){
     if(kind === "video"){
         body.innerHTML = "";
         const v = document.createElement("video");
-        v.src = m.file_url;
-        v.controls = true;
-        v.playsInline = true;
+        v.src = m.file_url; v.controls = true; v.playsInline = true;
         v.onerror = () => showError("Не удалось загрузить видео.");
         body.appendChild(v);
         return;
@@ -2130,8 +2423,7 @@ async function openFileViewer(m){
     if(kind === "audio"){
         body.innerHTML = "";
         const a = document.createElement("audio");
-        a.src = m.file_url;
-        a.controls = true;
+        a.src = m.file_url; a.controls = true;
         a.onerror = () => showError("Не удалось загрузить аудио.");
         body.appendChild(a);
         return;
@@ -2147,12 +2439,11 @@ async function openFileViewer(m){
     }
 
     if(kind === "text"){
-        showLoading("Загрузка текста…");
+        body.innerHTML = "<div class='viewer-fallback'><span class='big'>⏳</span><p>Загрузка текста…</p></div>";
         try{
             const res = await fetch(m.file_url, { referrerPolicy: "no-referrer" });
             if(!res.ok) throw new Error("HTTP " + res.status);
             const text = await res.text();
-
             body.innerHTML = "";
             const pre = document.createElement("pre");
             pre.style.cssText =
@@ -2165,17 +2456,14 @@ async function openFileViewer(m){
                 "box-shadow:0 20px 60px rgba(0,0,0,.4);";
             pre.textContent = text;
             body.appendChild(pre);
-        }catch(e){
-            errLog("TEXT VIEW", e);
-            showError("Не удалось загрузить текст: " + escapeHtml(e.message || ""));
-        }
+        }catch(e){ showError("Не удалось загрузить текст."); }
         return;
     }
 
     showError("Предпросмотр для этого типа файла недоступен.<br>Скачайте файл, чтобы открыть его.");
 }
 
-/* Открывает HTML-материал в редакторе */
+/* ---- Открыть HTML-материал в редакторе ---- */
 async function openHtmlEditorFromMaterial(m){
     const wrap = $("file-viewer");
     const body = $("file-viewer-body");
@@ -2184,11 +2472,7 @@ async function openHtmlEditorFromMaterial(m){
 
     title.textContent = m.title || m.file_name || "HTML-файл";
     wrap.classList.remove("hidden");
-    body.innerHTML =
-        "<div class='viewer-fallback'>" +
-            "<span class='big'>⏳</span>" +
-            "<p>Загрузка HTML…</p>" +
-        "</div>";
+    body.innerHTML = "<div class='viewer-fallback'><span class='big'>⏳</span><p>Загрузка HTML…</p></div>";
 
     try{
         const res = await fetch(m.file_url, { referrerPolicy: "no-referrer" });
@@ -2203,7 +2487,7 @@ async function openHtmlEditorFromMaterial(m){
         wrap.classList.add("hidden");
         body.innerHTML = "";
 
-        const tplLike = {
+        openTemplateEditor({
             id: m.id,
             guild_id: guildId,
             title: m.title || m.file_name || "HTML-материал",
@@ -2212,23 +2496,81 @@ async function openHtmlEditorFromMaterial(m){
             uploaded_by: m.uploaded_by,
             _source: "material",
             _material: m
-        };
-
-        openTemplateEditor(tplLike, guildId, canEdit, "material");
+        }, guildId, canEdit, "material");
     }catch(e){
         errLog("HTML VIEW", e);
-        body.innerHTML =
-            "<div class='viewer-fallback'>" +
-                "<span class='big'>📎</span>" +
-                "<p>Не удалось загрузить HTML: " + escapeHtml(e.message || "") + "</p>" +
-            "</div>";
+        body.innerHTML = "<div class='viewer-fallback'><span class='big'>📎</span><p>Не удалось загрузить HTML: " + escapeHtml(e.message || "") + "</p></div>";
         const btn = document.createElement("button");
-        btn.className = "main-button";
-        btn.type = "button";
+        btn.className = "main-button"; btn.type = "button";
         btn.textContent = "⬇ Скачать файл";
         btn.onclick = () => downloadFileByUrl(m.file_url, m.file_name);
-        const wrapEl = body.querySelector(".viewer-fallback");
-        if(wrapEl) wrapEl.appendChild(btn);
+        body.querySelector(".viewer-fallback")?.appendChild(btn);
+    }
+}
+
+/* ---- Открыть Excel/CSV-материал в редакторе ---- */
+async function openSheetEditorFromMaterial(m){
+    const wrap = $("file-viewer");
+    const body = $("file-viewer-body");
+    const title = $("file-viewer-title");
+    if(!wrap || !body) return;
+
+    title.textContent = m.title || m.file_name || "Таблица";
+    wrap.classList.remove("hidden");
+    body.innerHTML = "<div class='viewer-fallback'><span class='big'>⏳</span><p>Загрузка таблицы…</p></div>";
+
+    try{
+        const res = await fetch(m.file_url, { referrerPolicy: "no-referrer" });
+        if(!res.ok) throw new Error("HTTP " + res.status);
+        const arrayBuffer = await res.arrayBuffer();
+
+        const ext = fileExt(m.file_name || "");
+        let rows = [];
+        let sheetName = "Sheet1";
+
+        if(ext === "csv" || ext === "tsv"){
+            const text = new TextDecoder("utf-8").decode(arrayBuffer);
+            const wb = XLSX.read(text, { type: "string", raw: false });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            sheetName = wb.SheetNames[0] || "Sheet1";
+            rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false });
+        } else {
+            const wb = XLSX.read(arrayBuffer, { type: "array" });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            sheetName = wb.SheetNames[0] || "Sheet1";
+            rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false });
+        }
+
+        if(!rows || rows.length === 0) rows = [[""]];
+
+        const guildId = currentGuildId;
+        const amManager = guildId ? isManager(guildId) : false;
+        const isUploader = m.uploaded_by === currentUser.id;
+        const canEdit = amManager || isUploader || isAdmin();
+
+        wrap.classList.add("hidden");
+        body.innerHTML = "";
+
+        openTemplateEditor({
+            id: m.id,
+            guild_id: guildId,
+            title: m.title || m.file_name || "Таблица",
+            content: "",
+            _sheetData: rows,
+            _sheetName: sheetName,
+            created_at: m.created_at,
+            uploaded_by: m.uploaded_by,
+            _source: "material",
+            _material: m
+        }, guildId, canEdit, "sheet");
+    }catch(e){
+        errLog("SHEET VIEW", e);
+        body.innerHTML = "<div class='viewer-fallback'><span class='big'>📎</span><p>Не удалось загрузить таблицу: " + escapeHtml(e.message || "") + "</p></div>";
+        const btn = document.createElement("button");
+        btn.className = "main-button"; btn.type = "button";
+        btn.textContent = "⬇ Скачать файл";
+        btn.onclick = () => downloadFileByUrl(m.file_url, m.file_name);
+        body.querySelector(".viewer-fallback")?.appendChild(btn);
     }
 }
 
@@ -2392,9 +2734,7 @@ async function saveProfileChanges(){
     setProfileStatus("Сохранение…", "loading");
 
     try{
-        const update = await supabaseClient
-            .from("profiles").update(payload).eq("id", user.id).select().single();
-
+        const update = await supabaseClient.from("profiles").update(payload).eq("id", user.id).select().single();
         if(update.error){
             const m = (update.error.message||"").match(/Could not find the '([^']+)' column/);
             if(m && m[1]){
@@ -2402,8 +2742,7 @@ async function saveProfileChanges(){
                 availableColumns.delete(bad);
                 applySchemaVisibility();
                 delete payload[bad];
-                const retry = await supabaseClient.from("profiles")
-                    .update(payload).eq("id", user.id).select().single();
+                const retry = await supabaseClient.from("profiles").update(payload).eq("id", user.id).select().single();
                 if(retry.error){ setProfileStatus("Ошибка: " + retry.error.message, "err"); savingProfile = false; return; }
                 currentProfile = retry.data || Object.assign({}, currentProfile, payload);
                 applyProfileToUI(currentProfile);
@@ -2459,8 +2798,7 @@ async function loadNews(){
         (limit ? list.slice(0, limit) : list).forEach(item => {
             const div = document.createElement("div");
             div.className = "news-item";
-            div.innerHTML =
-                "<h3>" + escapeHtml(item.title || "") + "</h3>" +
+            div.innerHTML = "<h3>" + escapeHtml(item.title || "") + "</h3>" +
                 "<p>" + escapeHtml(item.text || "") + "</p>";
             frag.appendChild(div);
         });
@@ -2490,9 +2828,7 @@ async function sendMessage(){
     const text = input.value.trim(); if(!text) return;
 
     const nickname = (currentProfile && currentProfile.nickname) || "Player";
-    const result = await supabaseClient.from("messages").insert({
-        user_id: user.id, nickname, text
-    });
+    const result = await supabaseClient.from("messages").insert({ user_id: user.id, nickname, text });
     if(result.error){ errLog("MSG INSERT", result.error.message); alert("Ошибка: " + result.error.message); return; }
     input.value = "";
     loadHomeRecentMessages().catch(e => errLog(e));
@@ -2510,8 +2846,7 @@ async function loadMessages(){
     const userIds = Array.from(new Set((data || []).map(m => m.user_id).filter(Boolean)));
     const profiles = {};
     if(userIds.length){
-        const pRes = await supabaseClient
-            .from("profiles").select("id, nickname, avatar_url").in("id", userIds);
+        const pRes = await supabaseClient.from("profiles").select("id, nickname, avatar_url").in("id", userIds);
         (pRes.data || []).forEach(p => profiles[p.id] = p);
     }
     box.innerHTML = "";
@@ -2571,9 +2906,7 @@ function startChatRealtime(){
             { event: "INSERT", schema: "public", table: "messages" },
             async (payload) => {
                 const m = payload.new;
-                const pRes = await supabaseClient
-                    .from("profiles").select("nickname, avatar_url")
-                    .eq("id", m.user_id).maybeSingle();
+                const pRes = await supabaseClient.from("profiles").select("nickname, avatar_url").eq("id", m.user_id).maybeSingle();
                 appendMessage(m, pRes.data);
                 loadHomeRecentMessages().catch(e => errLog(e));
             })
@@ -2603,8 +2936,7 @@ async function createRoom(){
     if(!name){ alert("Введите название"); return; }
 
     setRoomStatus("Создание…");
-    const result = await supabaseClient.from("conference_rooms")
-        .insert({ name, description: description || null }).select().single();
+    const result = await supabaseClient.from("conference_rooms").insert({ name, description: description || null }).select().single();
     if(result.error){ setRoomStatus("Ошибка: " + result.error.message, "err"); return; }
     $("room-name-input").value = "";
     $("room-desc-input").value = "";
@@ -2620,9 +2952,7 @@ async function loadRooms(){
 
     const usersRes = await supabaseClient.from("conference_users").select("room_id");
     const counts = {};
-    (usersRes.data || []).forEach(u => {
-        counts[u.room_id] = (counts[u.room_id] || 0) + 1;
-    });
+    (usersRes.data || []).forEach(u => { counts[u.room_id] = (counts[u.room_id] || 0) + 1; });
     if(rooms.length === 0){ box.innerHTML = "<p style='color:#888'>Комнат нет. Создайте первую!</p>"; return; }
     const sorted = rooms.slice().sort((a,b) => (counts[b.id]||0)-(counts[a.id]||0));
     box.innerHTML = "";
@@ -2630,8 +2960,7 @@ async function loadRooms(){
         const count = counts[room.id] || 0;
         const card = document.createElement("div");
         card.className = "room-card";
-        card.innerHTML =
-            "<h3>🎙 " + escapeHtml(room.name || "Комната") + "</h3>" +
+        card.innerHTML = "<h3>🎙 " + escapeHtml(room.name || "Комната") + "</h3>" +
             "<p>" + escapeHtml(room.description || "") + "</p>" +
             "<p>👥 " + count + (count===1 ? " участник" : " участников") + "</p>";
         const btn = document.createElement("button");
@@ -2674,8 +3003,7 @@ async function joinRoom(room){
 }
 function closeMiroTalkRoom(){
     const c = $("mirotalk-container"); if(!c) return;
-    c.innerHTML =
-        "<div class='mirotalk-placeholder'>" +
+    c.innerHTML = "<div class='mirotalk-placeholder'>" +
         "<div class='mirotalk-placeholder-icon'>🎥</div>" +
         "<p>Выберите комнату из списка слева, чтобы начать конференцию</p>" +
         "</div>";
@@ -2683,10 +3011,8 @@ function closeMiroTalkRoom(){
 async function leaveRoom(){
     const user = await ensureAuth();
     if(currentRoom && user){
-        try{
-            await supabaseClient.from("conference_users").delete()
-                .eq("user_id", user.id).eq("room_id", currentRoom.id);
-        }catch(e){ errLog("LEAVE DB", e); }
+        try{ await supabaseClient.from("conference_users").delete().eq("user_id", user.id).eq("room_id", currentRoom.id); }
+        catch(e){ errLog("LEAVE DB", e); }
     }
     closeMiroTalkRoom();
     setText("current-room-title", "Комната не выбрана");
@@ -2705,7 +3031,5 @@ window.addEventListener("beforeunload", () => {
                 .eq("user_id", currentUser.id).eq("room_id", currentRoom.id);
         }catch(e){}
     }
-    if(presenceChannel){
-        try{ presenceChannel.untrack(); }catch(e){}
-    }
+    if(presenceChannel){ try{ presenceChannel.untrack(); }catch(e){} }
 });
