@@ -1,7 +1,8 @@
 /* =====================================================
    GAME PLATFORM — app.js (FULL)
    Auth + Profile + Chat + Conference + Online
-   + Games + Guilds (overlay, roles, materials, templates)
+   + Games + Guilds (overlay, roles, materials)
+   + Templates (HTML editor with live preview)
 ===================================================== */
 
 const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -43,6 +44,13 @@ let gamesAvailable = true;
 let gameIconTimer = null;
 
 let templatesAvailable = true;
+
+/* Редактор шаблонов */
+let currentTemplate = null;          // { id, guild_id, title, content, ... }
+let currentTemplateGuildId = null;
+let templatePreviewTimer = null;
+let templateInitialContent = "";
+let templateCanEdit = false;
 
 /* ============================================================
    ХЕЛПЕРЫ
@@ -172,20 +180,6 @@ function fileExt(name){
     const m = n.match(/\.([a-z0-9]+)$/i);
     return m ? m[1].toLowerCase() : "bin";
 }
-function fileIconByName(name, type){
-    const n = (name || "").toLowerCase();
-    const t = (type || "").toLowerCase();
-    if(t.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/.test(n)) return "🖼";
-    if(t.startsWith("video/") || /\.(mp4|webm|mov|avi|mkv)$/.test(n)) return "🎬";
-    if(t.startsWith("audio/") || /\.(mp3|wav|ogg|flac|m4a)$/.test(n)) return "🎵";
-    if(/\.(zip|rar|7z|tar|gz)$/.test(n)) return "🗜";
-    if(/\.(pdf)$/.test(n)) return "📕";
-    if(/\.(doc|docx)$/.test(n)) return "📄";
-    if(/\.(xls|xlsx|csv)$/.test(n)) return "📊";
-    if(/\.(txt|md|log)$/.test(n)) return "📝";
-    if(/\.(json|xml|yml|yaml|ini|cfg)$/.test(n)) return "⚙";
-    return "📎";
-}
 function fileViewerKind(name, type){
     const n = (name || "").toLowerCase();
     const t = (type || "").toLowerCase();
@@ -194,6 +188,51 @@ function fileViewerKind(name, type){
     if(t.startsWith("audio/") || /\.(mp3|wav|ogg|flac|m4a)$/.test(n)) return "audio";
     if(t === "application/pdf" || /\.pdf$/.test(n)) return "pdf";
     return "other";
+}
+
+/* ============================================================
+   ПОДГОТОВКА HTML ДЛЯ ПРЕВЬЮ
+   Оборачиваем фрагменты, чтобы работали таблицы и стили.
+============================================================ */
+function preparePreviewHtml(content){
+    if(!content || !content.trim()){
+        return "<!DOCTYPE html><html><head><meta charset='utf-8'></head>" +
+               "<body style='margin:0;padding:40px;font-family:Segoe UI,Arial,sans-serif;color:#98a2b5;text-align:center'>" +
+               "Пустой шаблон</body></html>";
+    }
+
+    const lower = content.toLowerCase();
+    const isFullDoc = lower.indexOf("<!doctype") !== -1 || lower.indexOf("<html") !== -1;
+
+    if(isFullDoc) return content;
+
+    // Фрагмент. Оборачиваем в минимальный каркас.
+    let body = content;
+
+    // Если это строки таблицы — обернём в <table> с базовыми стилями
+    const trimmed = content.trim();
+    const looksLikeRows = /^<tr[\s>]/i.test(trimmed) || /^<thead[\s>]/i.test(trimmed) || /^<tbody[\s>]/i.test(trimmed);
+
+    const baseStyles =
+        "body{margin:0;padding:20px;font-family:'Segoe UI',Arial,sans-serif;color:#1a2332;background:#fff;line-height:1.4}" +
+        "table{border-collapse:collapse;width:100%;font-size:14px}" +
+        "th,td{border:1px solid #d8e0ee;padding:8px 10px;text-align:left}" +
+        "th{background:#2f7cff;color:#fff;font-weight:700}" +
+        "tr:nth-child(even) td{background:#f8faff}" +
+        ".num{width:30px;text-align:center;color:#98a2b5;font-weight:700}" +
+        ".nick{font-weight:700}" +
+        ".guild{color:#4a5568}" +
+        ".faction-cell{color:#fff;font-weight:700;text-align:center;padding:6px 10px;white-space:nowrap}" +
+        ".f-england{background:#a31c1c}.f-france{background:#1c3fa3}.f-spain{background:#a37212}" +
+        ".f-holland{background:#a35712}.f-portugal{background:#12663a}.f-pirates{background:#2a2a2a}";
+
+    if(looksLikeRows){
+        body = "<table>" + content + "</table>";
+    }
+
+    return "<!DOCTYPE html><html><head><meta charset='utf-8'>" +
+           "<style>" + baseStyles + "</style></head>" +
+           "<body>" + body + "</body></html>";
 }
 
 /* ============================================================
@@ -1246,7 +1285,7 @@ async function changeRole(guildId, userId, newRole){
     await openGuildOverlayFor(guildId);
 }
 async function transferOwnership(guildId, newOwnerId, nickname){
-    if(!confirm("Передать владение " + (nickname || "игроку") + "?")) return;
+    if(!confirm("Передать владение " + (nickname || "игроку") + "? Вы станете заместителем.")) return;
     const user = await ensureAuth();
     if(!user) return;
 
@@ -1346,7 +1385,7 @@ async function uploadGuildIcon(guildId, file){
 }
 
 /* ============================================================
-   МАТЕРИАЛЫ (без иконок-скрепок)
+   МАТЕРИАЛЫ
 ============================================================ */
 async function renderMaterialsTab(guildId, amManager){
     const box = $("guild-tab-materials"); if(!box) return;
@@ -1546,7 +1585,7 @@ async function deleteMaterial(guildId, mat){
 }
 
 /* ============================================================
-   ШАБЛОНЫ (внутри гильдии)
+   ШАБЛОНЫ (список внутри гильдии)
 ============================================================ */
 async function renderTemplatesTab(guildId, amManager){
     const box = $("guild-tab-templates"); if(!box) return;
@@ -1561,7 +1600,8 @@ async function renderTemplatesTab(guildId, amManager){
             <div class="tpl-ai-hint-title">Как запросить шаблон у ИИ</div>
             <div class="tpl-ai-hint-text">
                 Скопируйте промпт, замените данные на свои, отправьте ИИ (ChatGPT, Claude и т.д.).
-                ИИ вернёт готовый HTML-код — вставьте его в поле «HTML-код».
+                ИИ вернёт готовый HTML-код — вставьте его в поле «HTML-код». Менеджеры гильдии могут
+                редактировать код прямо в редакторе шаблона.
             </div>
             <div class="tpl-ai-prompt" id="tpl-ai-prompt-box">Создай HTML-документ для World of Sea Battle: список друзей и врагов. Таблица с колонками: №, Никнейм, Гильдия, Фракция. Фракции выдели цветом и эмодзи-флагом. Заголовки: «🟢 Друзья» — синий, «🔴 Враги» — красный. Стиль — белая 3D-тема, скруглённые углы, тени.</div>
             <button class="main-button small" id="tpl-copy-ai" type="button">📋 Скопировать промпт</button>
@@ -1649,7 +1689,7 @@ async function renderTemplatesTab(guildId, amManager){
             "<div class='tpl-card-desc'>" + escapeHtml(t.description || preview || "Без описания") + "</div>" +
             "<div class='tpl-card-meta'>" +
                 "<span>📅 " + escapeHtml(date) + "</span>" +
-                "<span>🔒 только просмотр</span>" +
+                "<span>📝 HTML</span>" +
             "</div>" +
             "<div class='tpl-card-actions'></div>";
 
@@ -1657,8 +1697,8 @@ async function renderTemplatesTab(guildId, amManager){
         const openBtn = document.createElement("button");
         openBtn.className = "main-button";
         openBtn.type = "button";
-        openBtn.textContent = "👁 Открыть";
-        openBtn.onclick = () => openTemplateViewer(t);
+        openBtn.textContent = amManager ? "✏️ Открыть и править" : "👁 Открыть";
+        openBtn.onclick = () => openTemplateEditor(t, guildId, amManager);
         actions.appendChild(openBtn);
 
         if(canDelete){
@@ -1739,41 +1779,179 @@ async function deleteTemplate(guildId, t){
 }
 
 /* ============================================================
-   TEMPLATE VIEWER
+   РЕДАКТОР ШАБЛОНОВ (HTML + live preview)
 ============================================================ */
 function initTemplateViewer(){
-    const closeViewer = $("tpl-viewer-close");
-    if(closeViewer) closeViewer.onclick = closeTemplateViewer;
+    const closeBtn = $("tpl-viewer-close");
+    const saveBtn = $("tpl-viewer-save");
+    const resetBtn = $("tpl-viewer-reset");
+    const codeArea = $("tpl-viewer-code");
+
+    if(closeBtn) closeBtn.onclick = () => closeTemplateViewer();
+    if(saveBtn) saveBtn.onclick = saveTemplateEdits;
+    if(resetBtn) resetBtn.onclick = () => {
+        if(!templateCanEdit) return;
+        if(!codeArea) return;
+        if(!confirm("Отменить все изменения и вернуть исходный код?")) return;
+        codeArea.value = templateInitialContent;
+        updateTemplatePreview();
+        setTemplateHint("Изменения отменены", "");
+    };
+
+    if(codeArea){
+        codeArea.addEventListener("input", () => {
+            if(templatePreviewTimer) clearTimeout(templatePreviewTimer);
+            templatePreviewTimer = setTimeout(updateTemplatePreview, 400);
+            updateTemplateDirtyHint();
+        });
+
+        // Tab внутри textarea = 2 пробела, а не смена фокуса
+        codeArea.addEventListener("keydown", (e) => {
+            if(e.key === "Tab" && !e.shiftKey){
+                e.preventDefault();
+                const start = codeArea.selectionStart;
+                const end = codeArea.selectionEnd;
+                const v = codeArea.value;
+                codeArea.value = v.substring(0, start) + "  " + v.substring(end);
+                codeArea.selectionStart = codeArea.selectionEnd = start + 2;
+                codeArea.dispatchEvent(new Event("input"));
+            }
+        });
+    }
 }
 
-function openTemplateViewer(t){
-    const wrap = $("template-viewer");
+function setTemplateHint(text, cls){
+    const el = $("tpl-editor-hint");
+    if(!el) return;
+    el.textContent = text || "";
+    el.className = "tpl-split-hint" + (cls ? " " + cls : "");
+}
+
+function updateTemplateDirtyHint(){
+    const code = $("tpl-viewer-code");
+    if(!code) return;
+    const isDirty = code.value !== templateInitialContent;
+    if(isDirty){
+        setTemplateHint("● не сохранено", "dirty");
+    } else {
+        setTemplateHint("", "");
+    }
+}
+
+function updateTemplatePreview(){
+    const frame = $("tpl-viewer-frame");
+    const code = $("tpl-viewer-code");
+    if(!frame || !code) return;
+
+    const html = preparePreviewHtml(code.value);
+    frame.srcdoc = html;
+}
+
+function openTemplateEditor(t, guildId, canEdit){
+    currentTemplate = t;
+    currentTemplateGuildId = guildId;
+    templateCanEdit = !!canEdit;
+    templateInitialContent = t.content || "";
+
     const titleEl = $("tpl-viewer-title");
     const subEl = $("tpl-viewer-sub");
-    const frame = $("tpl-viewer-frame");
-    if(!wrap || !frame) return;
+    const codeArea = $("tpl-viewer-code");
+    const saveBtn = $("tpl-viewer-save");
+    const resetBtn = $("tpl-viewer-reset");
+    const modeBadge = $("tpl-mode-badge");
 
-    titleEl.textContent = t.title || "Шаблон";
+    if(titleEl) titleEl.textContent = t.title || "Шаблон";
 
     const date = t.created_at
         ? new Date(t.created_at).toLocaleDateString("ru-RU", { day:"2-digit", month:"long", year:"numeric" })
         : "";
+    if(subEl) subEl.textContent = "📄 Шаблон гильдии" + (date ? " · " + date : "");
 
-    subEl.textContent = "📄 Шаблон гильдии" + (date ? " · " + date : "");
+    if(codeArea){
+        codeArea.value = t.content || "";
+        codeArea.readOnly = !templateCanEdit;
+    }
 
-    // sandbox без разрешений — HTML рендерится, но JS/ссылки/формы не работают
-    frame.setAttribute("sandbox", "");
-    frame.srcdoc = t.content || "<html><body style='font-family:sans-serif;padding:40px;color:#888'>Пустой шаблон</body></html>";
+    if(modeBadge){
+        if(templateCanEdit){
+            modeBadge.textContent = "✏️ Режим редактирования";
+            modeBadge.classList.add("editing");
+        } else {
+            modeBadge.textContent = "🔒 Только просмотр";
+            modeBadge.classList.remove("editing");
+        }
+    }
 
-    wrap.classList.remove("hidden");
+    if(saveBtn) saveBtn.classList.toggle("hidden", !templateCanEdit);
+    if(resetBtn) resetBtn.classList.toggle("hidden", !templateCanEdit);
+
+    setTemplateHint("", "");
+
+    updateTemplatePreview();
+
+    const wrap = $("template-viewer");
+    if(wrap) wrap.classList.remove("hidden");
     document.body.style.overflow = "hidden";
 }
+
 function closeTemplateViewer(){
+    const codeArea = $("tpl-viewer-code");
+    if(templateCanEdit && codeArea && codeArea.value !== templateInitialContent){
+        if(!confirm("Есть несохранённые изменения. Закрыть без сохранения?")) return;
+    }
+
     const wrap = $("template-viewer");
     if(wrap) wrap.classList.add("hidden");
     const frame = $("tpl-viewer-frame");
     if(frame) frame.srcdoc = "";
+    if(codeArea) codeArea.value = "";
+
+    currentTemplate = null;
+    currentTemplateGuildId = null;
+    templateInitialContent = "";
+    templateCanEdit = false;
     document.body.style.overflow = "";
+    setTemplateHint("", "");
+}
+
+async function saveTemplateEdits(){
+    const user = await ensureAuth();
+    if(!user){ setTemplateHint("Нет авторизации", "err"); return; }
+    if(!currentTemplate || !currentTemplateGuildId){ setTemplateHint("Шаблон не найден", "err"); return; }
+    if(!templateCanEdit){ setTemplateHint("Нет прав на редактирование", "err"); return; }
+
+    const codeArea = $("tpl-viewer-code");
+    if(!codeArea) return;
+    const newContent = codeArea.value;
+    if(!newContent || newContent.trim().length < 5){
+        setTemplateHint("Код слишком короткий", "err");
+        return;
+    }
+    if(newContent.length > 500000){
+        setTemplateHint("Слишком большой шаблон (макс 500 000 символов)", "err");
+        return;
+    }
+
+    setTemplateHint("Сохранение…", "");
+
+    const upd = await supabaseClient
+        .from("templates")
+        .update({ content: newContent })
+        .eq("id", currentTemplate.id)
+        .select()
+        .single();
+
+    if(upd.error){
+        errLog("SAVE TEMPLATE EDITS", upd.error.message);
+        setTemplateHint("Ошибка: " + upd.error.message, "err");
+        return;
+    }
+
+    currentTemplate = upd.data || Object.assign({}, currentTemplate, { content: newContent });
+    templateInitialContent = newContent;
+
+    setTemplateHint("✓ Сохранено", "saved");
+    setTimeout(() => setTemplateHint("", ""), 2200);
 }
 
 /* ============================================================
