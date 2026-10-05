@@ -1,8 +1,8 @@
 /* =====================================================
    GAMEHUB ONLINE — app.js
    Auth + Profile + Chat + Conference + Online
-   + Games + Guilds + Templates
-   + Визуальный редактор (HTML + Excel/CSV)
+   + Games + Guilds (members, materials, templates, buttons)
+   + Визуальный редактор (HTML + Excel/CSV + Word)
    + Импорт таблиц и картинок с других сайтов
    + Правила в отдельном overlay
 ===================================================== */
@@ -59,6 +59,9 @@ let currentSheetName = "Sheet1";
 let importParsed = { tables: [], images: [] };
 let importMode = "url";
 
+let currentGuildButtonId = null;
+let gbModalState = { guildId: null, editing: null, type: "html", file: null, uploadedUrl: null, uploadedName: null };
+
 /* ============================================================
    ХЕЛПЕРЫ
 ============================================================ */
@@ -106,6 +109,11 @@ function setImportStatus(text, cls){
     const el = $("import-status"); if(!el) return;
     el.textContent = text || "";
     el.className = "import-status" + (cls ? " " + cls : "");
+}
+function setGbStatus(text, cls){
+    const el = $("gb-modal-status"); if(!el) return;
+    el.textContent = text || "";
+    el.className = "gb-modal-status" + (cls ? " " + cls : "");
 }
 function switchPage(pageName){
     document.querySelectorAll(".menu-button").forEach(b => {
@@ -797,7 +805,8 @@ function initGuildOverlay(){
     if(back) back.onclick = () => closeGuildOverlay();
     document.addEventListener("keydown", (e) => {
         if(e.key === "Escape"){
-            if($("file-viewer") && !$("file-viewer").classList.contains("hidden")) closeFileViewer();
+            if($("gb-modal") && !$("gb-modal").classList.contains("hidden")) closeGbModal();
+            else if($("file-viewer") && !$("file-viewer").classList.contains("hidden")) closeFileViewer();
             else if($("template-viewer") && !$("template-viewer").classList.contains("hidden")) closeTemplateViewer();
             else if($("guild-overlay") && !$("guild-overlay").classList.contains("hidden")) closeGuildOverlay();
         }
@@ -1036,12 +1045,14 @@ async function openGuildOverlayFor(guildId){
             <button class="guild-tab-btn ${currentGuildTab === "members" ? "active" : ""}" data-tab="members" type="button">👥 Участники (${approved.length})</button>
             <button class="guild-tab-btn ${currentGuildTab === "materials" ? "active" : ""}" data-tab="materials" type="button">📁 Материалы</button>
             <button class="guild-tab-btn ${currentGuildTab === "templates" ? "active" : ""}" data-tab="templates" type="button">📄 Шаблоны</button>
+            <button class="guild-tab-btn ${currentGuildTab === "buttons" ? "active" : ""}" data-tab="buttons" type="button">🔘 Разделы</button>
         </div>
 
         <div class="guild-tab-panel">
             <div class="guild-tab-content ${currentGuildTab === "members" ? "active" : ""}" id="guild-tab-members"></div>
             <div class="guild-tab-content ${currentGuildTab === "materials" ? "active" : ""}" id="guild-tab-materials"></div>
             <div class="guild-tab-content ${currentGuildTab === "templates" ? "active" : ""}" id="guild-tab-templates"></div>
+            <div class="guild-tab-content ${currentGuildTab === "buttons" ? "active" : ""}" id="guild-tab-buttons"></div>
         </div>
     `;
 
@@ -1075,6 +1086,9 @@ async function openGuildOverlayFor(guildId){
             body.querySelectorAll(".guild-tab-content").forEach(c => c.classList.remove("active"));
             const target = $("guild-tab-" + t);
             if(target) target.classList.add("active");
+            if(t === "buttons"){
+                renderGuildButtonsTab(guildId, amManager).catch(e => errLog(e));
+            }
         };
     });
 
@@ -1082,6 +1096,7 @@ async function openGuildOverlayFor(guildId){
     renderMembersTab(guildId, approved, pending, amManager, amOwner);
     await renderMaterialsTab(guildId, amManager);
     await renderTemplatesTab(guildId, amManager);
+    await renderGuildButtonsTab(guildId, amManager);
 }
 
 function renderMembersTab(guildId, approved, pending, amManager, amOwner){
@@ -1256,6 +1271,7 @@ async function dissolveGuild(guildId){
 
     await supabaseClient.from("guild_materials").delete().eq("guild_id", guildId);
     await supabaseClient.from("templates").delete().eq("guild_id", guildId);
+    await supabaseClient.from("guild_buttons").delete().eq("guild_id", guildId);
     await supabaseClient.from("guild_members").delete().eq("guild_id", guildId);
     const del = await supabaseClient.from("guilds").delete().eq("id", guildId);
     if(del.error){ alert("Ошибка: " + del.error.message); return; }
@@ -3166,6 +3182,562 @@ async function leaveRoom(){
     await loadRooms();
 }
 
+/* ============================================================
+   GUILD BUTTONS — кастомные разделы гильдии
+   До 10 кнопок, каждая с HTML / Excel / Word-контентом
+============================================================ */
+
+async function renderGuildButtonsTab(guildId, amManager){
+    const box = $("guild-tab-buttons"); if(!box) return;
+    box.innerHTML = "";
+
+    const { data, error } = await supabaseClient
+        .from("guild_buttons")
+        .select("*")
+        .eq("guild_id", guildId)
+        .order("position", { ascending: true })
+        .order("created_at", { ascending: true });
+
+    if(error){
+        errLog("GUILD BUTTONS LOAD", error.message);
+        box.innerHTML =
+            "<div class='dash-recent-empty'>Раздел «Разделы» требует таблицы <code>guild_buttons</code>.<br>" +
+            "Выполните SQL из инструкции в Supabase SQL Editor.</div>";
+        return;
+    }
+
+    const list = data || [];
+
+    if(currentGuildButtonId && !list.find(b => b.id === currentGuildButtonId)){
+        currentGuildButtonId = null;
+    }
+    if(!currentGuildButtonId && list.length > 0){
+        currentGuildButtonId = list[0].id;
+    }
+
+    const layout = document.createElement("div");
+    layout.className = "guild-buttons-layout";
+
+    // ---- Левая колонка: список кнопок ----
+    const sidebar = document.createElement("div");
+    sidebar.className = "guild-buttons-list";
+
+    const header = document.createElement("div");
+    header.className = "guild-buttons-header";
+    header.innerHTML =
+        "<span class='guild-buttons-header-title'>Разделы</span>" +
+        "<span class='guild-buttons-count'>" + list.length + " / 10</span>";
+    sidebar.appendChild(header);
+
+    if(list.length === 0){
+        const empty = document.createElement("div");
+        empty.className = "guild-buttons-empty";
+        empty.textContent = amManager
+            ? "Разделов пока нет. Создайте первый!"
+            : "Глава гильдии ещё не создал разделы.";
+        sidebar.appendChild(empty);
+    } else {
+        list.forEach(btn => {
+            const item = document.createElement("button");
+            item.type = "button";
+            item.className = "guild-button-item" + (btn.id === currentGuildButtonId ? " active" : "");
+            item.innerHTML =
+                "<span class='guild-button-item-icon'>" + guildBtnIcon(btn.source_type) + "</span>" +
+                "<span class='guild-button-item-title'>" + escapeHtml(btn.title || "Без названия") + "</span>";
+            item.onclick = () => {
+                currentGuildButtonId = btn.id;
+                renderGuildButtonsTab(guildId, amManager).catch(e => errLog(e));
+            };
+            sidebar.appendChild(item);
+        });
+    }
+
+    if(amManager && list.length < 10){
+        const addBtn = document.createElement("button");
+        addBtn.type = "button";
+        addBtn.className = "guild-buttons-add-btn";
+        addBtn.innerHTML = "➕ Добавить раздел";
+        addBtn.onclick = () => openGuildButtonModal(guildId, null, list.length);
+        sidebar.appendChild(addBtn);
+    } else if(amManager && list.length >= 10){
+        const lim = document.createElement("div");
+        lim.className = "guild-buttons-empty";
+        lim.textContent = "Достигнут лимит 10 разделов.";
+        sidebar.appendChild(lim);
+    }
+
+    layout.appendChild(sidebar);
+
+    // ---- Правая колонка: содержимое выбранной кнопки ----
+    const view = document.createElement("div");
+    view.className = "guild-buttons-view";
+
+    const current = list.find(b => b.id === currentGuildButtonId);
+
+    if(!current){
+        view.innerHTML = "<div class='guild-buttons-view-empty'>" +
+            "<span class='big'>🔘</span>" +
+            "Выберите раздел слева" +
+            "</div>";
+    } else {
+        const vHeader = document.createElement("div");
+        vHeader.className = "guild-buttons-view-header";
+
+        const vTitle = document.createElement("div");
+        vTitle.className = "guild-buttons-view-title";
+        vTitle.textContent = current.title || "Без названия";
+        vHeader.appendChild(vTitle);
+
+        if(amManager){
+            const actions = document.createElement("div");
+            actions.className = "guild-buttons-view-actions";
+
+            const editBtn = document.createElement("button");
+            editBtn.className = "main-button secondary";
+            editBtn.type = "button";
+            editBtn.textContent = "✏️ Изменить";
+            editBtn.onclick = () => openGuildButtonModal(guildId, current, list.length);
+            actions.appendChild(editBtn);
+
+            const delBtn = document.createElement("button");
+            delBtn.className = "main-button danger";
+            delBtn.type = "button";
+            delBtn.textContent = "🗑 Удалить";
+            delBtn.onclick = () => deleteGuildButton(current, guildId, amManager);
+            actions.appendChild(delBtn);
+
+            vHeader.appendChild(actions);
+        }
+
+        view.appendChild(vHeader);
+
+        const vBody = document.createElement("div");
+        vBody.className = "guild-buttons-view-body";
+
+        if(!current.content || !current.content.trim()){
+            vBody.innerHTML = "<div class='guild-buttons-view-empty'>" +
+                "<span class='big'>📄</span>" +
+                "Содержимое пусто. " +
+                (amManager ? "Нажмите «Изменить», чтобы загрузить файл или вставить HTML." : "") +
+                "</div>";
+        } else {
+            const ifr = document.createElement("iframe");
+            ifr.className = "guild-buttons-view-frame";
+            ifr.setAttribute("sandbox", "");
+            ifr.setAttribute("referrerpolicy", "no-referrer");
+            ifr.srcdoc = wrapGuildBtnHtml(current.content);
+            vBody.appendChild(ifr);
+        }
+
+        view.appendChild(vBody);
+    }
+
+    layout.appendChild(view);
+    box.appendChild(layout);
+}
+
+function guildBtnIcon(sourceType){
+    switch(sourceType){
+        case "sheet": return "📊";
+        case "doc":   return "📘";
+        case "html":  return "🌐";
+        default:      return "📄";
+    }
+}
+
+function wrapGuildBtnHtml(content){
+    const raw = String(content || "");
+    const lower = raw.toLowerCase();
+    const isFull = lower.indexOf("<!doctype") !== -1 || lower.indexOf("<html") !== -1;
+    if(isFull) return raw;
+
+    const trimmed = raw.trim();
+    const looksLikeRows = /^<tr[\s>]/i.test(trimmed) || /^<thead[\s>]/i.test(trimmed) || /^<tbody[\s>]/i.test(trimmed);
+
+    const styles =
+        "body{margin:0;padding:22px;font-family:'Segoe UI',Arial,sans-serif;color:#1a2332;background:#fff;line-height:1.55;font-size:14px}" +
+        "table{border-collapse:collapse;width:100%;font-size:14px;margin:8px 0}" +
+        "th,td{border:1px solid #d8e0ee;padding:8px 10px;text-align:left;vertical-align:top;min-width:60px}" +
+        "th{background:#2f7cff;color:#fff;font-weight:700}" +
+        "tr:nth-child(even) td{background:#f8faff}" +
+        "h1,h2,h3{margin:12px 0 8px} p{margin:8px 0} ul,ol{margin:8px 0 8px 22px}" +
+        "img{max-width:100%;height:auto;border-radius:8px;margin:6px 0;box-shadow:0 4px 12px rgba(40,70,120,.10)}";
+
+    const body = looksLikeRows ? "<table>" + raw + "</table>" : raw;
+    return "<!DOCTYPE html><html><head><meta charset='utf-8'><style>" +
+           styles + "</style></head><body>" + body + "</body></html>";
+}
+
+/* ============================================================
+   Модалка создания / редактирования раздела
+============================================================ */
+
+function ensureGbModal(){
+    if($("gb-modal")) return;
+
+    const modal = document.createElement("div");
+    modal.id = "gb-modal";
+    modal.className = "gb-modal hidden";
+    modal.innerHTML = `
+        <div class="gb-modal-window">
+            <div class="gb-modal-header">
+                <div class="gb-modal-title" id="gb-modal-title">Новый раздел</div>
+                <button class="main-button danger" id="gb-modal-close" type="button" style="height:36px;padding:0 14px;font-size:13px;border-radius:10px;">Закрыть</button>
+            </div>
+            <div class="gb-modal-body">
+
+                <label class="profile-field">
+                    <span>Название раздела</span>
+                    <input id="gb-title" placeholder="Например: Правила гильдии" maxlength="60" required>
+                </label>
+
+                <div class="gb-type-switch">
+                    <button class="gb-type-btn active" data-type="html" type="button">🌐 HTML-код</button>
+                    <button class="gb-type-btn" data-type="sheet" type="button">📊 Excel / CSV</button>
+                    <button class="gb-type-btn" data-type="doc" type="button">📘 Word (.docx)</button>
+                </div>
+
+                <div class="gb-pane active" id="gb-pane-html">
+                    <textarea id="gb-html-content" rows="12" placeholder="&lt;h1&gt;Заголовок&lt;/h1&gt;&#10;&lt;p&gt;Текст…&lt;/p&gt;" style="font-family:Consolas,Monaco,monospace;font-size:12.5px;"></textarea>
+                    <small class="field-hint">Полный HTML-код или фрагмент таблицы. Скрипты не выполняются.</small>
+                </div>
+
+                <div class="gb-pane" id="gb-pane-sheet">
+                    <label class="gb-dropzone">
+                        <span class="gb-drop-icon">📊</span>
+                        <span>Перетащите или выберите файл <b>.xlsx / .xls / .csv</b></span>
+                        <span class="gb-drop-hint">Файл будет преобразован в читаемую таблицу</span>
+                        <input type="file" id="gb-file-sheet" accept=".xlsx,.xls,.csv,.tsv,.ods">
+                    </label>
+                    <div id="gb-sheet-info" class="gb-file-info hidden"></div>
+                </div>
+
+                <div class="gb-pane" id="gb-pane-doc">
+                    <label class="gb-dropzone">
+                        <span class="gb-drop-icon">📘</span>
+                        <span>Перетащите или выберите файл <b>.docx</b></span>
+                        <span class="gb-drop-hint">Файл будет сконвертирован в читаемую страницу</span>
+                        <input type="file" id="gb-file-doc" accept=".docx">
+                    </label>
+                    <div id="gb-doc-info" class="gb-file-info hidden"></div>
+                </div>
+
+            </div>
+            <div class="gb-modal-status" id="gb-modal-status"></div>
+            <div class="gb-modal-footer">
+                <button class="main-button secondary" id="gb-modal-cancel" type="button">Отмена</button>
+                <button class="main-button" id="gb-modal-save" type="button">💾 Сохранить</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    $("gb-modal-close").onclick = () => closeGbModal();
+    $("gb-modal-cancel").onclick = () => closeGbModal();
+
+    document.querySelectorAll(".gb-type-btn").forEach(b => {
+        b.onclick = () => switchGbType(b.dataset.type);
+    });
+
+    $("gb-file-sheet").addEventListener("change", (e) => handleGbFile(e.target.files[0], "sheet"));
+    $("gb-file-doc").addEventListener("change", (e) => handleGbFile(e.target.files[0], "doc"));
+
+    ["gb-pane-sheet", "gb-pane-doc"].forEach(paneId => {
+        const drop = $(paneId).querySelector(".gb-dropzone");
+        if(!drop) return;
+        drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.style.background = "#eaf4ff"; });
+        drop.addEventListener("dragleave", () => { drop.style.background = ""; });
+        drop.addEventListener("drop", (e) => {
+            e.preventDefault(); drop.style.background = "";
+            const f = e.dataTransfer.files[0];
+            if(f) handleGbFile(f, paneId === "gb-pane-sheet" ? "sheet" : "doc");
+        });
+    });
+
+    $("gb-modal-save").onclick = () => saveGuildButton();
+}
+
+function openGuildButtonModal(guildId, editing, count){
+    ensureGbModal();
+
+    gbModalState = {
+        guildId,
+        editing: editing || null,
+        type: "html",
+        file: null,
+        uploadedUrl: null,
+        uploadedName: null
+    };
+
+    $("gb-modal-title").textContent = editing ? "Редактирование раздела" : "Новый раздел";
+    $("gb-title").value = editing ? (editing.title || "") : "";
+    $("gb-html-content").value = editing && editing.source_type === "html" ? (editing.content || "") : "";
+    $("gb-sheet-info").classList.add("hidden");
+    $("gb-doc-info").classList.add("hidden");
+    $("gb-file-sheet").value = "";
+    $("gb-file-doc").value = "";
+    setGbStatus("", "");
+
+    switchGbType(editing ? (editing.source_type || "html") : "html");
+
+    const modal = $("gb-modal");
+    modal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+
+    setTimeout(() => $("gb-title")?.focus(), 100);
+}
+
+function closeGbModal(){
+    const modal = $("gb-modal");
+    if(modal) modal.classList.add("hidden");
+    if($("guild-overlay") && !$("guild-overlay").classList.contains("hidden")){
+        document.body.style.overflow = "hidden";
+    } else {
+        document.body.style.overflow = "";
+    }
+    gbModalState = { guildId: null, editing: null, type: "html", file: null, uploadedUrl: null, uploadedName: null };
+}
+
+function switchGbType(type){
+    gbModalState.type = type;
+
+    document.querySelectorAll(".gb-type-btn").forEach(b => {
+        b.classList.toggle("active", b.dataset.type === type);
+    });
+    document.querySelectorAll(".gb-pane").forEach(p => p.classList.remove("active"));
+    const pane = $("gb-pane-" + type);
+    if(pane) pane.classList.add("active");
+
+    setGbStatus("", "");
+}
+
+async function handleGbFile(file, kind){
+    if(!file){ return; }
+
+    gbModalState.file = file;
+    gbModalState.uploadedUrl = null;
+    gbModalState.uploadedName = file.name;
+
+    const infoEl = kind === "sheet" ? $("gb-sheet-info") : $("gb-doc-info");
+    if(infoEl){
+        infoEl.className = "gb-file-info";
+        infoEl.textContent = "📎 " + file.name + " · " + humanFileSize(file.size);
+        infoEl.classList.remove("hidden");
+    }
+    setGbStatus("Файл выбран, нажмите «Сохранить»", "");
+}
+
+async function saveGuildButton(){
+    const user = await ensureAuth();
+    if(!user){ setGbStatus("Нет авторизации", "err"); return; }
+
+    const title = ($("gb-title").value || "").trim();
+    if(!title || title.length < 2){
+        setGbStatus("Название: минимум 2 символа", "err");
+        $("gb-title").focus();
+        return;
+    }
+
+    setGbStatus("Сохранение…", "loading");
+
+    let content = "";
+    let sourceUrl = null;
+    let sourceName = null;
+
+    try{
+        if(gbModalState.type === "html"){
+            content = $("gb-html-content").value || "";
+            if(!content.trim()){
+                setGbStatus("Вставьте HTML-код", "err");
+                return;
+            }
+        } else if(gbModalState.type === "sheet"){
+            if(!gbModalState.file){
+                if(gbModalState.editing && gbModalState.editing.content){
+                    content = gbModalState.editing.content;
+                    sourceUrl = gbModalState.editing.source_url;
+                    sourceName = gbModalState.editing.source_name;
+                } else {
+                    setGbStatus("Выберите Excel/CSV-файл", "err");
+                    return;
+                }
+            } else {
+                const buf = await gbModalState.file.arrayBuffer();
+                const ext = fileExt(gbModalState.file.name);
+                let rows = [];
+                if(ext === "csv" || ext === "tsv"){
+                    const text = new TextDecoder("utf-8").decode(buf);
+                    const wb = XLSX.read(text, { type: "string", raw: false });
+                    const ws = wb.Sheets[wb.SheetNames[0]];
+                    rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false });
+                } else {
+                    const wb = XLSX.read(buf, { type: "array" });
+                    const ws = wb.Sheets[wb.SheetNames[0]];
+                    rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false });
+                }
+                if(!rows || rows.length === 0) rows = [[""]];
+
+                const tbl = document.createElement("table");
+                rows.forEach((row, ri) => {
+                    const tr = document.createElement("tr");
+                    row.forEach(cellVal => {
+                        const cell = document.createElement(ri === 0 ? "th" : "td");
+                        cell.textContent = cellVal == null ? "" : String(cellVal);
+                        tr.appendChild(cell);
+                    });
+                    tbl.appendChild(tr);
+                });
+                content = tbl.outerHTML;
+                sourceName = gbModalState.file.name;
+
+                const path = user.id + "/" + gbModalState.guildId + "/btn-" +
+                             Date.now() + "-" + Math.random().toString(36).slice(2,8) + "." + ext;
+                const up = await supabaseClient.storage.from("guild-files")
+                    .upload(path, gbModalState.file, { upsert: false, contentType: gbModalState.file.type || undefined });
+                if(!up.error){
+                    const { data: pub } = supabaseClient.storage.from("guild-files").getPublicUrl(path);
+                    sourceUrl = pub.publicUrl;
+                } else {
+                    errLog("BUTTON FILE UPLOAD", up.error.message);
+                }
+            }
+        } else if(gbModalState.type === "doc"){
+            if(!gbModalState.file){
+                if(gbModalState.editing && gbModalState.editing.content){
+                    content = gbModalState.editing.content;
+                    sourceUrl = gbModalState.editing.source_url;
+                    sourceName = gbModalState.editing.source_name;
+                } else {
+                    setGbStatus("Выберите файл .docx", "err");
+                    return;
+                }
+            } else {
+                if(!gbModalState.file.name.toLowerCase().endsWith(".docx")){
+                    setGbStatus("Поддерживается только .docx (старый .doc не поддерживается)", "err");
+                    return;
+                }
+                if(typeof mammoth === "undefined"){
+                    setGbStatus("Библиотека mammoth.js не загружена", "err");
+                    return;
+                }
+                const buf = await gbModalState.file.arrayBuffer();
+                const conv = await mammoth.convertToHtml({ arrayBuffer: buf });
+                content = conv.value || "<p>Документ пуст</p>";
+                sourceName = gbModalState.file.name;
+
+                const path = user.id + "/" + gbModalState.guildId + "/doc-" +
+                             Date.now() + "-" + Math.random().toString(36).slice(2,8) + ".docx";
+                const up = await supabaseClient.storage.from("guild-files")
+                    .upload(path, gbModalState.file, { upsert: false, contentType: gbModalState.file.type || undefined });
+                if(!up.error){
+                    const { data: pub } = supabaseClient.storage.from("guild-files").getPublicUrl(path);
+                    sourceUrl = pub.publicUrl;
+                } else {
+                    errLog("BUTTON DOC UPLOAD", up.error.message);
+                }
+            }
+        }
+
+        if(gbModalState.editing){
+            const upd = await supabaseClient
+                .from("guild_buttons")
+                .update({
+                    title,
+                    content,
+                    source_type: gbModalState.type,
+                    source_url: sourceUrl,
+                    source_name: sourceName,
+                    updated_at: new Date().toISOString()
+                })
+                .eq("id", gbModalState.editing.id)
+                .select()
+                .single();
+
+            if(upd.error){
+                errLog("GB UPDATE", upd.error.message);
+                setGbStatus("Ошибка: " + upd.error.message, "err");
+                return;
+            }
+        } else {
+            const cnt = await supabaseClient
+                .from("guild_buttons")
+                .select("id", { count: "exact", head: true })
+                .eq("guild_id", gbModalState.guildId);
+
+            const currentCount = cnt.count || 0;
+            if(currentCount >= 10){
+                setGbStatus("Достигнут лимит 10 разделов", "err");
+                return;
+            }
+
+            const ins = await supabaseClient
+                .from("guild_buttons")
+                .insert({
+                    guild_id: gbModalState.guildId,
+                    title,
+                    content,
+                    source_type: gbModalState.type,
+                    source_url: sourceUrl,
+                    source_name: sourceName,
+                    position: currentCount,
+                    created_by: user.id
+                })
+                .select()
+                .single();
+
+            if(ins.error){
+                errLog("GB INSERT", ins.error.message);
+                setGbStatus("Ошибка: " + ins.error.message, "err");
+                return;
+            }
+            currentGuildButtonId = ins.data.id;
+        }
+
+        setGbStatus("✓ Сохранено", "ok");
+        const gid = gbModalState.guildId;
+        setTimeout(() => {
+            closeGbModal();
+            if(currentGuildId === gid){
+                renderGuildButtonsTab(gid, isManager(gid)).catch(e => errLog(e));
+            }
+        }, 400);
+
+    }catch(err){
+        errLog("GB SAVE EXC", err);
+        setGbStatus("Ошибка: " + (err.message || ""), "err");
+    }
+}
+
+async function deleteGuildButton(btn, guildId, amManager){
+    if(!amManager){
+        alert("Удалять разделы может только глава или заместитель.");
+        return;
+    }
+    if(!confirm("Удалить раздел «" + (btn.title || "без названия") + "»?")) return;
+
+    const del = await supabaseClient.from("guild_buttons").delete().eq("id", btn.id);
+    if(del.error){ alert("Ошибка: " + del.error.message); return; }
+
+    if(btn.source_url){
+        try{
+            const marker = "/object/public/guild-files/";
+            const idx = btn.source_url.indexOf(marker);
+            if(idx !== -1){
+                const path = decodeURIComponent(btn.source_url.substring(idx + marker.length).split("?")[0]);
+                await supabaseClient.storage.from("guild-files").remove([path]);
+            }
+        }catch(e){ errLog("GB DELETE FILE", e); }
+    }
+
+    if(currentGuildButtonId === btn.id){
+        currentGuildButtonId = null;
+    }
+    await renderGuildButtonsTab(guildId, amManager);
+}
+
+/* ============================================================
+   UNLOAD
+============================================================ */
 window.addEventListener("beforeunload", () => {
     if(currentRoom && currentUser){
         try{ supabaseClient.from("conference_users").delete().eq("user_id", currentUser.id).eq("room_id", currentRoom.id); }
