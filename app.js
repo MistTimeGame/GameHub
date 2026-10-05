@@ -4,7 +4,7 @@
    + Games + Guilds + Templates
    + Визуальный редактор (HTML + Excel/CSV)
    + Импорт таблиц и картинок с других сайтов
-   + Fallback: вставить HTML вручную
+   + Правила в отдельном overlay
 ===================================================== */
 
 const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -118,6 +118,19 @@ function switchPage(pageName){
 function isAdmin(){
     return !!(currentProfile && currentProfile.is_admin === true);
 }
+
+/* ===== ПРАВИЛА — открытие/закрытие overlay ===== */
+function openRulesScreen(){
+    const el = $("rules-screen");
+    if(el) el.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+}
+function closeRulesScreen(){
+    const el = $("rules-screen");
+    if(el) el.classList.add("hidden");
+    document.body.style.overflow = "";
+}
+
 async function ensureAuth(){
     if(currentUser && currentUser.id) return currentUser;
     try{
@@ -212,7 +225,7 @@ function fileViewerKind(name, type){
 }
 
 /* ============================================================
-   ПОДГОТОВКА HTML
+   HTML-парсинг
 ============================================================ */
 function parseHtmlContent(content){
     const raw = String(content || "");
@@ -317,6 +330,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initGuildOverlay();
     initFileViewer();
     initTemplateViewer();
+    initRulesScreen();
 
     supabaseClient.auth.onAuthStateChange((event, session) => {
         if(event === "SIGNED_OUT") currentUser = null;
@@ -325,6 +339,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
     checkSession();
 });
+
+/* ============================================================
+   ПРАВИЛА
+============================================================ */
+function initRulesScreen(){
+    const backBtn = $("rules-back");
+    if(backBtn) backBtn.onclick = () => closeRulesScreen();
+
+    const printBtn = $("rules-print-btn");
+    if(printBtn) printBtn.onclick = () => window.print();
+
+    const sidebarRules = $("sidebar-rules-btn");
+    if(sidebarRules) sidebarRules.onclick = () => openRulesScreen();
+
+    const authTermsLink = $("auth-terms-link");
+    if(authTermsLink) authTermsLink.onclick = (e) => {
+        e.preventDefault();
+        openRulesScreen();
+    };
+
+    document.addEventListener("keydown", (e) => {
+        if(e.key === "Escape" && $("rules-screen") && !$("rules-screen").classList.contains("hidden")){
+            closeRulesScreen();
+        }
+    });
+}
 
 /* ============================================================
    АВТОРИЗАЦИЯ
@@ -465,15 +505,6 @@ function initNavigation(){
             if(p === "online") renderOnlinePage();
         };
     });
-
-    const rulesPrintBtn = $("rules-print-btn");
-    if(rulesPrintBtn) rulesPrintBtn.onclick = () => window.print();
-
-    const authTermsLink = $("auth-terms-link");
-    if(authTermsLink) authTermsLink.onclick = (e) => {
-        e.preventDefault();
-        alert("Правила использования и Политика конфиденциальности доступны после входа — в разделе «📜 Правила» в меню слева.");
-    };
 }
 
 /* ============================================================
@@ -1803,7 +1834,7 @@ function execEditorCmd(cmd, value){
 }
 
 /* ============================================================
-   ОТКРЫТИЕ / ЗАКРЫТИЕ
+   ОТКРЫТИЕ РЕДАКТОРА
 ============================================================ */
 function openTemplateEditor(t, guildId, canEdit, source){
     currentTemplate = Object.assign({}, t);
@@ -1936,7 +1967,7 @@ function restoreInitialEditorState(){
 }
 
 /* ============================================================
-   РЕНДЕР
+   РЕНДЕР РЕДАКТОРА
 ============================================================ */
 function renderVisualFromHtml(content){
     const ed = $("visual-editor"); if(!ed) return;
@@ -2233,7 +2264,6 @@ ${body}
 /* ============================================================
    ИМПОРТ С САЙТОВ
 ============================================================ */
-
 const CORS_PROXIES = [
     { name: "allorigins", build: url => "https://api.allorigins.win/raw?url=" + encodeURIComponent(url) },
     { name: "allorigins-get", build: url => "https://api.allorigins.win/get?url=" + encodeURIComponent(url) },
