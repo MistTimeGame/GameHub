@@ -5,6 +5,7 @@
    + Визуальный редактор (HTML + Excel/CSV + Word)
    + Импорт таблиц и картинок с других сайтов
    + Правила в отдельном overlay
+   + MIT License в разделе «Правила»
 ===================================================== */
 
 const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -174,7 +175,7 @@ function normalizeImageUrl(url){
     return s;
 }
 function faviconFromUrl(url){
-    try{ const u = new URL(url); return "https://www.google.com/s2/favicons?domain=" + u.hostname + "&sz=128"; }
+    try{ const u = new URL(url); return "https://www.google.com/s2/favicons?domain=" + u.hostname + "&sz=128; }
     catch(e){ return ""; }
 }
 function testImageUrl(url){
@@ -744,20 +745,56 @@ async function saveNewGame(){
     const user = await ensureAuth();
     if(!user){ setGameStatus("Нет авторизации", "err"); return; }
     if(!gamesAvailable){ setGameStatus("Таблица games не создана", "err"); return; }
+
     const name = ($("game-name-input").value || "").trim();
     const url = ($("game-url-input").value || "").trim();
     const description = ($("game-desc-input").value || "").trim();
     const customIcon = ($("game-icon-input").value || "").trim();
+
     if(!name || name.length < 2){ setGameStatus("Название: минимум 2 символа", "err"); return; }
     if(!isValidHttpUrl(url) || !url){ setGameStatus("Ссылка на сайт некорректна", "err"); return; }
     if(customIcon && !isValidHttpUrl(customIcon)){ setGameStatus("Ссылка на иконку некорректна", "err"); return; }
 
+    // === Защита от дублирования ===
+    setGameStatus("Проверка на дубликаты…", "loading");
+    const nameKey = name.toLowerCase();
+    const urlKey = url.replace(/\/+$/, "").toLowerCase();
+
+    let existingGames = [];
+    try{
+        const chk = await supabaseClient.from("games").select("id, name, url");
+        if(!chk.error) existingGames = chk.data || [];
+    }catch(e){ errLog("DUP CHECK GAMES", e); }
+
+    const dupByName = existingGames.find(g => (g.name || "").trim().toLowerCase() === nameKey);
+    if(dupByName){
+        setGameStatus("Игра с названием «" + dupByName.name + "» уже добавлена", "err");
+        return;
+    }
+
+    const dupByUrl = existingGames.find(g => (g.url || "").replace(/\/+$/, "").toLowerCase() === urlKey);
+    if(dupByUrl){
+        setGameStatus("Игра с такой ссылкой уже добавлена: «" + dupByUrl.name + "»", "err");
+        return;
+    }
+
     const iconUrl = customIcon || faviconFromUrl(url);
     setGameStatus("Сохранение…", "loading");
+
     const ins = await supabaseClient.from("games").insert({
         name, description: description || null, url, icon_url: iconUrl, added_by: user.id
     }).select().single();
-    if(ins.error){ setGameStatus("Ошибка: " + ins.error.message, "err"); return; }
+
+    if(ins.error){
+        const msg = String(ins.error.message || "");
+        if(/duplicate key|unique constraint/i.test(msg)){
+            setGameStatus("Такая игра уже существует (проверьте название и ссылку)", "err");
+        } else {
+            setGameStatus("Ошибка: " + msg, "err");
+        }
+        return;
+    }
+
     setGameStatus("Игра добавлена ✓");
     setTimeout(() => setGameStatus(""), 1500);
     closeAddGameForm();
@@ -928,16 +965,43 @@ async function createGuild(){
     if(!user){ alert("Нет авторизации"); return; }
     if(!guildsAvailable){ alert("Таблицы гильдий не созданы"); return; }
     if(!guildsGameIdAvailable){ alert("Колонка guilds.game_id отсутствует."); return; }
+
     const gameId = parseInt($("guild-game-select").value, 10);
     const name = $("guild-name-input").value.trim();
     const description = $("guild-desc-input").value.trim();
+
     if(!gameId){ alert("Выберите игру"); return; }
     if(!name || name.length < 2){ alert("Название: минимум 2 символа"); return; }
+
+    // === Защита от дублирования: одинаковое имя гильдии в одной игре ===
+    const nameKey = name.toLowerCase();
+    const game = gamesCache.find(g => g.id === gameId);
+
+    let existingGuilds = [];
+    try{
+        const chk = await supabaseClient.from("guilds").select("name").eq("game_id", gameId);
+        if(!chk.error) existingGuilds = chk.data || [];
+    }catch(e){ errLog("DUP CHECK GUILDS", e); }
+
+    const dup = existingGuilds.find(g => (g.name || "").trim().toLowerCase() === nameKey);
+    if(dup){
+        alert("В игре «" + (game ? game.name : "—") + "» уже есть гильдия с таким названием.");
+        return;
+    }
 
     const ins = await supabaseClient.from("guilds").insert({
         name, description: description || null, owner_id: user.id, game_id: gameId
     }).select().single();
-    if(ins.error){ alert("Ошибка: " + ins.error.message); return; }
+
+    if(ins.error){
+        const msg = String(ins.error.message || "");
+        if(/duplicate key|unique constraint/i.test(msg)){
+            alert("В этой игре уже существует гильдия с таким названием.");
+        } else {
+            alert("Ошибка: " + msg);
+        }
+        return;
+    }
 
     await supabaseClient.from("guild_members").insert({
         guild_id: ins.data.id, user_id: user.id,
@@ -3184,7 +3248,6 @@ async function leaveRoom(){
 
 /* ============================================================
    GUILD BUTTONS — кастомные разделы гильдии
-   До 10 кнопок, каждая с HTML / Excel / Word-контентом
 ============================================================ */
 
 async function renderGuildButtonsTab(guildId, amManager){
