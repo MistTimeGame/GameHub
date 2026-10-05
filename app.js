@@ -1,7 +1,7 @@
 /* =====================================================
    GAME PLATFORM — app.js (FULL)
    Auth + Profile + Chat + Conference + Online
-   + Games + Guilds (overlay, roles, materials) + Templates
+   + Games + Guilds (overlay, roles, materials, templates)
 ===================================================== */
 
 const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -42,7 +42,6 @@ let gamesCache = [];
 let gamesAvailable = true;
 let gameIconTimer = null;
 
-let templatesCache = [];
 let templatesAvailable = true;
 
 /* ============================================================
@@ -168,6 +167,11 @@ function humanFileSize(bytes){
     if(n < 1024*1024*1024) return (n/1024/1024).toFixed(1) + " МБ";
     return (n/1024/1024/1024).toFixed(2) + " ГБ";
 }
+function fileExt(name){
+    const n = String(name || "");
+    const m = n.match(/\.([a-z0-9]+)$/i);
+    return m ? m[1].toLowerCase() : "bin";
+}
 function fileIconByName(name, type){
     const n = (name || "").toLowerCase();
     const t = (type || "").toLowerCase();
@@ -181,11 +185,6 @@ function fileIconByName(name, type){
     if(/\.(txt|md|log)$/.test(n)) return "📝";
     if(/\.(json|xml|yml|yaml|ini|cfg)$/.test(n)) return "⚙";
     return "📎";
-}
-function fileExt(name){
-    const n = String(name || "");
-    const m = n.match(/\.([a-z0-9]+)$/i);
-    return m ? m[1].toLowerCase() : "bin";
 }
 function fileViewerKind(name, type){
     const n = (name || "").toLowerCase();
@@ -262,7 +261,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initGuilds();
     initGuildOverlay();
     initFileViewer();
-    initTemplates();
+    initTemplateViewer();
 
     supabaseClient.auth.onAuthStateChange((event, session) => {
         if(event === "SIGNED_OUT") currentUser = null;
@@ -300,14 +299,10 @@ function initAuth(){
             setAuthMessage("Вход…", true);
             const email = $("login-email").value.trim();
             const password = $("login-password").value;
-            if(!email || !password){ setAuthMessage("Заполните email и пароль", "err"); return; }
+            if(!email || !password){ setAuthMessage("Заполните email и пароль"); return; }
             try{
                 const r = await supabaseClient.auth.signInWithPassword({ email, password });
-                if(r.error){
-                    errLog("LOGIN", r.error.message);
-                    setAuthMessage(r.error.message);
-                    return;
-                }
+                if(r.error){ errLog("LOGIN", r.error.message); setAuthMessage(r.error.message); return; }
                 currentUser = r.data.user;
                 setAuthMessage("");
                 openApp();
@@ -326,7 +321,7 @@ function initAuth(){
             const nickname = $("register-nickname").value.trim() || "Player";
             const email = $("register-email").value.trim();
             const password = $("register-password").value;
-            if(!email || !password){ setAuthMessage("Заполните все поля", "err"); return; }
+            if(!email || !password){ setAuthMessage("Заполните все поля"); return; }
             try{
                 const r = await supabaseClient.auth.signUp({
                     email, password, options:{ data:{ nickname } }
@@ -400,7 +395,6 @@ async function openApp(){
     await safeRun(loadHomeStats);
     await safeRun(loadGames);
     await safeRun(loadGuilds);
-    await safeRun(loadTemplates);
 
     startChatRealtime();
     initOnlinePresence();
@@ -432,7 +426,6 @@ function initNavigation(){
             if(p === "home"){ loadHomeStats().catch(e => errLog(e)); loadHomeRecentMessages().catch(e => errLog(e)); }
             if(p === "games") loadGames().catch(e => errLog(e));
             if(p === "guilds") loadGuilds().catch(e => errLog(e));
-            if(p === "templates") loadTemplates().catch(e => errLog(e));
             if(p === "online") renderOnlinePage();
         };
     });
@@ -1035,11 +1028,15 @@ async function openGuildOverlayFor(guildId){
             <button class="guild-tab-btn ${currentGuildTab === "materials" ? "active" : ""}" data-tab="materials" type="button">
                 📁 Материалы
             </button>
+            <button class="guild-tab-btn ${currentGuildTab === "templates" ? "active" : ""}" data-tab="templates" type="button">
+                📄 Шаблоны
+            </button>
         </div>
 
         <div class="guild-tab-panel">
             <div class="guild-tab-content ${currentGuildTab === "members" ? "active" : ""}" id="guild-tab-members"></div>
             <div class="guild-tab-content ${currentGuildTab === "materials" ? "active" : ""}" id="guild-tab-materials"></div>
+            <div class="guild-tab-content ${currentGuildTab === "templates" ? "active" : ""}" id="guild-tab-templates"></div>
         </div>
     `;
 
@@ -1081,6 +1078,7 @@ async function openGuildOverlayFor(guildId){
     openGuildOverlay();
     renderMembersTab(guildId, approved, pending, amManager, amOwner);
     await renderMaterialsTab(guildId, amManager);
+    await renderTemplatesTab(guildId, amManager);
 }
 
 function renderMembersTab(guildId, approved, pending, amManager, amOwner){
@@ -1281,7 +1279,7 @@ async function dissolveGuild(guildId){
         alert("Нельзя распустить гильдию, пока в ней есть другие участники.");
         return;
     }
-    if(!confirm("Распустить гильдию со всеми материалами? Действие необратимо.")) return;
+    if(!confirm("Распустить гильдию со всеми материалами и шаблонами? Действие необратимо.")) return;
 
     try{
         const matsRes = await supabaseClient.from("guild_materials").select("file_path").eq("guild_id", guildId);
@@ -1290,6 +1288,7 @@ async function dissolveGuild(guildId){
     }catch(e){ errLog("DISSOLVE STORAGE", e); }
 
     await supabaseClient.from("guild_materials").delete().eq("guild_id", guildId);
+    await supabaseClient.from("templates").delete().eq("guild_id", guildId);
     await supabaseClient.from("guild_members").delete().eq("guild_id", guildId);
     const del = await supabaseClient.from("guilds").delete().eq("id", guildId);
     if(del.error){ alert("Ошибка: " + del.error.message); return; }
@@ -1346,6 +1345,9 @@ async function uploadGuildIcon(guildId, file){
     await openGuildOverlayFor(guildId);
 }
 
+/* ============================================================
+   МАТЕРИАЛЫ (без иконок-скрепок)
+============================================================ */
 async function renderMaterialsTab(guildId, amManager){
     const box = $("guild-tab-materials"); if(!box) return;
     box.innerHTML = "";
@@ -1360,7 +1362,6 @@ async function renderMaterialsTab(guildId, amManager){
                 <input id="mat-desc" placeholder="Краткое описание (необязательно)" maxlength="200">
             </div>
             <label class="material-file-input">
-                <span class="file-icon">📎</span>
                 <span class="file-text" id="mat-file-text"><b>Выберите файл</b> или перетащите сюда</span>
                 <input type="file" id="mat-file">
             </label>
@@ -1425,11 +1426,9 @@ async function renderMaterialsTab(guildId, amManager){
         btn.className = "material-btn";
         btn.dataset.id = m.id;
 
-        const ico = fileIconByName(m.file_name || m.file_url, m.file_type);
         const canDelete = amManager || (m.uploaded_by === currentUser.id);
 
         btn.innerHTML =
-            "<div class='material-btn-icon'>" + ico + "</div>" +
             "<div class='material-btn-body'>" +
                 "<div class='material-btn-title'>" + escapeHtml(m.title || "Без названия") + "</div>" +
                 "<div class='material-btn-meta'>" +
@@ -1547,7 +1546,238 @@ async function deleteMaterial(guildId, mat){
 }
 
 /* ============================================================
-   FILE VIEWER
+   ШАБЛОНЫ (внутри гильдии)
+============================================================ */
+async function renderTemplatesTab(guildId, amManager){
+    const box = $("guild-tab-templates"); if(!box) return;
+    box.innerHTML = "";
+
+    // AI-hint
+    const hint = document.createElement("div");
+    hint.className = "tpl-ai-hint";
+    hint.innerHTML = `
+        <div class="tpl-ai-hint-icon">🤖</div>
+        <div class="tpl-ai-hint-body">
+            <div class="tpl-ai-hint-title">Как запросить шаблон у ИИ</div>
+            <div class="tpl-ai-hint-text">
+                Скопируйте промпт, замените данные на свои, отправьте ИИ (ChatGPT, Claude и т.д.).
+                ИИ вернёт готовый HTML-код — вставьте его в поле «HTML-код».
+            </div>
+            <div class="tpl-ai-prompt" id="tpl-ai-prompt-box">Создай HTML-документ для World of Sea Battle: список друзей и врагов. Таблица с колонками: №, Никнейм, Гильдия, Фракция. Фракции выдели цветом и эмодзи-флагом. Заголовки: «🟢 Друзья» — синий, «🔴 Враги» — красный. Стиль — белая 3D-тема, скруглённые углы, тени.</div>
+            <button class="main-button small" id="tpl-copy-ai" type="button">📋 Скопировать промпт</button>
+        </div>
+    `;
+    box.appendChild(hint);
+
+    const copyBtn = hint.querySelector("#tpl-copy-ai");
+    if(copyBtn) copyBtn.onclick = () => {
+        const t = hint.querySelector("#tpl-ai-prompt-box").textContent;
+        const done = () => {
+            const old = copyBtn.textContent;
+            copyBtn.textContent = "✓ Скопировано";
+            setTimeout(() => copyBtn.textContent = old, 1500);
+        };
+        if(navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(t).then(done).catch(() => fallbackCopy(t, done));
+        } else fallbackCopy(t, done);
+    };
+
+    // Форма загрузки — только для менеджеров
+    if(amManager){
+        const form = document.createElement("div");
+        form.className = "material-upload-form";
+        form.innerHTML = `
+            <h3>📤 Загрузить шаблон</h3>
+            <div class="material-form-row">
+                <input id="tpl-title" placeholder="Название шаблона" maxlength="80">
+                <input id="tpl-desc" placeholder="Краткое описание" maxlength="200">
+            </div>
+            <label class="profile-field" style="margin-bottom:10px">
+                <span>HTML-код шаблона</span>
+                <textarea id="tpl-content" rows="10" placeholder="&lt;!DOCTYPE html&gt;&#10;&lt;html&gt;...&lt;/html&gt;" style="font-family:Consolas,Monaco,monospace;font-size:12.5px;"></textarea>
+                <small class="field-hint">Вставьте полный HTML-код. Скрипты при просмотре не выполняются.</small>
+            </label>
+            <div class="profile-actions" style="margin-top:12px">
+                <button class="main-button" id="tpl-save-btn" type="button">Загрузить шаблон</button>
+            </div>
+            <div class="profile-status" id="tpl-status"></div>
+        `;
+        box.appendChild(form);
+        $("tpl-save-btn").onclick = () => saveTemplate(guildId);
+    }
+
+    // Список шаблонов
+    const listWrap = document.createElement("div");
+    listWrap.className = "templates-grid";
+    listWrap.innerHTML = "<div class='dash-recent-empty'>Загрузка шаблонов…</div>";
+    box.appendChild(listWrap);
+
+    const { data, error } = await supabaseClient
+        .from("templates").select("*")
+        .eq("guild_id", guildId)
+        .order("created_at", { ascending: false });
+
+    if(error){
+        templatesAvailable = false;
+        listWrap.innerHTML = "<div class='dash-recent-empty'>Раздел шаблонов недоступен.</div>";
+        return;
+    }
+    templatesAvailable = true;
+    const list = data || [];
+
+    if(list.length === 0){
+        listWrap.innerHTML = "<div class='dash-recent-empty'>Шаблонов пока нет" +
+            (amManager ? ". Загрузите первый или сгенерируйте через ИИ!" : "") + "</div>";
+        return;
+    }
+
+    listWrap.innerHTML = "";
+    list.forEach(t => {
+        const card = document.createElement("div");
+        card.className = "tpl-card";
+
+        const date = t.created_at
+            ? new Date(t.created_at).toLocaleDateString("ru-RU", { day:"2-digit", month:"short", year:"numeric" })
+            : "";
+
+        const preview = (t.content || "").slice(0, 120).replace(/\s+/g, " ");
+        const isOwner = t.uploaded_by === currentUser.id;
+        const canDelete = amManager || isOwner || isAdmin();
+
+        card.innerHTML =
+            "<div class='tpl-card-title'>" + escapeHtml(t.title || "Без названия") + "</div>" +
+            "<div class='tpl-card-desc'>" + escapeHtml(t.description || preview || "Без описания") + "</div>" +
+            "<div class='tpl-card-meta'>" +
+                "<span>📅 " + escapeHtml(date) + "</span>" +
+                "<span>🔒 только просмотр</span>" +
+            "</div>" +
+            "<div class='tpl-card-actions'></div>";
+
+        const actions = card.querySelector(".tpl-card-actions");
+        const openBtn = document.createElement("button");
+        openBtn.className = "main-button";
+        openBtn.type = "button";
+        openBtn.textContent = "👁 Открыть";
+        openBtn.onclick = () => openTemplateViewer(t);
+        actions.appendChild(openBtn);
+
+        if(canDelete){
+            const del = document.createElement("button");
+            del.className = "tpl-delete";
+            del.type = "button";
+            del.title = "Удалить";
+            del.textContent = "×";
+            del.onclick = (e) => { e.stopPropagation(); deleteTemplate(guildId, t); };
+            card.appendChild(del);
+        }
+
+        listWrap.appendChild(card);
+    });
+}
+
+function fallbackCopy(text, cb){
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    try{ document.execCommand("copy"); cb && cb(); }catch(e){ errLog("COPY FAIL", e); }
+    ta.remove();
+}
+
+async function saveTemplate(guildId){
+    const user = await ensureAuth();
+    if(!user){ setTplStatus("Нет авторизации", "err"); return; }
+    if(!templatesAvailable){ setTplStatus("Таблица templates не создана", "err"); return; }
+
+    const title = ($("tpl-title").value || "").trim();
+    const description = ($("tpl-desc").value || "").trim();
+    const content = ($("tpl-content").value || "").trim();
+
+    if(!title || title.length < 2){ setTplStatus("Название: минимум 2 символа", "err"); return; }
+    if(!content || content.length < 20){ setTplStatus("Вставьте HTML-код шаблона", "err"); return; }
+    if(content.length > 500000){ setTplStatus("Шаблон слишком большой", "err"); return; }
+
+    setTplStatus("Сохранение…", "loading");
+
+    const ins = await supabaseClient.from("templates").insert({
+        guild_id: guildId,
+        title,
+        description: description || null,
+        category: "guild",
+        content,
+        uploaded_by: user.id
+    }).select().single();
+
+    if(ins.error){
+        errLog("SAVE TEMPLATE", ins.error.message);
+        setTplStatus("Ошибка: " + ins.error.message, "err");
+        return;
+    }
+
+    setTplStatus("Шаблон загружен ✓");
+    setTimeout(() => setTplStatus(""), 1500);
+    await openGuildOverlayFor(guildId);
+}
+
+async function deleteTemplate(guildId, t){
+    const user = await ensureAuth();
+    if(!user) return;
+
+    const isOwner = t.uploaded_by === user.id;
+    const amManager = isManager(guildId);
+    if(!isOwner && !amManager && !isAdmin()){
+        alert("Удалить шаблон может автор, заместитель или администратор.");
+        return;
+    }
+    if(!confirm("Удалить шаблон «" + (t.title || "без названия") + "»?")) return;
+
+    const del = await supabaseClient.from("templates").delete().eq("id", t.id);
+    if(del.error){ alert("Ошибка: " + del.error.message); return; }
+    await openGuildOverlayFor(guildId);
+}
+
+/* ============================================================
+   TEMPLATE VIEWER
+============================================================ */
+function initTemplateViewer(){
+    const closeViewer = $("tpl-viewer-close");
+    if(closeViewer) closeViewer.onclick = closeTemplateViewer;
+}
+
+function openTemplateViewer(t){
+    const wrap = $("template-viewer");
+    const titleEl = $("tpl-viewer-title");
+    const subEl = $("tpl-viewer-sub");
+    const frame = $("tpl-viewer-frame");
+    if(!wrap || !frame) return;
+
+    titleEl.textContent = t.title || "Шаблон";
+
+    const date = t.created_at
+        ? new Date(t.created_at).toLocaleDateString("ru-RU", { day:"2-digit", month:"long", year:"numeric" })
+        : "";
+
+    subEl.textContent = "📄 Шаблон гильдии" + (date ? " · " + date : "");
+
+    // sandbox без разрешений — HTML рендерится, но JS/ссылки/формы не работают
+    frame.setAttribute("sandbox", "");
+    frame.srcdoc = t.content || "<html><body style='font-family:sans-serif;padding:40px;color:#888'>Пустой шаблон</body></html>";
+
+    wrap.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+}
+function closeTemplateViewer(){
+    const wrap = $("template-viewer");
+    if(wrap) wrap.classList.add("hidden");
+    const frame = $("tpl-viewer-frame");
+    if(frame) frame.srcdoc = "";
+    document.body.style.overflow = "";
+}
+
+/* ============================================================
+   FILE VIEWER (для материалов)
 ============================================================ */
 function initFileViewer(){
     const close = $("file-viewer-close");
@@ -1598,7 +1828,7 @@ function openFileViewer(m){
         const fallback = document.createElement("div");
         fallback.className = "viewer-fallback";
         fallback.innerHTML =
-            "<span class='big'>" + fileIconByName(m.file_name, m.file_type) + "</span>" +
+            "<span class='big'>📎</span>" +
             "<p>Предпросмотр недоступен.<br>Скачайте файл, чтобы открыть его.</p>";
         const btn = document.createElement("button");
         btn.className = "main-button"; btn.type = "button";
@@ -1619,233 +1849,6 @@ function closeFileViewer(){
     if(wrap) wrap.classList.add("hidden");
     const body = $("file-viewer-body");
     if(body) body.innerHTML = "";
-}
-
-/* ============================================================
-   ШАБЛОНЫ
-============================================================ */
-function initTemplates(){
-    const toggle = $("toggle-add-template");
-    const cancel = $("cancel-template-btn");
-    const save = $("save-template-btn");
-    const copyBtn = $("copy-ai-prompt");
-    const closeViewer = $("tpl-viewer-close");
-
-    if(toggle) toggle.onclick = () => {
-        const panel = $("add-template-panel"); if(!panel) return;
-        panel.classList.toggle("hidden");
-        if(!panel.classList.contains("hidden")) $("tpl-title")?.focus();
-    };
-    if(cancel) cancel.onclick = () => {
-        const panel = $("add-template-panel");
-        if(panel) panel.classList.add("hidden");
-        setTplStatus("");
-    };
-    if(save) save.onclick = saveTemplate;
-    if(copyBtn) copyBtn.onclick = copyAiPrompt;
-    if(closeViewer) closeViewer.onclick = closeTemplateViewer;
-}
-
-function copyAiPrompt(){
-    const box = $("ai-prompt-box");
-    if(!box) return;
-    const text = box.textContent;
-    const done = () => {
-        const btn = $("copy-ai-prompt");
-        if(!btn) return;
-        const old = btn.textContent;
-        btn.textContent = "✓ Скопировано";
-        setTimeout(() => btn.textContent = old, 1500);
-    };
-    if(navigator.clipboard && navigator.clipboard.writeText){
-        navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
-    } else fallbackCopy(text, done);
-}
-function fallbackCopy(text, cb){
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.left = "-9999px";
-    document.body.appendChild(ta);
-    ta.select();
-    try{ document.execCommand("copy"); cb && cb(); }catch(e){ errLog("COPY FAIL", e); }
-    ta.remove();
-}
-
-async function loadTemplates(){
-    const box = $("templates-list"); if(!box) return;
-
-    const { data, error } = await supabaseClient
-        .from("templates").select("*")
-        .order("created_at", { ascending: false });
-
-    if(error){
-        templatesAvailable = false;
-        box.innerHTML =
-            "<div class='dash-recent-empty'>Раздел «Шаблоны» требует таблицы <code>templates</code> в Supabase.</div>";
-        return;
-    }
-    templatesAvailable = true;
-    templatesCache = data || [];
-
-    if(templatesCache.length === 0){
-        box.innerHTML =
-            "<div class='dash-recent-empty'>Шаблонов пока нет. Загрузите первый или сгенерируйте через ИИ!</div>";
-        return;
-    }
-
-    box.innerHTML = "";
-    templatesCache.forEach(t => box.appendChild(buildTemplateCard(t)));
-}
-
-function buildTemplateCard(t){
-    const card = document.createElement("div");
-    card.className = "tpl-card";
-
-    const cat = t.category || "general";
-    const catLabel = {
-        wosb: "🎮 WOSB",
-        general: "📄 Общее",
-        guild: "⚔ Гильдии",
-        other: "📁 Другое"
-    }[cat] || "📄";
-
-    const date = t.created_at
-        ? new Date(t.created_at).toLocaleDateString("ru-RU", { day:"2-digit", month:"short", year:"numeric" })
-        : "";
-
-    const preview = (t.content || "").slice(0, 120).replace(/\s+/g, " ");
-    const isOwner = t.uploaded_by === currentUser.id;
-    const canDelete = isOwner || isAdmin();
-
-    card.innerHTML =
-        "<div class='tpl-card-header'>" +
-            "<div class='tpl-card-icon'>📄</div>" +
-            "<div class='tpl-card-info'>" +
-                "<div class='tpl-card-title'>" + escapeHtml(t.title || "Без названия") + "</div>" +
-                "<span class='tpl-card-cat " + cat + "'>" + catLabel + "</span>" +
-            "</div>" +
-        "</div>" +
-        "<div class='tpl-card-desc'>" + escapeHtml(t.description || preview || "Без описания") + "</div>" +
-        "<div class='tpl-card-meta'>" +
-            "<span>📅 " + escapeHtml(date) + "</span>" +
-            "<span>🔒 только просмотр</span>" +
-        "</div>" +
-        "<div class='tpl-card-actions'></div>";
-
-    const actions = card.querySelector(".tpl-card-actions");
-    const openBtn = document.createElement("button");
-    openBtn.className = "main-button";
-    openBtn.type = "button";
-    openBtn.textContent = "👁 Открыть";
-    openBtn.onclick = () => openTemplateViewer(t);
-    actions.appendChild(openBtn);
-
-    if(canDelete){
-        const del = document.createElement("button");
-        del.className = "tpl-delete";
-        del.type = "button";
-        del.title = "Удалить";
-        del.textContent = "×";
-        del.onclick = (e) => { e.stopPropagation(); deleteTemplate(t); };
-        card.appendChild(del);
-    }
-    return card;
-}
-
-async function saveTemplate(){
-    const user = await ensureAuth();
-    if(!user){ setTplStatus("Нет авторизации", "err"); return; }
-    if(!templatesAvailable){ setTplStatus("Таблица templates не создана", "err"); return; }
-
-    const title = ($("tpl-title").value || "").trim();
-    const description = ($("tpl-desc").value || "").trim();
-    const category = ($("tpl-category").value || "general").trim();
-    const content = ($("tpl-content").value || "").trim();
-
-    if(!title || title.length < 2){ setTplStatus("Название: минимум 2 символа", "err"); return; }
-    if(!content || content.length < 20){ setTplStatus("Вставьте HTML-код шаблона", "err"); return; }
-    if(content.length > 500000){ setTplStatus("Шаблон слишком большой (макс 500 000 символов)", "err"); return; }
-
-    setTplStatus("Сохранение…", "loading");
-
-    const ins = await supabaseClient.from("templates").insert({
-        title,
-        description: description || null,
-        category,
-        content,
-        uploaded_by: user.id
-    }).select().single();
-
-    if(ins.error){
-        errLog("SAVE TEMPLATE", ins.error.message);
-        setTplStatus("Ошибка: " + ins.error.message, "err");
-        return;
-    }
-
-    setTplStatus("Шаблон загружен ✓");
-    setTimeout(() => setTplStatus(""), 1500);
-
-    $("tpl-title").value = "";
-    $("tpl-desc").value = "";
-    $("tpl-content").value = "";
-    $("tpl-category").value = "general";
-    $("add-template-panel").classList.add("hidden");
-
-    await loadTemplates();
-}
-
-async function deleteTemplate(t){
-    const user = await ensureAuth();
-    if(!user) return;
-
-    const isOwner = t.uploaded_by === user.id;
-    if(!isOwner && !isAdmin()){
-        alert("Удалить шаблон может только автор или администратор.");
-        return;
-    }
-    if(!confirm("Удалить шаблон «" + (t.title || "без названия") + "»?")) return;
-
-    const del = await supabaseClient.from("templates").delete().eq("id", t.id);
-    if(del.error){ alert("Ошибка: " + del.error.message); return; }
-    await loadTemplates();
-}
-
-function openTemplateViewer(t){
-    const wrap = $("template-viewer");
-    const titleEl = $("tpl-viewer-title");
-    const subEl = $("tpl-viewer-sub");
-    const frame = $("tpl-viewer-frame");
-    if(!wrap || !frame) return;
-
-    titleEl.textContent = t.title || "Шаблон";
-
-    const cat = t.category || "general";
-    const catLabel = {
-        wosb: "🎮 World of Sea Battle",
-        general: "📄 Общее",
-        guild: "⚔ Гильдии",
-        other: "📁 Другое"
-    }[cat] || "📄";
-
-    const date = t.created_at
-        ? new Date(t.created_at).toLocaleDateString("ru-RU", { day:"2-digit", month:"long", year:"numeric" })
-        : "";
-
-    subEl.textContent = catLabel + (date ? " · " + date : "");
-
-    frame.setAttribute("sandbox", "");
-    frame.srcdoc = t.content || "<html><body style='font-family:sans-serif;padding:40px;color:#888'>Пустой шаблон</body></html>";
-
-    wrap.classList.remove("hidden");
-    document.body.style.overflow = "hidden";
-}
-function closeTemplateViewer(){
-    const wrap = $("template-viewer");
-    if(wrap) wrap.classList.add("hidden");
-    const frame = $("tpl-viewer-frame");
-    if(frame) frame.srcdoc = "";
-    document.body.style.overflow = "";
 }
 
 /* ============================================================
