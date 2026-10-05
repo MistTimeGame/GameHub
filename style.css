@@ -1,5 +1,5 @@
 /* =====================================
-   GAME PLATFORM — WHITE 3D UI
+   GAMEHUB ONLINE — WHITE 3D UI
 ===================================== */
 
 *{ box-sizing:border-box; margin:0; padding:0; font-family:"Segoe UI", Arial, sans-serif; }
@@ -13,10 +13,36 @@ body{ background:#ffffff; color:#20242a; min-height:100vh; }
     box-shadow:0 20px 50px rgba(0,0,0,.18); text-align:center; }
 .logo{ width:90px; height:90px; margin:auto;
     display:flex; align-items:center; justify-content:center;
-    border-radius:25px; font-size:38px; font-weight:900;
-    background:linear-gradient(145deg,#ffffff,#b9bec5);
-    box-shadow:inset 0 3px 8px white, 0 10px 25px rgba(0,0,0,.3); }
-.auth-card h1{ margin-top:20px; font-size:30px; }
+    border-radius:25px; font-size:34px; font-weight:900;
+    letter-spacing:2px;
+    background:linear-gradient(145deg,#2f7cff 0%,#1b4aa8 60%,#0f3c8a 100%);
+    color:#fff;
+    text-shadow:0 1px 0 rgba(255,255,255,.35), 0 3px 10px rgba(0,0,0,.25);
+    box-shadow:
+        inset 0 3px 8px rgba(255,255,255,.35),
+        inset 0 -4px 12px rgba(0,0,0,.20),
+        0 14px 32px rgba(47,124,255,.30),
+        0 0 0 1px rgba(255,255,255,.5);
+    position:relative;
+    animation:logoPulse 3.6s ease-in-out infinite;
+}
+.logo::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:inherit;
+    background:linear-gradient(180deg, rgba(255,255,255,.35), transparent 55%);
+    pointer-events:none;
+}
+@keyframes logoPulse{
+    0%,100%{ box-shadow: inset 0 3px 8px rgba(255,255,255,.35), inset 0 -4px 12px rgba(0,0,0,.20), 0 14px 32px rgba(47,124,255,.30), 0 0 0 1px rgba(255,255,255,.5); }
+    50%    { box-shadow: inset 0 3px 8px rgba(255,255,255,.35), inset 0 -4px 12px rgba(0,0,0,.20), 0 18px 42px rgba(47,124,255,.50), 0 0 0 1px rgba(255,255,255,.7); }
+}
+
+.auth-card h1{ margin-top:20px; font-size:26px; letter-spacing:1px;
+    background:linear-gradient(135deg,#1a2332 0%,#1b4aa8 100%);
+    -webkit-background-clip:text; background-clip:text;
+    -webkit-text-fill-color:transparent; }
 .auth-card p{ color:#777; margin:10px 0 25px; }
 .auth-tabs{ display:flex; gap:10px; margin-bottom:20px; }
 .auth-tabs button{ flex:1; height:45px; border:none; border-radius:15px; cursor:pointer;
@@ -25,6 +51,12 @@ body{ background:#ffffff; color:#20242a; min-height:100vh; }
     box-shadow:0 4px 10px rgba(0,140,255,.35); }
 #auth-message{ min-height:18px; margin-bottom:8px; font-size:13px; color:#c33; }
 #auth-message.ok{ color:#1e8f4a; }
+
+.auth-terms{ font-size:12px !important; color:#8a94a8 !important;
+    margin:18px 0 0 !important; text-align:center; }
+.auth-terms a{ color:#1b4aa8; font-weight:700; text-decoration:none;
+    border-bottom:1px dashed #a9d6ff; cursor:pointer; }
+.auth-terms a:hover{ color:#0f3c8a; border-bottom-color:#2f7cff; }
 
 input, textarea, select{
     width:100%; padding:0 15px; margin:8px 0; border-radius:14px;
@@ -52,20 +84,85 @@ input:focus, textarea:focus, select:focus{
 .main-button:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
 .main-button.small{ height:38px; padding:0 14px; font-size:13px; border-radius:12px; }
 
-.topbar{ height:85px; display:flex; justify-content:space-between; align-items:center;
-    padding:0 30px; background:white; border-bottom:1px solid #ddd;
-    box-shadow:0 5px 20px rgba(0,0,0,.12); }
-.brand{ display:flex; align-items:center; gap:15px; }
-.brand-logo{ width:55px; height:55px; display:flex; align-items:center; justify-content:center;
-    border-radius:18px; font-size:25px; font-weight:900;
-    background:linear-gradient(145deg,#fff,#aaa);
-    box-shadow:0 6px 15px rgba(0,0,0,.3); }
-.brand span{ color:#777; font-size:12px; }
+/* TOPBAR */
+.topbar{ height:92px; display:flex; justify-content:space-between; align-items:center;
+    padding:0 28px; background:linear-gradient(180deg,#ffffff 0%,#fbfdff 100%);
+    border-bottom:1px solid #e6eaf1;
+    box-shadow:0 1px 0 rgba(255,255,255,1) inset, 0 4px 20px rgba(40,70,120,.08); }
+
+/* BRAND / ЛОГОТИП PlayStation style */
+.brand{ display:flex; align-items:center; gap:16px;
+    padding:6px 22px 6px 8px; border-radius:18px;
+    background:linear-gradient(135deg,#f8fbff 0%,#ffffff 55%,#eef4ff 100%);
+    box-shadow:inset 0 1px 0 #fff, 0 8px 22px rgba(47,124,255,.12),
+        0 0 0 1px rgba(47,124,255,.10), 0 0 40px rgba(47,124,255,.10);
+    border:1px solid #e4ecf8; position:relative;
+    transition:transform .2s ease, box-shadow .25s ease; }
+.brand:hover{ transform:translateY(-1px);
+    box-shadow:inset 0 1px 0 #fff, 0 12px 28px rgba(47,124,255,.18),
+        0 0 0 1px rgba(47,124,255,.18), 0 0 50px rgba(47,124,255,.15); }
+
+.brand-logo{ position:relative; width:64px; height:64px; border-radius:18px;
+    background:linear-gradient(145deg,#4a96ff 0%,#1b4aa8 55%,#0a1f52 100%);
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+    box-shadow:
+        inset 0 3px 10px rgba(255,255,255,.45),
+        inset 0 -10px 20px rgba(0,0,0,.35),
+        0 14px 28px rgba(47,124,255,.50),
+        0 0 0 2px rgba(255,255,255,.85),
+        0 0 24px rgba(74,150,255,.35);
+    transform:rotate(-2deg);
+    transition:transform .25s ease; }
+.brand:hover .brand-logo{ transform:rotate(-6deg) scale(1.04); }
+.brand-logo::before{ content:""; position:absolute; top:0; left:0; right:0; height:50%;
+    background:linear-gradient(180deg, rgba(255,255,255,.55) 0%,
+        rgba(255,255,255,.10) 60%, transparent 100%);
+    border-radius:inherit; pointer-events:none; }
+.brand-logo::after{ content:""; position:absolute; bottom:-30%; left:-20%; right:-20%; height:60%;
+    background:radial-gradient(ellipse at center, rgba(74,150,255,.85) 0%, transparent 70%);
+    pointer-events:none; }
+.brand-logo-inner{ position:relative; z-index:2; color:#ffffff;
+    font-size:24px; font-weight:900; letter-spacing:2.5px;
+    font-family:"Segoe UI", Arial, sans-serif;
+    text-shadow:0 2px 0 rgba(0,0,0,.35), 0 4px 12px rgba(0,0,0,.45),
+        0 0 20px rgba(150,200,255,.45); }
+
+.brand-text{ display:flex; flex-direction:column; justify-content:center;
+    line-height:1; min-width:0; }
+.brand-name{ display:flex; align-items:baseline; gap:6px;
+    margin:0 0 6px 0; font-size:23px; font-weight:900;
+    letter-spacing:1.2px; text-transform:uppercase;
+    line-height:1; white-space:nowrap; color:#0a1226;
+    text-shadow:0 1px 0 rgba(255,255,255,.9);
+    font-family:"Segoe UI", Arial, sans-serif; }
+.brand-name span{ background:linear-gradient(135deg,#4a96ff 0%,#1b4aa8 70%,#0a1f52 100%);
+    -webkit-background-clip:text; background-clip:text;
+    -webkit-text-fill-color:transparent; color:#1b4aa8; font-weight:900;
+    letter-spacing:1.2px; }
+.brand-sub{ display:inline-flex; align-items:center; gap:6px;
+    align-self:flex-start; padding:3px 10px 3px 8px; border-radius:6px;
+    background:linear-gradient(135deg,#eaf3ff 0%,#d6e6ff 100%);
+    border:1px solid #c7dcff; color:#1b4aa8;
+    font-size:10px; font-weight:900; letter-spacing:2px;
+    text-transform:uppercase;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9), 0 1px 3px rgba(47,124,255,.15);
+    line-height:1; }
+.brand-sub::before{ content:""; display:inline-block; width:6px; height:6px;
+    border-radius:50%; background:linear-gradient(145deg,#4a96ff,#1b4aa8);
+    box-shadow:0 0 8px rgba(47,124,255,.7);
+    animation:brandDot 1.6s ease-in-out infinite; }
+@keyframes brandDot{
+    0%,100%{ opacity:1; transform:scale(1); }
+    50%{ opacity:.5; transform:scale(.85); }
+}
+
 .top-profile{ display:flex; align-items:center; gap:15px; }
 .top-profile img{ width:55px; height:55px; border-radius:50%; object-fit:cover;
     border:3px solid white; box-shadow:0 5px 15px rgba(0,0,0,.3); background:#eef2f8; }
 
-.layout{ display:flex; min-height:calc(100vh - 85px); }
+/* LAYOUT */
+.layout{ display:flex; min-height:calc(100vh - 92px); }
 .sidebar{ width:270px; background:linear-gradient(180deg,#f1f3f6,#d8dce2);
     padding:20px; box-shadow:5px 0 25px rgba(0,0,0,.15); }
 .menu-title{ margin:20px 10px 10px; color:#777; font-size:12px;
@@ -354,6 +451,7 @@ input:focus, textarea:focus, select:focus{
 .guild-member-actions{ display:flex; gap:6px; flex-wrap:wrap; }
 .guild-member-actions .main-button{ height:34px; font-size:12px; padding:0 12px; border-radius:10px; }
 
+/* MATERIALS */
 .material-upload-form{ padding:18px; background:#f8faff;
     border:1px solid #eaf0f9; border-radius:16px; margin-bottom:18px; }
 .material-upload-form h3{ font-size:14px; margin-bottom:12px; color:#1a2332; }
@@ -410,6 +508,7 @@ input:focus, textarea:focus, select:focus{
 .material-btn:hover .material-btn-delete{ display:flex; }
 .material-btn-delete:hover{ background:#fde8e8; }
 
+/* TEMPLATES */
 .tpl-ai-hint{ display:flex; gap:16px;
     padding:16px 18px;
     background:linear-gradient(135deg,#f0f7ff 0%,#e8f3ff 100%);
@@ -453,9 +552,7 @@ input:focus, textarea:focus, select:focus{
 .tpl-card:hover .tpl-delete{ display:flex; }
 .tpl-delete:hover{ background:#fde8e8; }
 
-/* ============================================================
-   EDITOR
-============================================================ */
+/* EDITOR */
 .template-viewer{
     position:fixed; inset:0; z-index:1100;
     background:rgba(15,25,45,.88);
@@ -674,9 +771,7 @@ input:focus, textarea:focus, select:focus{
 .editor-pane-code textarea:focus{ background:#fff; }
 .editor-pane-code textarea[readonly]{ background:#f4f6f8; color:#4a5568; cursor:not-allowed; }
 
-/* ============================================================
-   IMPORT PANE
-============================================================ */
+/* IMPORT PANE */
 .editor-pane-import.active{
     display:flex;
     flex-direction:column;
@@ -1023,6 +1118,7 @@ input:focus, textarea:focus, select:focus{
 .profile-status.err{ color:#c33; }
 .profile-status.loading{ color:#7a849a; }
 
+/* RIGHT BAR */
 .rightbar{ width:300px; padding:25px; background:#fafafa; border-left:1px solid #ddd; }
 .side-profile{ text-align:center; background:white; padding:25px;
     border-radius:25px; box-shadow:0 10px 25px rgba(0,0,0,.12); }
@@ -1034,6 +1130,7 @@ input:focus, textarea:focus, select:focus{
 .online-dot{ display:inline-block; width:12px; height:12px;
     background:#00d000; border-radius:50%; margin-right:6px; vertical-align:middle; }
 
+/* ONLINE PAGE */
 .online-list-page{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px; }
 .online-user-card{ background:white; border:1px solid #e8edf5; border-radius:16px;
     padding:14px; display:flex; align-items:center; gap:12px;
@@ -1049,6 +1146,156 @@ input:focus, textarea:focus, select:focus{
 .online-user-name{ font-weight:700; color:#1a2332; font-size:14px; }
 .online-user-meta{ font-size:11.5px; color:#8a94a8; margin-top:2px; }
 
+/* ============================================================
+   ПРАВИЛА И ПОЛИТИКА
+============================================================ */
+.rules-layout{
+    display:grid;
+    grid-template-columns:260px 1fr;
+    gap:24px;
+    align-items:start;
+}
+.rules-toc{
+    position:sticky;
+    top:20px;
+    background:white;
+    border-radius:20px;
+    padding:18px;
+    border:1px solid #e9eef5;
+    box-shadow:0 8px 24px rgba(40,70,120,.08);
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    max-height:calc(100vh - 130px);
+    overflow-y:auto;
+}
+.rules-toc-title{
+    font-size:11.5px;
+    font-weight:800;
+    color:#8a94a8;
+    letter-spacing:.8px;
+    text-transform:uppercase;
+    margin-bottom:10px;
+    padding:0 8px;
+}
+.rules-toc-link{
+    display:block;
+    padding:7px 10px;
+    border-radius:10px;
+    font-size:13px;
+    font-weight:700;
+    color:#4a5568;
+    text-decoration:none;
+    transition:.15s;
+    border-left:3px solid transparent;
+}
+.rules-toc-link.sub{
+    padding-left:22px;
+    font-weight:600;
+    font-size:12.5px;
+    color:#7a849a;
+}
+.rules-toc-link:hover{
+    background:#f3f7ff;
+    color:#1b4aa8;
+    border-left-color:#a9d6ff;
+}
+.rules-toc-link:active{
+    background:#eef4ff;
+    border-left-color:#2f7cff;
+}
+.rules-body{
+    background:white;
+    border-radius:22px;
+    padding:32px 36px;
+    border:1px solid #e9eef5;
+    box-shadow:0 10px 30px rgba(40,70,120,.08);
+    color:#2a3446;
+    font-size:14.5px;
+    line-height:1.65;
+}
+.rules-meta{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    padding:12px 16px;
+    background:linear-gradient(135deg,#f0f7ff 0%,#e8f3ff 100%);
+    border:1px solid #cfdff9;
+    border-radius:14px;
+    margin-bottom:26px;
+    flex-wrap:wrap;
+}
+.rules-badge{
+    font-size:12.5px;
+    font-weight:700;
+    color:#1b4aa8;
+}
+.rules-h1{
+    font-size:22px;
+    font-weight:800;
+    color:#1a2332;
+    margin:34px 0 16px;
+    padding:14px 20px;
+    border-left:5px solid #2f7cff;
+    background:linear-gradient(90deg,#eff6ff 0%,transparent 100%);
+    border-radius:8px;
+    letter-spacing:-0.2px;
+}
+.rules-h1:first-of-type{ margin-top:0; }
+.rules-h2{
+    font-size:16.5px;
+    font-weight:800;
+    color:#1b4aa8;
+    margin:22px 0 10px;
+    letter-spacing:-0.1px;
+}
+.rules-body p{
+    margin:8px 0 12px;
+    color:#3a4556;
+}
+.rules-body p b{ color:#1a2332; }
+.rules-body ul{
+    margin:8px 0 14px 0;
+    padding-left:22px;
+}
+.rules-body li{
+    margin:6px 0;
+    color:#3a4556;
+}
+.rules-body li b{ color:#1a2332; }
+.rules-body a{
+    color:#1b4aa8;
+    text-decoration:none;
+    border-bottom:1px dashed #a9d6ff;
+    transition:.15s;
+}
+.rules-body a:hover{
+    color:#0f3c8a;
+    border-bottom-color:#2f7cff;
+}
+.rules-signature{
+    margin-top:30px;
+    padding-top:18px;
+    border-top:1px solid #eef2f8;
+    font-size:13px;
+    color:#7a849a;
+    text-align:right;
+    line-height:1.8;
+}
+
+/* PRINT */
+@media print{
+    .sidebar, .rightbar, .topbar, .rules-toc, .rules-meta .main-button{ display:none !important; }
+    .layout{ display:block; }
+    .content{ padding:0; }
+    .rules-body{ box-shadow:none; border:none; padding:0; }
+    .rules-h1{ page-break-after:avoid; }
+    .rules-h2{ page-break-after:avoid; }
+    body{ background:white; }
+}
+
+/* MOBILE */
 @media(max-width:1000px){
     .layout{ flex-direction:column; }
     .sidebar, .rightbar{ width:100%; }
@@ -1077,106 +1324,43 @@ input:focus, textarea:focus, select:focus{
     .import-grid-images{ grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); }
     .import-footer{ flex-direction:column; align-items:stretch; }
     .import-footer-actions .main-button{ flex:1; }
-}
-/* ============================================================
-   GAMEHUB ONLINE — РЕБРЕНДИНГ ЛОГОТИПА
-============================================================ */
-
-/* Логотип на экране авторизации */
-.logo{
-    position:relative;
-    background:linear-gradient(145deg,#2f7cff 0%,#1b4aa8 60%,#0f3c8a 100%) !important;
-    color:#fff !important;
-    letter-spacing:2px;
-    font-size:34px;
-    text-shadow:
-        0 1px 0 rgba(255,255,255,.35),
-        0 3px 10px rgba(0,0,0,.25);
-    box-shadow:
-        inset 0 3px 8px rgba(255,255,255,.35),
-        inset 0 -4px 12px rgba(0,0,0,.20),
-        0 14px 32px rgba(47,124,255,.30),
-        0 0 0 1px rgba(255,255,255,.5) !important;
-    animation:logoPulse 3.6s ease-in-out infinite;
-}
-.logo::after{
-    content:"";
-    position:absolute;
-    inset:0;
-    border-radius:inherit;
-    background:linear-gradient(180deg, rgba(255,255,255,.35), transparent 55%);
-    pointer-events:none;
-}
-@keyframes logoPulse{
-    0%,100%{ box-shadow: inset 0 3px 8px rgba(255,255,255,.35), inset 0 -4px 12px rgba(0,0,0,.20), 0 14px 32px rgba(47,124,255,.30), 0 0 0 1px rgba(255,255,255,.5); }
-    50%    { box-shadow: inset 0 3px 8px rgba(255,255,255,.35), inset 0 -4px 12px rgba(0,0,0,.20), 0 18px 42px rgba(47,124,255,.50), 0 0 0 1px rgba(255,255,255,.7); }
+    .rules-layout{ grid-template-columns:1fr; }
+    .rules-toc{ position:static; max-height:none; }
+    .rules-body{ padding:22px 20px; font-size:14px; }
+    .rules-h1{ font-size:19px; }
+    .rules-h2{ font-size:15px; }
 }
 
-/* Заголовок на экране авторизации */
-.auth-card h1{
-    letter-spacing:1px;
-    background:linear-gradient(135deg,#1a2332 0%,#1b4aa8 100%);
-    -webkit-background-clip:text;
-    background-clip:text;
-    -webkit-text-fill-color:transparent;
-}
-
-/* Логотип в топбаре */
-.brand-logo{
-    background:linear-gradient(145deg,#2f7cff 0%,#1b4aa8 100%) !important;
-    color:#fff !important;
-    font-size:22px !important;
-    letter-spacing:1px;
-    text-shadow:0 1px 2px rgba(0,0,0,.25);
-    box-shadow:
-        inset 0 2px 6px rgba(255,255,255,.35),
-        inset 0 -3px 8px rgba(0,0,0,.20),
-        0 8px 18px rgba(47,124,255,.35),
-        0 0 0 1px rgba(255,255,255,.4) !important;
-    position:relative;
-    overflow:hidden;
-}
-.brand-logo::after{
-    content:"";
-    position:absolute;
-    inset:0;
-    background:linear-gradient(180deg, rgba(255,255,255,.4), transparent 55%);
-    pointer-events:none;
-}
-
-/* Название бренда в топбаре */
-.brand h2,
-.brand-name{
-    font-weight:900 !important;
-    letter-spacing:1.5px;
-    color:#1a2332 !important;
-    font-size:19px !important;
-    margin-bottom:2px;
-    line-height:1.1;
-}
-.brand-name span{
-    background:linear-gradient(135deg,#2f7cff 0%,#1b4aa8 100%);
-    -webkit-background-clip:text;
-    background-clip:text;
-    -webkit-text-fill-color:transparent;
-    font-weight:900;
-}
-
-/* Подпись бренда */
-.brand-sub{
-    font-size:10.5px !important;
-    color:#7a849a;
-    font-weight:800;
-    letter-spacing:2.5px;
-    text-transform:uppercase;
-}
-
-/* Лёгкий акцент на топбаре */
-.topbar{
-    border-bottom:1px solid #e6eaf1 !important;
-    background:
-        linear-gradient(180deg,#ffffff 0%,#fbfdff 100%) !important;
-    box-shadow:
-        0 1px 0 rgba(255,255,255,1) inset,
-        0 4px 20px rgba(40,70,120,.08) !important;
+@media(max-width:700px){
+    .topbar{
+        height:auto !important;
+        padding:10px 14px !important;
+        flex-wrap:wrap;
+        gap:10px;
+    }
+    .brand{
+        padding:4px 14px 4px 6px !important;
+        gap:10px !important;
+    }
+    .brand-logo{
+        width:48px !important;
+        height:48px !important;
+        border-radius:14px !important;
+    }
+    .brand-logo-inner{
+        font-size:18px;
+        letter-spacing:1.5px;
+    }
+    .brand-name{
+        font-size:15px !important;
+        letter-spacing:.6px !important;
+    }
+    .brand-sub{
+        font-size:8.5px !important;
+        letter-spacing:1.2px !important;
+        padding:2px 8px 2px 6px;
+    }
+    .brand-sub::before{
+        width:5px; height:5px;
+    }
 }
