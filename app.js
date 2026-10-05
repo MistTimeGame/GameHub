@@ -46,7 +46,7 @@ let gameIconTimer = null;
 let templatesAvailable = true;
 
 /* Редактор шаблонов */
-let currentTemplate = null;          // { id, guild_id, title, content, ... }
+let currentTemplate = null;
 let currentTemplateGuildId = null;
 let templatePreviewTimer = null;
 let templateInitialContent = "";
@@ -180,19 +180,43 @@ function fileExt(name){
     const m = n.match(/\.([a-z0-9]+)$/i);
     return m ? m[1].toLowerCase() : "bin";
 }
+function fileIconByName(name, type){
+    const n = (name || "").toLowerCase();
+    const t = (type || "").toLowerCase();
+    if(t.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|bmp|svg|avif)$/.test(n)) return "🖼";
+    if(t.startsWith("video/") || /\.(mp4|webm|mov|avi|mkv)$/.test(n)) return "🎬";
+    if(t.startsWith("audio/") || /\.(mp3|wav|ogg|flac|m4a)$/.test(n)) return "🎵";
+    if(t.includes("html") || /\.(html|htm)$/.test(n)) return "🌐";
+    if(/\.(zip|rar|7z|tar|gz)$/.test(n)) return "🗜";
+    if(/\.(pdf)$/.test(n)) return "📕";
+    if(/\.(doc|docx)$/.test(n)) return "📄";
+    if(/\.(xls|xlsx|csv)$/.test(n)) return "📊";
+    if(t.startsWith("text/") || /\.(txt|md|log|json|xml|yml|yaml|css|js|ts)$/.test(n)) return "📝";
+    return "📎";
+}
 function fileViewerKind(name, type){
     const n = (name || "").toLowerCase();
     const t = (type || "").toLowerCase();
-    if(t.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/.test(n)) return "image";
-    if(t.startsWith("video/") || /\.(mp4|webm|mov|ogv)$/.test(n)) return "video";
-    if(t.startsWith("audio/") || /\.(mp3|wav|ogg|flac|m4a)$/.test(n)) return "audio";
+
+    if(t.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|bmp|svg|avif|ico)$/.test(n)) return "image";
+    if(t.startsWith("video/") || /\.(mp4|webm|mov|ogv|m4v|mkv)$/.test(n)) return "video";
+    if(t.startsWith("audio/") || /\.(mp3|wav|ogg|oga|flac|m4a|aac)$/.test(n)) return "audio";
     if(t === "application/pdf" || /\.pdf$/.test(n)) return "pdf";
+
+    // HTML-файлы
+    if(t.includes("html") || /\.(html|htm|xhtml)$/.test(n)) return "html";
+
+    // Текстовые форматы
+    if(t.startsWith("text/") ||
+       /\.(txt|md|markdown|log|json|xml|yml|yaml|css|js|mjs|ts|csv|tsv|ini|cfg|conf|env|sh|bat|sql|py|java|cpp|c|h|php|rb|go|rs|toml)$/.test(n)) {
+        return "text";
+    }
+
     return "other";
 }
 
 /* ============================================================
    ПОДГОТОВКА HTML ДЛЯ ПРЕВЬЮ
-   Оборачиваем фрагменты, чтобы работали таблицы и стили.
 ============================================================ */
 function preparePreviewHtml(content){
     if(!content || !content.trim()){
@@ -206,10 +230,7 @@ function preparePreviewHtml(content){
 
     if(isFullDoc) return content;
 
-    // Фрагмент. Оборачиваем в минимальный каркас.
     let body = content;
-
-    // Если это строки таблицы — обернём в <table> с базовыми стилями
     const trimmed = content.trim();
     const looksLikeRows = /^<tr[\s>]/i.test(trimmed) || /^<thead[\s>]/i.test(trimmed) || /^<tbody[\s>]/i.test(trimmed);
 
@@ -1585,13 +1606,12 @@ async function deleteMaterial(guildId, mat){
 }
 
 /* ============================================================
-   ШАБЛОНЫ (список внутри гильдии)
+   ШАБЛОНЫ
 ============================================================ */
 async function renderTemplatesTab(guildId, amManager){
     const box = $("guild-tab-templates"); if(!box) return;
     box.innerHTML = "";
 
-    // AI-hint
     const hint = document.createElement("div");
     hint.className = "tpl-ai-hint";
     hint.innerHTML = `
@@ -1622,7 +1642,6 @@ async function renderTemplatesTab(guildId, amManager){
         } else fallbackCopy(t, done);
     };
 
-    // Форма загрузки — только для менеджеров
     if(amManager){
         const form = document.createElement("div");
         form.className = "material-upload-form";
@@ -1646,7 +1665,6 @@ async function renderTemplatesTab(guildId, amManager){
         $("tpl-save-btn").onclick = () => saveTemplate(guildId);
     }
 
-    // Список шаблонов
     const listWrap = document.createElement("div");
     listWrap.className = "templates-grid";
     listWrap.innerHTML = "<div class='dash-recent-empty'>Загрузка шаблонов…</div>";
@@ -1779,7 +1797,7 @@ async function deleteTemplate(guildId, t){
 }
 
 /* ============================================================
-   РЕДАКТОР ШАБЛОНОВ (HTML + live preview)
+   РЕДАКТОР ШАБЛОНОВ
 ============================================================ */
 function initTemplateViewer(){
     const closeBtn = $("tpl-viewer-close");
@@ -1805,7 +1823,6 @@ function initTemplateViewer(){
             updateTemplateDirtyHint();
         });
 
-        // Tab внутри textarea = 2 пробела, а не смена фокуса
         codeArea.addEventListener("keydown", (e) => {
             if(e.key === "Tab" && !e.shiftKey){
                 e.preventDefault();
@@ -1955,7 +1972,7 @@ async function saveTemplateEdits(){
 }
 
 /* ============================================================
-   FILE VIEWER (для материалов)
+   FILE VIEWER
 ============================================================ */
 function initFileViewer(){
     const close = $("file-viewer-close");
@@ -1965,12 +1982,22 @@ function initFileViewer(){
         const url = dl.dataset.url;
         const name = dl.dataset.name || "";
         if(!url) return;
-        const a = document.createElement("a");
-        a.href = url; a.download = name; a.target = "_blank"; a.rel = "noopener";
-        document.body.appendChild(a); a.click(); a.remove();
+        downloadFileByUrl(url, name);
     };
 }
-function openFileViewer(m){
+
+function downloadFileByUrl(url, name){
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name || "";
+    a.target = "_blank";
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
+
+async function openFileViewer(m){
     const wrap = $("file-viewer");
     const title = $("file-viewer-title");
     const body = $("file-viewer-body");
@@ -1982,46 +2009,122 @@ function openFileViewer(m){
     dl.dataset.name = m.file_name || "";
 
     const kind = fileViewerKind(m.file_name, m.file_type);
-    body.innerHTML = "";
+    wrap.classList.remove("hidden");
+
+    const showLoading = (text) => {
+        body.innerHTML =
+            "<div class='viewer-fallback'>" +
+                "<span class='big'>⏳</span>" +
+                "<p>" + escapeHtml(text) + "</p>" +
+            "</div>";
+    };
+
+    const showError = (text) => {
+        body.innerHTML =
+            "<div class='viewer-fallback'>" +
+                "<span class='big'>📎</span>" +
+                "<p>" + text + "</p>" +
+            "</div>";
+        const btn = document.createElement("button");
+        btn.className = "main-button";
+        btn.type = "button";
+        btn.textContent = "⬇ Скачать файл";
+        btn.onclick = () => downloadFileByUrl(m.file_url, m.file_name);
+        const wrapEl = body.querySelector(".viewer-fallback");
+        if(wrapEl) wrapEl.appendChild(btn);
+    };
 
     if(kind === "image"){
+        body.innerHTML = "";
         const img = document.createElement("img");
         img.referrerPolicy = "no-referrer";
         img.src = m.file_url;
         img.alt = m.title || "";
+        img.onerror = () => showError("Не удалось загрузить изображение.");
         body.appendChild(img);
-    } else if(kind === "video"){
+        return;
+    }
+
+    if(kind === "video"){
+        body.innerHTML = "";
         const v = document.createElement("video");
-        v.src = m.file_url; v.controls = true; v.playsInline = true;
+        v.src = m.file_url;
+        v.controls = true;
+        v.playsInline = true;
+        v.onerror = () => showError("Не удалось загрузить видео.");
         body.appendChild(v);
-    } else if(kind === "audio"){
+        return;
+    }
+
+    if(kind === "audio"){
+        body.innerHTML = "";
         const a = document.createElement("audio");
-        a.src = m.file_url; a.controls = true;
+        a.src = m.file_url;
+        a.controls = true;
+        a.onerror = () => showError("Не удалось загрузить аудио.");
         body.appendChild(a);
-    } else if(kind === "pdf"){
+        return;
+    }
+
+    if(kind === "pdf"){
+        body.innerHTML = "";
         const ifr = document.createElement("iframe");
         ifr.src = m.file_url;
+        ifr.style.background = "white";
         body.appendChild(ifr);
-    } else {
-        const fallback = document.createElement("div");
-        fallback.className = "viewer-fallback";
-        fallback.innerHTML =
-            "<span class='big'>📎</span>" +
-            "<p>Предпросмотр недоступен.<br>Скачайте файл, чтобы открыть его.</p>";
-        const btn = document.createElement("button");
-        btn.className = "main-button"; btn.type = "button";
-        btn.textContent = "⬇ Скачать файл";
-        btn.onclick = () => {
-            const a = document.createElement("a");
-            a.href = m.file_url; a.download = m.file_name || "";
-            a.target = "_blank"; a.rel = "noopener";
-            document.body.appendChild(a); a.click(); a.remove();
-        };
-        fallback.appendChild(btn);
-        body.appendChild(fallback);
+        return;
     }
-    wrap.classList.remove("hidden");
+
+    if(kind === "html"){
+        showLoading("Загрузка HTML…");
+        try{
+            const res = await fetch(m.file_url, { referrerPolicy: "no-referrer" });
+            if(!res.ok) throw new Error("HTTP " + res.status);
+            const text = await res.text();
+
+            body.innerHTML = "";
+            const ifr = document.createElement("iframe");
+            ifr.setAttribute("sandbox", "");
+            ifr.setAttribute("referrerpolicy", "no-referrer");
+            ifr.style.background = "white";
+            ifr.srcdoc = text;
+            body.appendChild(ifr);
+        }catch(e){
+            errLog("HTML VIEW", e);
+            showError("Не удалось загрузить HTML: " + escapeHtml(e.message || ""));
+        }
+        return;
+    }
+
+    if(kind === "text"){
+        showLoading("Загрузка текста…");
+        try{
+            const res = await fetch(m.file_url, { referrerPolicy: "no-referrer" });
+            if(!res.ok) throw new Error("HTTP " + res.status);
+            const text = await res.text();
+
+            body.innerHTML = "";
+            const pre = document.createElement("pre");
+            pre.style.cssText =
+                "width:100%;height:100%;margin:0;padding:22px;" +
+                "background:#0f172a;color:#e2e8f0;" +
+                "font-family:Consolas,Monaco,monospace;" +
+                "font-size:13px;line-height:1.6;" +
+                "border-radius:12px;overflow:auto;" +
+                "white-space:pre-wrap;word-break:break-word;" +
+                "box-shadow:0 20px 60px rgba(0,0,0,.4);";
+            pre.textContent = text;
+            body.appendChild(pre);
+        }catch(e){
+            errLog("TEXT VIEW", e);
+            showError("Не удалось загрузить текст: " + escapeHtml(e.message || ""));
+        }
+        return;
+    }
+
+    showError("Предпросмотр для этого типа файла недоступен.<br>Скачайте файл, чтобы открыть его.");
 }
+
 function closeFileViewer(){
     const wrap = $("file-viewer");
     if(wrap) wrap.classList.add("hidden");
