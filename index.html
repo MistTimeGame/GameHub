@@ -337,11 +337,15 @@
   <div class="file-viewer-body" id="file-viewer-body"></div>
 </div>
 
+<!-- ============================================================
+     РЕДАКТОР СОДЕРЖИМОГО
+============================================================ -->
 <div id="template-viewer" class="template-viewer hidden">
   <div class="template-viewer-window">
+
     <div class="template-viewer-header">
       <div class="template-viewer-title">
-        <div class="template-viewer-title-main" id="tpl-viewer-title">Шаблон</div>
+        <div class="template-viewer-title-main" id="tpl-viewer-title">Редактор</div>
         <div class="template-viewer-title-sub" id="tpl-viewer-sub">—</div>
       </div>
       <div class="template-viewer-actions">
@@ -352,31 +356,31 @@
       </div>
     </div>
 
-    <div class="template-viewer-body">
-      <div class="tpl-split">
-        <div class="tpl-split-editor">
-          <div class="tpl-split-label">
-            <span>📝 HTML-код</span>
-            <span class="tpl-split-hint" id="tpl-editor-hint"></span>
-          </div>
-          <textarea id="tpl-viewer-code" spellcheck="false" autocomplete="off"></textarea>
-        </div>
-        <div class="tpl-split-preview">
-          <div class="tpl-split-label">
-            <span>👁 Просмотр</span>
-            <span class="tpl-split-hint">обновляется автоматически</span>
-          </div>
-          <iframe id="tpl-viewer-frame"
-                  sandbox=""
-                  referrerpolicy="no-referrer"
-                  title="Просмотр шаблона"></iframe>
+    <div class="editor-tabs">
+      <button class="editor-tab-btn active" data-mode="content" type="button">🎨 Содержимое</button>
+      <button class="editor-tab-btn" data-mode="code" type="button">&lt;/&gt; HTML-код</button>
+    </div>
+
+    <div class="editor-toolbar" id="editor-toolbar"></div>
+
+    <div class="editor-body">
+      <div class="editor-pane editor-pane-content active" id="editor-pane-content">
+        <div class="visual-editor-wrap">
+          <div id="visual-editor" class="visual-editor" contenteditable="false"></div>
         </div>
       </div>
+      <div class="editor-pane editor-pane-code" id="editor-pane-code">
+        <textarea id="tpl-viewer-code" spellcheck="false" autocomplete="off"></textarea>
+      </div>
     </div>
+
+    <div class="editor-status-bar" id="editor-status-bar"></div>
+
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="app.js"></script>
 
 </body>
