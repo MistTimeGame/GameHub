@@ -1,8 +1,8 @@
 /* =====================================================
    GAME PLATFORM — app.js (FULL)
    Auth + Profile + Chat + Conference + Online
-   + Games + Guilds (overlay, roles, materials)
-   + Templates (HTML editor with live preview)
+   + Games + Guilds (overlay, roles, materials, templates)
+   + HTML editor for materials & templates
 ===================================================== */
 
 const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -45,7 +45,7 @@ let gameIconTimer = null;
 
 let templatesAvailable = true;
 
-/* Редактор шаблонов */
+/* Редактор шаблонов и HTML-материалов */
 let currentTemplate = null;
 let currentTemplateGuildId = null;
 let templatePreviewTimer = null;
@@ -203,10 +203,8 @@ function fileViewerKind(name, type){
     if(t.startsWith("audio/") || /\.(mp3|wav|ogg|oga|flac|m4a|aac)$/.test(n)) return "audio";
     if(t === "application/pdf" || /\.pdf$/.test(n)) return "pdf";
 
-    // HTML-файлы
     if(t.includes("html") || /\.(html|htm|xhtml)$/.test(n)) return "html";
 
-    // Текстовые форматы
     if(t.startsWith("text/") ||
        /\.(txt|md|markdown|log|json|xml|yml|yaml|css|js|mjs|ts|csv|tsv|ini|cfg|conf|env|sh|bat|sql|py|java|cpp|c|h|php|rb|go|rs|toml)$/.test(n)) {
         return "text";
@@ -217,6 +215,7 @@ function fileViewerKind(name, type){
 
 /* ============================================================
    ПОДГОТОВКА HTML ДЛЯ ПРЕВЬЮ
+   Фрагменты оборачиваем в <table> с базовыми стилями.
 ============================================================ */
 function preparePreviewHtml(content){
     if(!content || !content.trim()){
@@ -1606,7 +1605,7 @@ async function deleteMaterial(guildId, mat){
 }
 
 /* ============================================================
-   ШАБЛОНЫ
+   ШАБЛОНЫ (список)
 ============================================================ */
 async function renderTemplatesTab(guildId, amManager){
     const box = $("guild-tab-templates"); if(!box) return;
@@ -1716,7 +1715,7 @@ async function renderTemplatesTab(guildId, amManager){
         openBtn.className = "main-button";
         openBtn.type = "button";
         openBtn.textContent = amManager ? "✏️ Открыть и править" : "👁 Открыть";
-        openBtn.onclick = () => openTemplateEditor(t, guildId, amManager);
+        openBtn.onclick = () => openTemplateEditor(t, guildId, amManager, "template");
         actions.appendChild(openBtn);
 
         if(canDelete){
@@ -1797,7 +1796,7 @@ async function deleteTemplate(guildId, t){
 }
 
 /* ============================================================
-   РЕДАКТОР ШАБЛОНОВ
+   РЕДАКТОР ШАБЛОНОВ / HTML-МАТЕРИАЛОВ
 ============================================================ */
 function initTemplateViewer(){
     const closeBtn = $("tpl-viewer-close");
@@ -1864,8 +1863,9 @@ function updateTemplatePreview(){
     frame.srcdoc = html;
 }
 
-function openTemplateEditor(t, guildId, canEdit){
-    currentTemplate = t;
+function openTemplateEditor(t, guildId, canEdit, source){
+    currentTemplate = Object.assign({}, t);
+    currentTemplate._source = source || "template";
     currentTemplateGuildId = guildId;
     templateCanEdit = !!canEdit;
     templateInitialContent = t.content || "";
@@ -1877,12 +1877,19 @@ function openTemplateEditor(t, guildId, canEdit){
     const resetBtn = $("tpl-viewer-reset");
     const modeBadge = $("tpl-mode-badge");
 
-    if(titleEl) titleEl.textContent = t.title || "Шаблон";
+    const isMaterial = currentTemplate._source === "material";
+
+    if(titleEl){
+        titleEl.textContent = (isMaterial ? "🌐 " : "📄 ") + (t.title || "Шаблон");
+    }
 
     const date = t.created_at
         ? new Date(t.created_at).toLocaleDateString("ru-RU", { day:"2-digit", month:"long", year:"numeric" })
         : "";
-    if(subEl) subEl.textContent = "📄 Шаблон гильдии" + (date ? " · " + date : "");
+    if(subEl){
+        subEl.textContent = (isMaterial ? "HTML-материал" : "Шаблон гильдии") +
+            (date ? " · " + date : "");
+    }
 
     if(codeArea){
         codeArea.value = t.content || "";
@@ -1934,22 +1941,79 @@ function closeTemplateViewer(){
 async function saveTemplateEdits(){
     const user = await ensureAuth();
     if(!user){ setTemplateHint("Нет авторизации", "err"); return; }
-    if(!currentTemplate || !currentTemplateGuildId){ setTemplateHint("Шаблон не найден", "err"); return; }
+    if(!currentTemplate){ setTemplateHint("Файл не найден", "err"); return; }
     if(!templateCanEdit){ setTemplateHint("Нет прав на редактирование", "err"); return; }
 
     const codeArea = $("tpl-viewer-code");
     if(!codeArea) return;
     const newContent = codeArea.value;
-    if(!newContent || newContent.trim().length < 5){
+    if(!newContent || newContent.trim().length < 3){
         setTemplateHint("Код слишком короткий", "err");
         return;
     }
     if(newContent.length > 500000){
-        setTemplateHint("Слишком большой шаблон (макс 500 000 символов)", "err");
+        setTemplateHint("Слишком большой файл (макс 500 000 символов)", "err");
         return;
     }
 
     setTemplateHint("Сохранение…", "");
+
+    /* ---- HTML-материал: перезаписываем файл в Storage ---- */
+    if(currentTemplate._source === "material"){
+        const m = currentTemplate._material;
+        if(!m || !m.file_path){
+            setTemplateHint("Не найден путь к файлу", "err");
+            return;
+        }
+
+        try{
+            const blob = new Blob([newContent], { type: m.file_type || "text/html;charset=utf-8" });
+
+            const up = await supabaseClient.storage
+                .from("guild-files")
+                .upload(m.file_path, blob, { upsert: true, contentType: "text/html;charset=utf-8" });
+
+            if(up.error){
+                errLog("MATERIAL SAVE", up.error.message);
+                setTemplateHint("Ошибка сохранения: " + up.error.message, "err");
+                return;
+            }
+
+            const { data: pub } = supabaseClient.storage.from("guild-files").getPublicUrl(m.file_path);
+            const newUrl = pub.publicUrl + "?t=" + Date.now();
+
+            const upd = await supabaseClient
+                .from("guild_materials")
+                .update({ file_url: newUrl, file_size: blob.size })
+                .eq("id", m.id)
+                .select()
+                .single();
+
+            if(upd.error){
+                errLog("MATERIAL DB UPDATE", upd.error.message);
+            }
+
+            m.file_url = newUrl;
+            m.file_size = blob.size;
+
+            templateInitialContent = newContent;
+            setTemplateHint("✓ Сохранено", "saved");
+            setTimeout(() => setTemplateHint("", ""), 2200);
+
+            if(currentGuildId){
+                setTimeout(() => {
+                    openGuildOverlayFor(currentGuildId).catch(e => errLog(e));
+                }, 400);
+            }
+        }catch(e){
+            errLog("MATERIAL SAVE EXC", e);
+            setTemplateHint("Ошибка: " + (e.message || ""), "err");
+        }
+        return;
+    }
+
+    /* ---- Обычный шаблон ---- */
+    if(!currentTemplateGuildId){ setTemplateHint("Гильдия не найдена", "err"); return; }
 
     const upd = await supabaseClient
         .from("templates")
@@ -1964,7 +2028,7 @@ async function saveTemplateEdits(){
         return;
     }
 
-    currentTemplate = upd.data || Object.assign({}, currentTemplate, { content: newContent });
+    currentTemplate = Object.assign({}, currentTemplate, upd.data || { content: newContent });
     templateInitialContent = newContent;
 
     setTemplateHint("✓ Сохранено", "saved");
@@ -2004,11 +2068,18 @@ async function openFileViewer(m){
     const dl = $("file-viewer-download");
     if(!wrap || !body) return;
 
+    const kind = fileViewerKind(m.file_name, m.file_type);
+
+    /* ---- HTML-файлы открываем в редакторе ---- */
+    if(kind === "html"){
+        openHtmlEditorFromMaterial(m);
+        return;
+    }
+
     title.textContent = m.title || m.file_name || "Файл";
     dl.dataset.url = m.file_url;
     dl.dataset.name = m.file_name || "";
 
-    const kind = fileViewerKind(m.file_name, m.file_type);
     wrap.classList.remove("hidden");
 
     const showLoading = (text) => {
@@ -2075,27 +2146,6 @@ async function openFileViewer(m){
         return;
     }
 
-    if(kind === "html"){
-        showLoading("Загрузка HTML…");
-        try{
-            const res = await fetch(m.file_url, { referrerPolicy: "no-referrer" });
-            if(!res.ok) throw new Error("HTTP " + res.status);
-            const text = await res.text();
-
-            body.innerHTML = "";
-            const ifr = document.createElement("iframe");
-            ifr.setAttribute("sandbox", "");
-            ifr.setAttribute("referrerpolicy", "no-referrer");
-            ifr.style.background = "white";
-            ifr.srcdoc = text;
-            body.appendChild(ifr);
-        }catch(e){
-            errLog("HTML VIEW", e);
-            showError("Не удалось загрузить HTML: " + escapeHtml(e.message || ""));
-        }
-        return;
-    }
-
     if(kind === "text"){
         showLoading("Загрузка текста…");
         try{
@@ -2123,6 +2173,63 @@ async function openFileViewer(m){
     }
 
     showError("Предпросмотр для этого типа файла недоступен.<br>Скачайте файл, чтобы открыть его.");
+}
+
+/* Открывает HTML-материал в редакторе */
+async function openHtmlEditorFromMaterial(m){
+    const wrap = $("file-viewer");
+    const body = $("file-viewer-body");
+    const title = $("file-viewer-title");
+    if(!wrap || !body) return;
+
+    title.textContent = m.title || m.file_name || "HTML-файл";
+    wrap.classList.remove("hidden");
+    body.innerHTML =
+        "<div class='viewer-fallback'>" +
+            "<span class='big'>⏳</span>" +
+            "<p>Загрузка HTML…</p>" +
+        "</div>";
+
+    try{
+        const res = await fetch(m.file_url, { referrerPolicy: "no-referrer" });
+        if(!res.ok) throw new Error("HTTP " + res.status);
+        const text = await res.text();
+
+        const guildId = currentGuildId;
+        const amManager = guildId ? isManager(guildId) : false;
+        const isUploader = m.uploaded_by === currentUser.id;
+        const canEdit = amManager || isUploader || isAdmin();
+
+        wrap.classList.add("hidden");
+        body.innerHTML = "";
+
+        const tplLike = {
+            id: m.id,
+            guild_id: guildId,
+            title: m.title || m.file_name || "HTML-материал",
+            content: text,
+            created_at: m.created_at,
+            uploaded_by: m.uploaded_by,
+            _source: "material",
+            _material: m
+        };
+
+        openTemplateEditor(tplLike, guildId, canEdit, "material");
+    }catch(e){
+        errLog("HTML VIEW", e);
+        body.innerHTML =
+            "<div class='viewer-fallback'>" +
+                "<span class='big'>📎</span>" +
+                "<p>Не удалось загрузить HTML: " + escapeHtml(e.message || "") + "</p>" +
+            "</div>";
+        const btn = document.createElement("button");
+        btn.className = "main-button";
+        btn.type = "button";
+        btn.textContent = "⬇ Скачать файл";
+        btn.onclick = () => downloadFileByUrl(m.file_url, m.file_name);
+        const wrapEl = body.querySelector(".viewer-fallback");
+        if(wrapEl) wrapEl.appendChild(btn);
+    }
 }
 
 function closeFileViewer(){
