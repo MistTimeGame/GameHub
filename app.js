@@ -1,5 +1,5 @@
 /* =====================================================
-   GAME PLATFORM — app.js (FULL)
+   GAMEHUB ONLINE — app.js
    Auth + Profile + Chat + Conference + Online
    + Games + Guilds + Templates
    + Визуальный редактор (HTML + Excel/CSV)
@@ -63,8 +63,8 @@ let importMode = "url";
    ХЕЛПЕРЫ
 ============================================================ */
 function $(id){ return document.getElementById(id); }
-function log(...a){ console.log("[GP]", ...a); }
-function errLog(...a){ console.error("[GP][ОШИБКА]", ...a); }
+function log(...a){ console.log("[GH]", ...a); }
+function errLog(...a){ console.error("[GH][ОШИБКА]", ...a); }
 
 function escapeHtml(s){
     return String(s == null ? "" : s)
@@ -118,7 +118,6 @@ function switchPage(pageName){
 function isAdmin(){
     return !!(currentProfile && currentProfile.is_admin === true);
 }
-
 async function ensureAuth(){
     if(currentUser && currentUser.id) return currentUser;
     try{
@@ -133,7 +132,7 @@ async function ensureAuth(){
 }
 
 /* ============================================================
-   URL / IMG утилиты
+   URL / IMG
 ============================================================ */
 function isValidHttpUrl(str){
     if(!str) return true;
@@ -280,7 +279,6 @@ async function detectProfileColumns(userId){
     result = await trySel(cols);
     return { columns: available, row: result.data };
 }
-
 function applySchemaVisibility(){
     if(!availableColumns) return;
     const has = (c) => availableColumns.has(c);
@@ -467,6 +465,15 @@ function initNavigation(){
             if(p === "online") renderOnlinePage();
         };
     });
+
+    const rulesPrintBtn = $("rules-print-btn");
+    if(rulesPrintBtn) rulesPrintBtn.onclick = () => window.print();
+
+    const authTermsLink = $("auth-terms-link");
+    if(authTermsLink) authTermsLink.onclick = (e) => {
+        e.preventDefault();
+        alert("Правила использования и Политика конфиденциальности доступны после входа — в разделе «📜 Правила» в меню слева.");
+    };
 }
 
 /* ============================================================
@@ -1651,7 +1658,6 @@ function initTemplateViewer(){
         btn.onclick = () => switchEditorMode(btn.dataset.mode);
     });
 
-    // Переключатель режимов импорта
     document.querySelectorAll(".import-mode-btn").forEach(btn => {
         btn.onclick = () => {
             const mode = btn.dataset.importMode;
@@ -1858,7 +1864,6 @@ function openTemplateEditor(t, guildId, canEdit, source){
     const tb = $("editor-toolbar");
     if(tb) tb.classList.remove("hidden");
 
-    // Сброс импорта
     importParsed = { tables: [], images: [] };
     importMode = "url";
     document.querySelectorAll(".import-mode-btn").forEach(b => {
@@ -3104,7 +3109,7 @@ async function joinRoom(room){
         const ins = await supabaseClient.from("conference_users").insert({ room_id: room.id, user_id: user.id, nickname });
         if(ins.error) errLog("ROOM USER INSERT", ins.error.message);
         currentRoom = room;
-        const miroRoomId = "gp-" + room.id;
+        const miroRoomId = "gh-" + room.id;
         const miroUrl = MIROTALK_BASE + "/join/?room=" + encodeURIComponent(miroRoomId) +
             "&name=" + encodeURIComponent(nickname) + "&audio=1&video=1&screen=1&chat=1&notify=1";
         const container = $("mirotalk-container");
