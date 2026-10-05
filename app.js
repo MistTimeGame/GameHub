@@ -3,7 +3,8 @@
    Auth + Profile + Chat + Conference + Online
    + Games + Guilds + Templates
    + Визуальный редактор (HTML + Excel/CSV)
-   + Импорт таблиц и картинок с других сайтов (отдельная вкладка)
+   + Импорт таблиц и картинок с других сайтов
+   + Fallback: вставить HTML вручную
 ===================================================== */
 
 const SUPABASE_URL = "https://uvzaoobtysostmfwyfxm.supabase.co";
@@ -46,7 +47,6 @@ let gameIconTimer = null;
 
 let templatesAvailable = true;
 
-/* Редактор */
 let currentTemplate = null;
 let currentTemplateGuildId = null;
 let templateInitialContent = "";
@@ -56,8 +56,8 @@ let currentEditorKind = "html";
 let currentSheetRows = null;
 let currentSheetName = "Sheet1";
 
-/* Импорт */
 let importParsed = { tables: [], images: [] };
+let importMode = "url";
 
 /* ============================================================
    ХЕЛПЕРЫ
@@ -101,6 +101,11 @@ function setTplStatus(t, cls){
 function setEditorStatus(t, cls){
     const el = $("editor-status-bar"); if(!el) return;
     el.innerHTML = '<span class="' + (cls || "") + '">' + escapeHtml(t || "") + '</span>';
+}
+function setImportStatus(text, cls){
+    const el = $("import-status"); if(!el) return;
+    el.textContent = text || "";
+    el.className = "import-status" + (cls ? " " + cls : "");
 }
 function switchPage(pageName){
     document.querySelectorAll(".menu-button").forEach(b => {
@@ -208,7 +213,7 @@ function fileViewerKind(name, type){
 }
 
 /* ============================================================
-   ПОДГОТОВКА HTML ДЛЯ РЕДАКТОРА
+   ПОДГОТОВКА HTML
 ============================================================ */
 function parseHtmlContent(content){
     const raw = String(content || "");
@@ -1646,21 +1651,38 @@ function initTemplateViewer(){
         btn.onclick = () => switchEditorMode(btn.dataset.mode);
     });
 
-    // Импорт-контролы
+    // Переключатель режимов импорта
+    document.querySelectorAll(".import-mode-btn").forEach(btn => {
+        btn.onclick = () => {
+            const mode = btn.dataset.importMode;
+            importMode = mode;
+            document.querySelectorAll(".import-mode-btn").forEach(b => {
+                b.classList.toggle("active", b.dataset.importMode === mode);
+            });
+            const urlBlock = $("import-url-block");
+            const htmlBlock = $("import-html-block");
+            if(urlBlock) urlBlock.classList.toggle("hidden", mode !== "url");
+            if(htmlBlock) htmlBlock.classList.toggle("hidden", mode !== "html");
+            setImportStatus("", "");
+        };
+    });
+
     const importLoad = $("import-load");
+    const importParseBtn = $("import-parse-btn");
     const importClear = $("import-clear");
     const importInsert = $("import-insert");
     const importUrl = $("import-url");
 
     if(importLoad) importLoad.onclick = () => loadImportPage();
+    if(importParseBtn) importParseBtn.onclick = () => loadImportPage();
     if(importUrl) importUrl.addEventListener("keydown", (e) => {
         if(e.key === "Enter"){ e.preventDefault(); loadImportPage(); }
     });
     if(importClear) importClear.onclick = () => {
         importParsed = { tables: [], images: [] };
         if(importUrl) importUrl.value = "";
-        const box = $("import-results");
-        if(box) box.innerHTML = "";
+        const ih = $("import-html"); if(ih) ih.value = "";
+        const box = $("import-results"); if(box) box.innerHTML = "";
         setImportStatus("", "");
         updateImportCounter();
     };
@@ -1696,7 +1718,6 @@ function switchEditorMode(mode){
     if(codePane) codePane.classList.toggle("active", mode === "code");
     if(importPane) importPane.classList.toggle("active", mode === "import");
 
-    // Тулбар: скрыть на вкладке импорта
     const tb = $("editor-toolbar");
     if(tb) tb.classList.toggle("hidden", mode === "import");
 
@@ -1776,7 +1797,7 @@ function execEditorCmd(cmd, value){
 }
 
 /* ============================================================
-   ОТКРЫТИЕ / ЗАКРЫТИЕ РЕДАКТОРА
+   ОТКРЫТИЕ / ЗАКРЫТИЕ
 ============================================================ */
 function openTemplateEditor(t, guildId, canEdit, source){
     currentTemplate = Object.assign({}, t);
@@ -1819,7 +1840,6 @@ function openTemplateEditor(t, guildId, canEdit, source){
         templateInitialContent = t.content || "";
     }
 
-    // Скрыть вкладку «код» и «импорт» для sheet
     document.querySelectorAll(".editor-tab-btn").forEach(b => {
         if(currentEditorKind === "sheet" && (b.dataset.mode === "code" || b.dataset.mode === "import")){
             b.classList.add("hidden");
@@ -1838,12 +1858,18 @@ function openTemplateEditor(t, guildId, canEdit, source){
     const tb = $("editor-toolbar");
     if(tb) tb.classList.remove("hidden");
 
-    // Очистить импорт-панель
+    // Сброс импорта
     importParsed = { tables: [], images: [] };
-    const importUrl = $("import-url");
-    if(importUrl) importUrl.value = "";
-    const importResults = $("import-results");
-    if(importResults) importResults.innerHTML = "";
+    importMode = "url";
+    document.querySelectorAll(".import-mode-btn").forEach(b => {
+        b.classList.toggle("active", b.dataset.importMode === "url");
+    });
+    if($("import-url-block")) $("import-url-block").classList.remove("hidden");
+    if($("import-html-block")) $("import-html-block").classList.add("hidden");
+    if($("import-url")) $("import-url").value = "";
+    if($("import-base-url")) $("import-base-url").value = "";
+    if($("import-html")) $("import-html").value = "";
+    if($("import-results")) $("import-results").innerHTML = "";
     setImportStatus("", "");
     updateImportCounter();
 
@@ -1905,11 +1931,10 @@ function restoreInitialEditorState(){
 }
 
 /* ============================================================
-   РЕНДЕР — HTML
+   РЕНДЕР
 ============================================================ */
 function renderVisualFromHtml(content){
     const ed = $("visual-editor"); if(!ed) return;
-
     const parsed = parseHtmlContent(content);
     ed.innerHTML = "";
 
@@ -1931,10 +1956,6 @@ function collectHtmlFromVisual(){
     clone.querySelectorAll('style[data-editor="1"]').forEach(s => s.remove());
     return clone.innerHTML.trim();
 }
-
-/* ============================================================
-   РЕНДЕР — SHEET
-============================================================ */
 function renderVisualSheet(rows){
     const ed = $("visual-editor"); if(!ed) return;
     ed.innerHTML = "";
@@ -2205,28 +2226,80 @@ ${body}
 }
 
 /* ============================================================
-   ИМПОРТ С САЙТОВ — ВКЛАДКА В РЕДАКТОРЕ
+   ИМПОРТ С САЙТОВ
 ============================================================ */
 
 const CORS_PROXIES = [
-    url => "https://api.allorigins.win/raw?url=" + encodeURIComponent(url),
-    url => "https://corsproxy.io/?" + encodeURIComponent(url),
-    url => "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url)
+    { name: "allorigins", build: url => "https://api.allorigins.win/raw?url=" + encodeURIComponent(url) },
+    { name: "allorigins-get", build: url => "https://api.allorigins.win/get?url=" + encodeURIComponent(url) },
+    { name: "corsproxy.io", build: url => "https://corsproxy.io/?url=" + encodeURIComponent(url) },
+    { name: "codetabs", build: url => "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url) },
+    { name: "thingproxy", build: url => "https://thingproxy.freeboard.io/fetch/" + url },
+    { name: "whateverorigin", build: url => "https://www.whateverorigin.org/get?url=" + encodeURIComponent(url) },
+    { name: "cors.eu.org", build: url => "https://cors.eu.org/" + url }
 ];
 
 async function fetchPageViaProxy(url){
-    let lastErr = null;
-    for(const build of CORS_PROXIES){
+    let lastError = "Неизвестная ошибка";
+    const tried = [];
+
+    for(const proxy of CORS_PROXIES){
         try{
-            const proxyUrl = build(url);
-            const res = await fetch(proxyUrl, { method: "GET", redirect: "follow" });
-            if(!res.ok) throw new Error("HTTP " + res.status);
-            const text = await res.text();
-            if(!text || text.length < 50) throw new Error("Пустой ответ");
+            const proxyUrl = proxy.build(url);
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 12000);
+
+            const res = await fetch(proxyUrl, {
+                method: "GET",
+                redirect: "follow",
+                signal: controller.signal
+            });
+            clearTimeout(timeout);
+
+            if(!res.ok){
+                tried.push(proxy.name + " → HTTP " + res.status);
+                lastError = "HTTP " + res.status;
+                continue;
+            }
+
+            let text = await res.text();
+
+            if(proxy.name === "allorigins-get" || proxy.name === "whateverorigin"){
+                try{
+                    const parsed = JSON.parse(text);
+                    if(parsed.contents) text = parsed.contents;
+                }catch(e){}
+            }
+
+            if(!text || text.length < 50){
+                tried.push(proxy.name + " → пустой ответ");
+                lastError = "Пустой ответ";
+                continue;
+            }
+
+            const lower = text.toLowerCase();
+            if(lower.indexOf("<html") === -1 && lower.indexOf("<!doctype") === -1 && lower.indexOf("<body") === -1){
+                tried.push(proxy.name + " → не HTML");
+                lastError = "Ответ не похож на HTML";
+                continue;
+            }
+
+            log("IMPORT: успешно через", proxy.name);
             return text;
-        }catch(e){ lastErr = e; errLog("PROXY FAIL", e.message); }
+        }catch(e){
+            const msg = e.name === "AbortError" ? "таймаут" : (e.message || "ошибка");
+            tried.push(proxy.name + " → " + msg);
+            lastError = msg;
+            errLog("PROXY FAIL", proxy.name, msg);
+        }
     }
-    throw new Error("Не удалось загрузить страницу. " + (lastErr ? lastErr.message : ""));
+
+    throw new Error(
+        "Ни один прокси не справился.\n\nПопытки:\n" +
+        tried.join("\n") +
+        "\n\nСкорее всего сайт защищён Cloudflare или блокирует прокси.\n" +
+        "Переключитесь на режим «📋 Вставить HTML вручную»."
+    );
 }
 
 function parsePageContent(html, baseUrl){
@@ -2238,7 +2311,6 @@ function parsePageContent(html, baseUrl){
         try{ return new URL(href, baseUrl).href; }catch(e){ return href; }
     };
 
-    // ---- Таблицы ----
     const tables = [];
     doc.querySelectorAll("table").forEach((tbl, idx) => {
         const rows = tbl.querySelectorAll("tr");
@@ -2270,7 +2342,6 @@ function parsePageContent(html, baseUrl){
         });
     });
 
-    // ---- Картинки ----
     const images = [];
     const seen = new Set();
     doc.querySelectorAll("img").forEach((img) => {
@@ -2291,18 +2362,15 @@ function parsePageContent(html, baseUrl){
     return { tables, images };
 }
 
-function setImportStatus(text, cls){
-    const el = $("import-status"); if(!el) return;
-    el.textContent = text || "";
-    el.className = "import-status" + (cls ? " " + cls : "");
-}
-
 async function loadImportPage(){
     const urlInput = $("import-url");
     const url = (urlInput.value || "").trim();
-    if(!url || !isValidHttpUrl(url)){
-        setImportStatus("Введите корректный URL (http или https)", "err");
-        return;
+
+    if(importMode === "url"){
+        if(!url || !isValidHttpUrl(url)){
+            setImportStatus("Введите корректный URL (http или https)", "err");
+            return;
+        }
     }
 
     setImportStatus("Загрузка страницы…", "loading");
@@ -2313,9 +2381,26 @@ async function loadImportPage(){
     importParsed = { tables: [], images: [] };
 
     try{
-        const html = await fetchPageViaProxy(url);
+        let html;
+        let baseUrl = url;
+
+        if(importMode === "html"){
+            const ta = $("import-html");
+            if(!ta || !ta.value.trim()){
+                setImportStatus("Вставьте HTML-код страницы", "err");
+                return;
+            }
+            html = ta.value;
+            const baseField = $("import-base-url");
+            if(baseField && baseField.value.trim()) baseUrl = baseField.value.trim();
+            if(!baseUrl) baseUrl = "https://example.com/";
+            log("IMPORT: используем вставленный HTML, длина", html.length);
+        } else {
+            html = await fetchPageViaProxy(url);
+        }
+
         setImportStatus("Парсинг…", "loading");
-        const parsed = parsePageContent(html, url);
+        const parsed = parsePageContent(html, baseUrl);
         importParsed = parsed;
 
         const total = parsed.tables.length + parsed.images.length;
@@ -2328,7 +2413,9 @@ async function loadImportPage(){
         updateImportCounter();
     }catch(e){
         errLog("IMPORT LOAD", e);
-        setImportStatus("Ошибка: " + (e.message || "не удалось загрузить"), "err");
+        const msg = String(e.message || "не удалось загрузить");
+        setImportStatus("Ошибка загрузки", "err");
+        alert(msg);
     }
 }
 
@@ -2397,7 +2484,6 @@ function updateImportCounter(){
     if(btn) btn.disabled = selected === 0;
 }
 
-/* Сохранить выбранное в документ */
 function insertSelectedImports(){
     const ed = $("visual-editor");
     if(!ed){ setImportStatus("Редактор не найден", "err"); return; }
@@ -2421,13 +2507,11 @@ function insertSelectedImports(){
         return;
     }
 
-    // Сохраняем в визуальный редактор: добавляем в конец контента
     let inserted = 0;
     selected.forEach(item => {
         if(item.type === "table"){
             const tmp = document.createElement("div");
             tmp.innerHTML = item.html;
-            // пропускаем уже вставленный style
             while(tmp.firstChild){
                 const child = tmp.firstChild;
                 if(child.nodeType === 1 && child.tagName === "STYLE"){
@@ -2436,7 +2520,6 @@ function insertSelectedImports(){
                 }
                 ed.appendChild(child);
             }
-            // отступ
             const p = document.createElement("p");
             p.innerHTML = "<br>";
             ed.appendChild(p);
@@ -2454,19 +2537,15 @@ function insertSelectedImports(){
         }
     });
 
-    // Синхронизация в коде
     const html = collectHtmlFromVisual();
     const codeArea = $("tpl-viewer-code");
     if(codeArea) codeArea.value = html;
 
     updateEditorDirtyState();
-
-    // Переключиться на содержимое, чтобы увидеть результат
     switchEditorMode("content");
     setEditorStatus("✓ Сохранено в документ: " + inserted + " элементов", "ok");
     setTimeout(() => setEditorStatus("", ""), 2500);
 
-    // Скролл к концу
     const wrap = document.querySelector(".visual-editor-wrap");
     if(wrap) wrap.scrollTop = wrap.scrollHeight;
 }
